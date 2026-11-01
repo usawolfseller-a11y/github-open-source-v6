@@ -48,7 +48,7 @@ class Config:
 
     GitHub_token: str = ""
     Gemini_api_key: str = ""
-    Gemini_model: str = "Gemini-2.5-flash"
+    Gemini_model: str = "gemini-3.8-flash"
     telegraph_access_token: str = ""
 
     dev_api_key: str = ""
@@ -79,7 +79,7 @@ class Config:
             telegram_source_channels=_csv("TELEGRAM_SOURCE_CHANNELS"),
             GitHub_token=(os.getenv("GH_API_TOKEN") or os.getenv("GITHUB_TOKEN") or "").strip(),
             Gemini_api_key=(os.getenv("GEMINI_API_KEY") or "").strip(),
-            Gemini_model=(os.getenv("GEMINI_MODEL") or "Gemini-2.5-flash").strip(),
+            Gemini_model=(os.getenv("GEMINI_MODEL") or "gemini-3.8-flash").strip().lower(),
             telegraph_access_token=(os.getenv("TELEGRAPH_ACCESS_TOKEN") or "").strip(),
             dev_api_key=(os.getenv("DEV_API_KEY") or "").strip(),
             bluesky_handle=(os.getenv("BLUESKY_HANDLE") or "").strip().lstrip("@"),

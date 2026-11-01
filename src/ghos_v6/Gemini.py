@@ -78,9 +78,9 @@ def _clip_sentence(text: Any, limit: int) -> str:
 
 
 class GeminiClient:
-    def __init__(self, api_key: str, model: str = "Gemini-2.5-flash"):
+    def __init__(self, api_key: str, model: str = "gemini-3.8-flash"):
         self.api_key = api_key.strip()
-        self.model = model.removeprefix("models/")
+        self.model = model.strip().lower().removeprefix("models/")
 
     @property
     def configured(self) -> bool:
