@@ -42,11 +42,20 @@ discovery lists are empty, repeat steps 1–3 and run Doctor again.
 |---|---|
 | `TELEGRAM_BOT_TOKEN` | Bot API publishing and owner reports |
 | `GEMINI_API_KEY` | Structured generation and news verification |
-| `TELEGRAPH_ACCESS_TOKEN` | Full-breakdown pages and card hosting |
+| `IMGBB_API_KEY` | Primary public host for rendered card images (direct CDN URL) |
+| `TELEGRAPH_ACCESS_TOKEN` | Full-breakdown (Telegraph) pages |
 | `DEV_API_KEY` | Optional article-of-day |
 | `BLUESKY_APP_PASSWORD` | Optional Bluesky crossposts |
 | `MASTODON_ACCESS_TOKEN` | Optional Mastodon crossposts |
 | `FACEBOOK_PAGE_ACCESS_TOKEN` | Optional direct Facebook Page posts |
+
+`IMGBB_API_KEY` is optional at runtime: without it, cards fall back to
+the monthly GitHub release host, then to Telegraph upload, then to
+GitHub OpenGraph. Media hosting is only needed until each platform has
+copied the image: Telegram stores the photo on its own CDN, Bluesky and
+Mastodon upload blobs, and dev.to downloads the cover. Telegraph
+articles keep hot-linking the uploaded URL, so an expired or deleted
+ImgBB image would leave a broken image on the Telegraph page only.
 
 There is deliberately no personal Telegram session secret in v1.
 GitHub API calls inside workflows use the built-in `github.token`,

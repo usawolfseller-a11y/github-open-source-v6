@@ -48,6 +48,7 @@ class Config:
 
     GitHub_token: str = ""
     GitHub_repository: str = ""
+    imgbb_api_key: str = ""
     Gemini_api_key: str = ""
     Gemini_model: str = "gemini-3.5-flash-lite"
     telegraph_access_token: str = ""
@@ -82,6 +83,7 @@ class Config:
             GitHub_repository=(
                 os.getenv("GHOS_GITHUB_REPOSITORY") or os.getenv("GITHUB_REPOSITORY") or ""
             ).strip(),
+            imgbb_api_key=(os.getenv("IMGBB_API_KEY") or "").strip(),
             Gemini_api_key=(os.getenv("GEMINI_API_KEY") or "").strip(),
             Gemini_model=(os.getenv("GEMINI_MODEL") or "gemini-3.5-flash-lite").strip().lower(),
             telegraph_access_token=(os.getenv("TELEGRAPH_ACCESS_TOKEN") or "").strip(),
@@ -127,6 +129,7 @@ class Config:
             "GEMINI_API_KEY": self.Gemini_api_key,
             "GH_API_TOKEN": self.GitHub_token,
             "GITHUB_REPOSITORY": self.GitHub_repository,
+            "IMGBB_API_KEY": self.imgbb_api_key,
             "TELEGRAPH_ACCESS_TOKEN": self.telegraph_access_token,
             "DEV_API_KEY": self.dev_api_key,
             "BLUESKY_APP_PASSWORD": self.bluesky_app_password,

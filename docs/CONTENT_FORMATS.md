@@ -157,13 +157,21 @@ if it improves those outcomes without reducing link clicks or trust.
 
 Visual cascade stays: a valid large README demo (at least 800×250)
 → locally rendered branded card → GitHub OpenGraph only as the final
-fallback. Rendered cards are hosted first as assets on a monthly
-GitHub **prerelease** in this repository (for example
-`media-2026-11`) using the workflow token; the legacy
-`telegra.ph/upload` endpoint is only a second attempt because it can
-return HTTP 400 `Unknown error` for external clients. If both hosts
-fail and OpenGraph is used, state records `visual_kind=opengraph`
-honestly and a `card_host_failed` event is written.
+fallback. Rendered cards are hosted first on **ImgBB** (`IMGBB_API_KEY`) because
+it serves a direct `image/png` URL that Telegram previews and Telegraph
+`<img>` tags accept; the second attempt is a monthly GitHub
+**prerelease** in this repository (for example `media-2026-11`) using
+the workflow token; the legacy `telegra.ph/upload` endpoint is a last
+attempt only because it can return HTTP 400 `Unknown error` for
+external clients. If all hosts fail and OpenGraph is used, state
+records `visual_kind=opengraph` honestly and a `card_host_failed`
+event is written. The winning host is stored as `visual_host`.
+
+Hosting lifetime matters less than it looks: Telegram, Bluesky and
+Mastodon copy the image into their own storage at post time, and dev.to
+downloads the cover. Only the Telegraph article hot-links the URL, so a
+later ImgBB deletion/expiry would break the image in that article
+alone — never the Telegram or social posts.
 
 ## Alt text rule
 

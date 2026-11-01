@@ -36,6 +36,7 @@ def run_doctor(
         "TELEGRAM_OWNER_CHAT_ID": config.telegram_owner_chat_id is not None,
         "GH_API_TOKEN": bool(config.GitHub_token),
         "GEMINI_API_KEY": bool(config.Gemini_api_key),
+        "IMGBB_API_KEY": bool(config.imgbb_api_key),
         "TELEGRAPH_ACCESS_TOKEN": bool(config.telegraph_access_token),
         "DEV_API_KEY": bool(config.dev_api_key),
         "BLUESKY_APP_PASSWORD": bool(config.bluesky_app_password),

@@ -63,9 +63,12 @@ JSON string `"Unknown error"` from the undocumented
 OpenGraph while still recording `visual_kind=card`.
 
 Fixes: rendered cards are now hosted first as monthly GitHub
-Release prerelease assets from the workflow token, Telegraph upload
-is only the legacy second attempt with the real error surfaced, and
-any OpenGraph fallback is recorded honestly as
+Release prerelease assets from the workflow token, with ImgBB
+(`IMGBB_API_KEY`) as the preferred host because it returns a direct
+`image/png` CDN URL that Telegram and Telegraph both accept; Telegraph
+upload is only the legacy last attempt with the real error surfaced,
+the winning host is recorded as `visual_host`, and any OpenGraph
+fallback is recorded honestly as
 `visual_kind=opengraph` with a `card_host_failed` event. The same
 host helper is used for project, AI Brief and digest cards.
 

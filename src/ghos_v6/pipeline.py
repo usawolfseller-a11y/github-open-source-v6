@@ -18,7 +18,7 @@ from .gate import GateConfig, evaluate
 from .Gemini import GeminiClient, generate_project_content
 from .http import download_bytes, sanitize
 from .media import choose_visual
-from .media_host import GitHubReleaseMediaHost
+from .media_host import GitHubReleaseMediaHost, ImgBBMediaHost
 from .news import (
     extract_primary_urls,
     fetch_primary_text,
@@ -71,32 +71,49 @@ def _host_local_image(
     *,
     filename: str,
     content_type: str = "image/png",
-) -> str:
+) -> tuple[str, str]:
     """Host a rendered card and return a public URL ('' on failure).
 
-    Order: monthly GitHub Release assets (durable, uses the workflow
-    token already present in Actions) -> legacy Telegraph upload.
+    Order: ImgBB (public CDN with a real image content-type, what
+    Telegram previews and Telegraph ``<img>`` tags need) -> monthly
+    GitHub Release assets (we control the repository, no extra vendor)
+    -> legacy Telegraph upload (kept only as a last attempt).
     Callers decide their own final fallback; this helper never
     silently substitutes a different image.
     """
     if not data:
-        return ""
+        return "", ""
+    imgbb = ImgBBMediaHost(getattr(config, "imgbb_api_key", ""))
+    if imgbb.configured:
+        try:
+            return imgbb.upload_image(data, filename=filename, content_type=content_type), "imgbb"
+        except Exception as exc:  # noqa: BLE001 - next host is the fallback
+            logger.warning(
+                "ImgBB upload failed; trying GitHub release host: %s",
+                sanitize(str(exc))[:240],
+            )
     host = GitHubReleaseMediaHost(config.GitHub_token, config.GitHub_repository)
     if host.configured:
         try:
-            return host.upload_image(data, filename=filename, content_type=content_type)
+            return (
+                host.upload_image(data, filename=filename, content_type=content_type),
+                "github-release",
+            )
         except Exception as exc:  # noqa: BLE001 - legacy host is the next attempt
             logger.warning(
                 "GitHub media host failed; trying Telegraph upload: %s",
                 sanitize(str(exc))[:240],
             )
     try:
-        return TelegraphClient(config.telegraph_access_token).upload_image(
-            data, filename=filename, content_type=content_type
+        return (
+            TelegraphClient(config.telegraph_access_token).upload_image(
+                data, filename=filename, content_type=content_type
+            ),
+            "telegraph",
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("Telegraph image upload failed: %s", sanitize(str(exc))[:240])
-        return ""
+        return "", ""
 
 
 def alert_owner(config: Config, title: str, details: str = "") -> None:
@@ -327,8 +344,9 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
         telegraph = TelegraphClient(config.telegraph_access_token)
         image_url = visual.url
         effective_visual_kind = visual.kind
+        visual_host = "readme" if visual.kind == "readme" else ""
         if visual.kind == "card" and visual.data:
-            hosted = _host_local_image(
+            hosted, hosted_by = _host_local_image(
                 config,
                 visual.data,
                 filename=(visual.local_path.name if visual.local_path else "cover.png"),
@@ -336,11 +354,13 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
             )
             if hosted:
                 image_url = hosted
+                visual_host = hosted_by
             else:
                 # Be honest in state/alt text: the card rendered, but
                 # the image readers actually see is GitHub OpenGraph.
                 image_url = f"https://opengraph.githubassets.com/1/{candidate.get('full_name')}"
                 effective_visual_kind = "opengraph"
+                visual_host = "opengraph"
                 store.event("card_host_failed", repo=key, fallback="opengraph")
 
         telegraph_url = ""
@@ -403,6 +423,7 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
                 "telegraph_url": telegraph_url,
                 "image_url": image_url,
                 "visual_kind": effective_visual_kind,
+                "visual_host": visual_host,
                 "card_style": visual.card_style,
                 "crossposts": {
                     "bluesky": {"status": "pending" if config.feature_bluesky else "disabled", "due_at": due.isoformat(), "attempts": 0},
@@ -636,7 +657,7 @@ def news_command(config: Config, store: StateStore, *, force: bool = False) -> d
                     str(brief.get("official_name") or "Primary source"),
                     Path(tmp) / "ai-brief.png",
                 )
-                uploaded = _host_local_image(
+                uploaded, _hosted_by = _host_local_image(
                     config, card_path.read_bytes(), filename=card_path.name
                 )
                 if uploaded:
@@ -693,7 +714,9 @@ def digest_command(config: Config, store: StateStore) -> dict[str, Any]:
     image_url = ""
     with tempfile.TemporaryDirectory() as tmp:
         path = render_digest_card(records, Path(tmp) / "sunday-digest.png")
-        image_url = _host_local_image(config, path.read_bytes(), filename=path.name)
+        image_url, _hosted_by = _host_local_image(
+            config, path.read_bytes(), filename=path.name
+        )
     lines = ["📰 <b>The Open Source Daily — Top 5 of the Week</b>", ""]
     for index, record in enumerate(records, 1):
         name = html.escape(str(record.get("name") or record.get("full_name") or "Project"))

@@ -15,12 +15,15 @@ the repository's "Latest" software release.
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import quote
+
+import requests
 
 from .http import request_json, sanitize
 
@@ -176,3 +179,86 @@ class GitHubReleaseMediaHost:
                     f"{quote(tag, safe='')}/{quote(asset_name, safe='')}"
                 )
         raise self._error("asset upload", status, body)
+
+
+class ImgBBMediaHost:
+    """Upload an image to ImgBB and return its direct CDN URL.
+
+    ImgBB serves the file with a real image content-type, which is what
+    Telegram link previews, Telegraph ``<img>`` tags and dev.to cover
+    images expect.  The API accepts either a binary upload or base64 in
+    the ``image`` field; base64 is used here so the call is a single
+    form POST and stays under the 32 MB limit for our 1200x630 cards.
+    """
+
+    API = "https://api.imgbb.com/1/upload"
+
+    def __init__(
+        self,
+        api_key: str,
+        *,
+        expiration: int | None = None,
+        post_fn: Callable[..., Any] | None = None,
+    ) -> None:
+        self.api_key = (api_key or "").strip()
+        self.expiration = expiration
+        self._post = post_fn or requests.post
+
+    @property
+    def configured(self) -> bool:
+        return bool(self.api_key)
+
+    def upload_image(
+        self,
+        data: bytes,
+        *,
+        filename: str = "card.png",
+        content_type: str = "image/png",
+    ) -> str:
+        if not self.configured:
+            raise MediaHostError("ImgBB is not configured (IMGBB_API_KEY is empty)")
+        if not data:
+            raise MediaHostError("Cannot upload an empty image")
+
+        name = _safe_asset_name(filename, data).rsplit(".", 1)[0]
+        payload: dict[str, Any] = {
+            "key": self.api_key,
+            "image": base64.b64encode(data).decode("ascii"),
+            "name": name,
+        }
+        if self.expiration:
+            payload["expiration"] = str(int(self.expiration))
+        try:
+            response = self._post(self.API, data=payload, timeout=120)
+        except requests.RequestException as exc:
+            raise MediaHostError(
+                f"ImgBB upload request failed: {sanitize(str(exc))[:200]}"
+            ) from exc
+        try:
+            body = response.json()
+        except ValueError as exc:
+            raise MediaHostError(
+                f"ImgBB upload returned non-JSON HTTP {response.status_code}"
+            ) from exc
+
+        success = isinstance(body, dict) and bool(body.get("success"))
+        if response.status_code >= 400 or not success:
+            detail: Any = body
+            if isinstance(body, dict) and isinstance(body.get("error"), dict):
+                detail = body["error"].get("message") or body["error"]
+            raise MediaHostError(
+                f"ImgBB upload failed HTTP {response.status_code}: {sanitize(str(detail))[:200]}"
+            )
+
+        data_obj = body.get("data") if isinstance(body, dict) else None
+        data_obj = data_obj if isinstance(data_obj, dict) else {}
+        image_obj = data_obj.get("image") if isinstance(data_obj.get("image"), dict) else {}
+        url = str(
+            image_obj.get("url")
+            or data_obj.get("display_url")
+            or data_obj.get("url")
+            or ""
+        )
+        if not url.startswith("https://"):
+            raise MediaHostError("ImgBB response has no usable image URL")
+        return url

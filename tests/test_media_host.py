@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from ghos_v6.media_host import GitHubReleaseMediaHost, MediaHostError
+from ghos_v6.media_host import GitHubReleaseMediaHost, ImgBBMediaHost, MediaHostError
 from ghos_v6.telegraph import TelegraphClient, TelegraphError
 
 
@@ -89,3 +89,62 @@ def test_telegraph_upload_surfaces_unknown_error_string(monkeypatch):
     )
     with pytest.raises(TelegraphError, match="Unknown error"):
         TelegraphClient("token").upload_image(b"png-bytes")
+
+
+class _Response:
+    def __init__(self, status_code, body):
+        self.status_code = status_code
+        self._body = body
+
+    def json(self):
+        return self._body
+
+
+def test_imgbb_upload_returns_direct_cdn_image_url():
+    seen = {}
+
+    def fake_post(url, data=None, timeout=None):
+        seen["url"] = url
+        seen["data"] = dict(data or {})
+        return _Response(
+            200,
+            {
+                "data": {
+                    "url": "https://i.ibb.co/abc/cover.png",
+                    "display_url": "https://i.ibb.co/xyz/cover.png",
+                    "image": {"url": "https://i.ibb.co/abc/cover.png"},
+                },
+                "success": True,
+                "status": 200,
+            },
+        )
+
+    host = ImgBBMediaHost("secret-key", post_fn=fake_post)
+    url = host.upload_image(b"\x89PNG-bytes", filename="cover.png")
+    assert url == "https://i.ibb.co/abc/cover.png"
+    assert seen["url"].endswith("/1/upload")
+    assert seen["data"]["key"] == "secret-key"
+    assert seen["data"]["name"].startswith("cover-")
+    assert "expiration" not in seen["data"]  # permanent by default
+
+
+def test_imgbb_reports_vendor_error_without_leaking_key():
+    def fake_post(url, data=None, timeout=None):
+        return _Response(400, {"error": {"message": "Invalid API v1 key."}, "success": False})
+
+    host = ImgBBMediaHost("secret-key", post_fn=fake_post)
+    with pytest.raises(MediaHostError) as exc:
+        host.upload_image(b"png")
+    assert "Invalid API v1 key." in str(exc.value)
+    assert "secret-key" not in str(exc.value)
+
+
+def test_imgbb_expiration_is_passed_when_configured():
+    captured = {}
+
+    def fake_post(url, data=None, timeout=None):
+        captured.update(data or {})
+        return _Response(200, {"data": {"image": {"url": "https://i.ibb.co/x/y.png"}}, "success": True})
+
+    ImgBBMediaHost("k", expiration=604800, post_fn=fake_post).upload_image(b"png")
+    assert captured["expiration"] == "604800"
