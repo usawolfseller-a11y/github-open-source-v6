@@ -33,7 +33,8 @@ def _parser() -> argparse.ArgumentParser:
     doctor.add_argument("--configure-bot", action="store_true", help="Set bot commands/descriptions")
     doctor.add_argument("--news-spike", action="store_true", help="Try Gemini YouTube URL input on the latest WorldofAI video")
 
-    sub.add_parser("collect", help="Collect, enrich, gate and queue candidates")
+    collect = sub.add_parser("collect", help="Collect, enrich, gate and queue candidates")
+    collect.add_argument("--pages", action="append", default=[], help="Extra search page(s) to sweep")
 
     publish = sub.add_parser("publish", help="Publish one queued project")
     publish.add_argument("--slot", default="manual")
@@ -56,7 +57,7 @@ def _parser() -> argparse.ArgumentParser:
 def _run_scheduled(config: Config, store: StateStore, schedule: str) -> dict[str, Any]:
     normalized = " ".join(schedule.split())
     routes: dict[str, Any] = {
-        "20 4 * * *": lambda: collect_command(config, store),
+        "20 4 * * *": lambda: collect_command(config, store, extra_pages=[1, 2]),
         "10 7 * * *": lambda: publish_slot(config, store, "europe_morning"),
         "40 12 * * *": lambda: publish_slot(config, store, "europe_us_morning"),
         "15 17 * * *": lambda: publish_slot(config, store, "us_peak"),

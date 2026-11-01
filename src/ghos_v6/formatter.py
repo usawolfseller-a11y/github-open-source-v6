@@ -363,6 +363,12 @@ def format_project_post(
         lines: list[str] = [header]
         if hook:
             lines.append(f"<b>{_esc(hook)}</b>")
+        # "Why now" answers the reader's first question — "why should I
+        # care today?" — before any feature bullets.  Kept short so it
+        # never becomes a second hook.
+        why_now_text = _clip(str(project.get("why_now") or ""), 180)
+        if why_now_text:
+            lines += ["", f"⏱ <b>Why now:</b> {_esc(why_now_text)}"]
         lines.append(_DIVIDER)
         lines.extend(meta_lines)
         if project.get("is_dual_use"):

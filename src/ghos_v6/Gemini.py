@@ -21,6 +21,8 @@ PROJECT_SCHEMA: dict[str, Any] = {
     "type": "OBJECT",
     "properties": {
         "hook": {"type": "STRING"},
+        "card_hook": {"type": "STRING"},
+        "card_subline": {"type": "STRING"},
         "summary": {"type": "STRING"},
         "key_features": {"type": "ARRAY", "items": {"type": "STRING"}},
         "who_for": {"type": "STRING"},
@@ -37,6 +39,8 @@ PROJECT_SCHEMA: dict[str, Any] = {
     },
     "required": [
         "hook",
+        "card_hook",
+        "card_subline",
         "summary",
         "key_features",
         "who_for",
@@ -67,6 +71,20 @@ def _readme_for_prompt(readme: str, limit: int = 10_000) -> str:
     text = re.sub(r"<!--.*?-->", "", readme or "", flags=re.S)
     text = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", text)
     return text[:limit]
+
+
+def _short_phrase(text: Any, limit: int) -> str:
+    """Cut copy on a clause boundary; never leave a dangling ellipsis."""
+    value = " ".join(str(text or "").split()).rstrip(" .,;:…")
+    if len(value) <= limit:
+        return value
+    window = value[: limit + 2]
+    for separator in (", ", "; ", ": ", " — ", ". "):
+        cut = window.rfind(separator)
+        if cut > 0 and len(value[:cut]) >= limit * 0.6:
+            return value[:cut].rstrip(" ,;:.—-")
+    cut = window.rfind(" ")
+    return (window[:cut] if cut > 0 else window).rstrip(" ,;:.—-")
 
 
 def _clip_sentence(text: Any, limit: int) -> str:
@@ -211,12 +229,25 @@ Output constraints:
 - hook: one benefit-led sentence, <=120 chars. Rewrite; do not copy the
   repository description verbatim. No hype words such as "insane",
   "revolutionary" or "game-changing" unless quantified by the source.
+- card_hook: the headline printed on the 1200x630 cover card. Maximum
+  60 characters, one complete thought, no trailing punctuation, no
+  ellipsis, no repository name (the card prints it separately). It must
+  read as a finished sentence or a punchy noun phrase, e.g.
+  "Browse the web without Chrome" or "Git history for AI agents".
+- card_subline: one clarifying sentence for the card, maximum 130
+  characters, plain language, no ellipsis. It explains who the project
+  is for or what problem it removes.
 - summary: 2-4 sentences that add context beyond the hook; do not
   restate the hook in different words.
 - key_features: 4-6 concrete items, each <=120 chars; start with a
   capability or verb, not marketing adjectives. Each item must add a
   distinct capability or evidence point not already covered by summary.
-- who_for / why_now / verdict: concise, factual
+- who_for: who benefits, one line.
+- why_now: one sentence a reader sees near the top: the concrete reason
+  this project is worth attention at this moment (a capability that
+  only became practical now, a gap it closes, a shift in the ecosystem).
+  No "hot", "trending", "game-changing"; no invented news or funding.
+- verdict: one-line judgement, honest about limits.
 - category: one short broad label such as AI, DevTools, Security, Data,
   Web or CLI; never a long multiword phrase.
 - quick_start: copy or closely paraphrase an actually documented command;
@@ -322,6 +353,8 @@ Worth a serious look if the problem matches your stack. Read the repository docu
 """.strip()
     result = {
         "hook": description or f"Meet {name}",
+        "card_hook": _short_phrase(description or name, 70),
+        "card_subline": _short_phrase(summary, 140),
         "summary": summary,
         "key_features": features,
         "who_for": "Developers and teams looking for an inspectable open-source option in this space.",
@@ -355,6 +388,10 @@ def normalize_project_content(
         safety = "reject"
     result = {
         "hook": _clip_sentence(raw.get("hook") or candidate.get("description"), 140),
+        "card_hook": _short_phrase(raw.get("card_hook") or raw.get("hook"), 70)
+        or _short_phrase(candidate.get("description"), 70),
+        "card_subline": _short_phrase(raw.get("card_subline") or raw.get("summary"), 140)
+        or _short_phrase(candidate.get("description"), 140),
         "summary": _clip_sentence(raw.get("summary") or candidate.get("description"), 800),
         "key_features": features[:6],
         "who_for": _clip_sentence(raw.get("who_for"), 320),

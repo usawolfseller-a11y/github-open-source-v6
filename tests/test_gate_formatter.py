@@ -114,3 +114,56 @@ def test_formatter_hashtags_use_category_and_block_evasion_terms():
     assert "#devtools" in rendered
     assert "#browser" in rendered
     assert "#antidetect" not in rendered
+
+
+def _fresh_repo(**overrides):
+    base = {
+        "full_name": "acme/tool",
+        "name": "tool",
+        "description": "A tool for developers",
+        "language": "Python",
+        "topics": ["cli"],
+        "stars": 500,
+        "forks": 12,
+        "contributors_count": 3,
+        "readme": "x" * 800,
+        "has_readme": True,
+        "license": {"spdx_id": "MIT"},
+        "created_at": (datetime.now(timezone.utc) - timedelta(days=200)).isoformat(),
+        "pushed_at": datetime.now(timezone.utc).isoformat(),
+        "archived": False,
+        "fork": False,
+        "disabled": False,
+    }
+    base.update(overrides)
+    return base
+
+
+def test_gate_rejects_markdown_only_projects_and_velocity_spikes():
+    from ghos_v6.gate import GateConfig, evaluate
+
+    content_repo = _fresh_repo(non_software_reason="language:markdown")
+    assert not evaluate(content_repo, GateConfig()).ok
+
+    spike = _fresh_repo(
+        stars=40_000,
+        created_at=(datetime.now(timezone.utc) - timedelta(days=2)).isoformat(),
+    )
+    reasons = evaluate(spike, GateConfig()).reasons
+    assert any(reason.startswith("velocity_too_high") for reason in reasons)
+
+
+def test_gate_rejects_non_english_readme():
+    from ghos_v6.gate import GateConfig, evaluate
+
+    chinese = _fresh_repo(readme="这是一个用于本地运行大模型的推理引擎。" * 40)
+    assert "readme_not_english" in evaluate(chinese, GateConfig()).reasons
+
+
+def test_search_queries_favour_recent_repositories():
+    from ghos_v6.sources import build_search_queries
+
+    queries = [query for query, _sort in build_search_queries()]
+    created_bounded = [query for query in queries if "created:>=" in query]
+    assert len(created_bounded) >= 6
+    assert any("pushed:>=" in query for query in queries)  # evergreen lane kept

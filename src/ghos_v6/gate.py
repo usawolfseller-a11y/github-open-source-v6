@@ -36,6 +36,23 @@ BLOCK_PATTERNS = [
     r"\bfake (?:followers|likes)\b",
     r"\bransomware\b",
     r"\bbotnet\b",
+    # jailbreak / uncensoring prompt packs: popular in 2026 but not a
+    # product our audience should be pointed at
+    r"\bjailbreak\b",
+    r"\buncensored (?:prompt|model|llm)\b",
+    r"\bbypass (?:safety|guardrails|filter)\b",
+    r"\bprompt injection (?:pack|collection|tools)\b",
+    # piracy and licence-laundering
+    r"\bpirated? (?:games?|movies?|software|content)\b",
+    r"\bbypass (?:drm|licen[cs]e|activation)\b",
+    r"\bgame (?:rom|dump)s? download\b",
+    # pure link-list repositories are not projects
+    r"\bcurated list of (?:viral|trending|awesome)\b",
+    r"\bcollection of (?:viral|trending) (?:videos|prompts|links)\b",
+    # free-tier abuse: "use every paid model without an account/key"
+    r"\bno (?:api )?key (?:needed|required)\b",
+    r"\bwithout (?:an )?(?:account|subscription|api key)\b",
+    r"\bfree (?:premium|paid) (?:access|api)\b",
 ]
 _BLOCK_RE = re.compile("|".join(f"(?:{p})" for p in BLOCK_PATTERNS), re.I)
 
@@ -63,6 +80,13 @@ class GateConfig:
     min_readme_chars: int = 500
     min_contributors: int = 2
     min_forks: int = 5
+    # an "awesome-*"/awesome list is curation, not software
+    max_files: int = 0
+    # velocity alone should not buy airtime: a 40k-star repo that is one
+    # day old is almost always manufactured
+    star_velocity_ceiling: float = 2500.0
+    # and a sustained >6k stars/day across a whole month is a campaign
+    star_daily_ceiling: float = 6000.0
 
 
 @dataclass
@@ -170,6 +194,24 @@ def evaluate(project: dict[str, Any], cfg: GateConfig = GateConfig()) -> GateDec
     if not project.get("has_readme") and len(readme.strip()) < cfg.min_readme_chars:
         reasons.append("no_readme")
 
+    # The channel publishes in English.  A README written almost only in
+    # CJK (or any non-Latin script) cannot be summarised faithfully and
+    # the linked article would not help an English-reading audience.
+    description = str(project.get("description") or "")
+    if description:
+        desc_letters = [ch for ch in description if ch.isalpha()]
+        if len(desc_letters) >= 20:
+            latin = sum(1 for ch in desc_letters if ch.isascii())
+            if latin / len(desc_letters) < 0.6:
+                reasons.append("description_not_english")
+    if readme:
+        sample = readme[:4000]
+        letters = [ch for ch in sample if ch.isalpha()]
+        if len(letters) >= 200:
+            latin = sum(1 for ch in letters if ch.isascii())
+            if latin / len(letters) < 0.6:
+                reasons.append("readme_not_english")
+
     stars = _int(project, "stars", "stargazers_count")
     is_gem = False
     if stars < cfg.min_stars:
@@ -182,6 +224,33 @@ def evaluate(project: dict[str, Any], cfg: GateConfig = GateConfig()) -> GateDec
                 is_gem = True
             else:
                 reasons.append(f"stars<{cfg.min_stars}")
+
+    # Manufactured popularity: a very young repository with an extreme
+    # star count is a launch campaign, not a discovery.  Keep it out of
+    # the daily slot so the channel does not become a hype mirror.
+    if created is not None and created <= now and stars > 0:
+        age_days = max(1, (now - created).days)
+        velocity = stars / age_days
+        ceiling = (
+            cfg.star_velocity_ceiling
+            if age_days <= 14
+            else cfg.star_daily_ceiling
+        )
+        if velocity > ceiling:
+            reasons.append("velocity_too_high")
+
+    # Non-software repositories: guides, notes, prompt dumps, media
+    # collections.  A "living guide" can have 70k stars and still be a
+    # Markdown file, which is not what this channel publishes.
+    non_software = str(project.get("non_software_reason") or "")
+    if non_software:
+        reasons.append(f"not_software:{non_software}")
+
+    # Curation repositories: "awesome-x", "best-of-x", link farms.
+    name = str(project.get("name") or "").lower()
+    description = str(project.get("description") or "").lower()
+    if name.startswith(("awesome", "best-of", "best_of")) or "curated list" in description and "list" in name:
+        reasons.append("curation_repo")
 
     dual = is_dual_use(project)
     return GateDecision(

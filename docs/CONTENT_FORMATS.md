@@ -153,6 +153,30 @@ compare per-post reactions, comments, saves/forwards and Telegram
 joins by CTA variant and by referring surface. Keep the variant only
 if it improves those outcomes without reducing link clicks or trust.
 
+## Card copy rule
+
+The cover card carries three text blocks and none of them may be cut
+with "…":
+
+| Block | Source field | Limit | Rule |
+|---|---|---|---|
+| Project name | `name` | auto-fit | serif, shrinks to fit width |
+| Headline | `card_hook` | 60 chars | one complete thought, no trailing punctuation |
+| Subline | `card_subline` | 130 chars | who it is for / what it removes |
+
+The renderer shrinks type before it drops words, and if copy is still
+too long it cuts on a comma/sentence boundary. The old behaviour —
+wrap two lines, glue "…" — produced headlines such as *"that replaces
+Chrome for AI agents and…"*, which reads like an unfinished sentence
+and is exactly what a reader scrolling a feed skips.
+
+## Post structure rule
+
+After the bold hook the Telegram post answers "why should I care
+today?" with one line (`why_now`), then the proof meta line, then
+What it does. A reader who stops after three lines still learns what
+the project is, why it matters now, and that it is real.
+
 ## Media hosting rule
 
 Visual cascade stays: a valid large README demo (at least 800×250)

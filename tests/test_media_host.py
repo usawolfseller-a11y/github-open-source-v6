@@ -148,3 +148,32 @@ def test_imgbb_expiration_is_passed_when_configured():
 
     ImgBBMediaHost("k", expiration=604800, post_fn=fake_post).upload_image(b"png")
     assert captured["expiration"] == "604800"
+
+
+def test_editorial_card_never_ends_with_ellipsis_and_keeps_all_words():
+    from pathlib import Path
+
+    from PIL import Image
+
+    from ghos_v6.cards import _fit_block, _short_copy
+    from PIL import ImageDraw
+
+    draw = ImageDraw.Draw(Image.new("RGB", (10, 10)))
+    long_copy = (
+        "An open-source, self-hosted, fully local alternative to the entire "
+        "cloud productivity stack"
+    )
+    trimmed = _short_copy(long_copy, 74)
+    _font_obj, lines = _fit_block(draw, trimmed, "serif", 40, 720, 2, minimum=26)
+    assert "…" not in " ".join(lines)
+    # every word that was kept must be rendered, nothing silently dropped
+    assert " ".join(lines).split() == trimmed.split()
+
+
+def test_short_copy_prefers_clause_boundary():
+    from ghos_v6.cards import _short_copy
+
+    value = _short_copy("Run documents and slides on your own hardware, offline and free", 45)
+    assert "…" not in value
+    assert len(value) <= 45
+    assert value.endswith(("hardware", "own hardware"))

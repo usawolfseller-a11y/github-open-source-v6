@@ -51,6 +51,11 @@ def _fit(draw: ImageDraw.ImageDraw, text: str, kind: str, size: int, max_width: 
 
 
 def _wrap(draw: ImageDraw.ImageDraw, text: str, font, max_width: int, max_lines: int = 3) -> list[str]:
+    """Greedy word wrap that never invents a trailing ellipsis.
+
+    Callers that must not lose words should use ``_fit_block``, which
+    shrinks the font instead of cutting the sentence.
+    """
     words = str(text or "").split()
     lines: list[str] = []
     current = ""
@@ -62,14 +67,82 @@ def _wrap(draw: ImageDraw.ImageDraw, text: str, font, max_width: int, max_lines:
         if current:
             lines.append(current)
             if len(lines) >= max_lines:
-                break
+                return lines
         current = word
     if current and len(lines) < max_lines:
         lines.append(current)
-    rendered = " ".join(lines)
-    if lines and rendered != " ".join(words):
-        lines[-1] = lines[-1].rstrip(".,;:") + "…"
     return lines
+
+
+def _fits(draw: ImageDraw.ImageDraw, text: str, font, max_width: int) -> bool:
+    return all(draw.textlength(word, font=font) <= max_width for word in str(text or "").split())
+
+
+def _fit_block(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    kind: str,
+    size: int,
+    max_width: int,
+    max_lines: int,
+    bold: bool = True,
+    minimum: int = 18,
+) -> tuple[object, list[str]]:
+    """Find the largest font size that fits ``text`` in full.
+
+    Unlike ``_wrap`` this never truncates: it reduces the type size
+    until every word fits inside ``max_lines``.  A headline that ends
+    in "…" reads like an unfinished sentence and performs badly in a
+    feed, so the card must either show the whole line or the caller
+    must hand over shorter copy (``card_hook``).
+    """
+    text = " ".join(str(text or "").split())
+    current = size
+    while current >= minimum:
+        font = _font(kind, current, bold)
+        if _fits(draw, text, font, max_width):
+            lines = _wrap(draw, text, font, max_width, max_lines + 1)
+            if len(lines) <= max_lines:
+                return font, lines
+        current -= 2
+    font = _font(kind, minimum, bold)
+    lines = _wrap(draw, text, font, max_width, max_lines + 1)
+    if len(lines) <= max_lines:
+        return font, lines
+    # Last resort: drop whole trailing phrases at a clause boundary so
+    # the card never shows a chopped word or a dangling "…".
+    words = text.split()
+    while len(words) > 3:
+        words = words[:-1]
+        trimmed = " ".join(words).rstrip(" ,;:.—-")
+        lines = _wrap(draw, trimmed, font, max_width, max_lines + 1)
+        if len(lines) <= max_lines:
+            return font, lines
+    return font, _wrap(draw, " ".join(words), font, max_width, max_lines)
+
+
+def _short_copy(text: str, limit: int) -> str:
+    """Trim ``text`` to ``limit`` characters at a clause boundary.
+
+    Used only when the model did not supply dedicated short copy.  It
+    prefers cutting on a comma/dash/dot so the result reads as a
+    complete thought rather than a chopped sentence, and never adds
+    an ellipsis.
+    """
+    text = " ".join(str(text or "").split()).rstrip(" .,;:…")
+    if len(text) <= limit:
+        return text
+    # A comma clause is usually the most natural place to stop ("Run
+    # documents and slides on your own hardware", not "…on your own").
+    # Look slightly past the limit so a comma sitting exactly at the
+    # boundary still counts, but never return more than ``limit`` chars.
+    window = text[: limit + 2]
+    for separator in (", ", "; ", ": ", " — ", ". "):
+        cut = window.rfind(separator)
+        if cut > 0 and len(text[:cut]) >= limit * 0.6:
+            return text[:cut].rstrip(" ,;:.—-")
+    cut = window.rfind(" ")
+    return (window[:cut] if cut > 0 else window).rstrip(" ,;:.—-")
 
 
 def _rounded(draw, box, radius, fill=None, outline=None, width=1):
@@ -169,20 +242,30 @@ def render_editorial_card(
     title_font = _fit(draw, name, "serif", 104, 720, True, 44)
     draw.text((56, 165), name, font=title_font, fill="#17130d")
 
-    hook = str(generated.get("hook") or candidate.get("description") or "")
-    hook_lines = _wrap(draw, hook, _font("serif", 38, True), 720, 2)
-    y = 292
+    hook = _short_copy(
+        str(generated.get("card_hook") or generated.get("hook") or candidate.get("description") or ""),
+        74,
+    )
+    hook_font, hook_lines = _fit_block(draw, hook, "serif", 40, 720, 2, minimum=26)
+    y = 288 + max(0, (2 - len(hook_lines)) * 12)
     for index, line in enumerate(hook_lines):
         color = "#b3342a" if index == len(hook_lines) - 1 and len(hook_lines) > 1 else "#393126"
-        draw.text((62, y), line, font=_font("serif", 38, True), fill=color)
-        y += 47
+        draw.text((62, y), line, font=hook_font, fill=color)
+        y += int(hook_font.size * 1.22)
 
-    summary = str(generated.get("summary") or candidate.get("description") or "")
-    summary_lines = _wrap(draw, summary, _font("sans", 24), 705, 2)
-    y = max(y + 8, 405)
+    summary = _short_copy(
+        str(generated.get("card_subline") or generated.get("summary") or candidate.get("description") or ""),
+        150,
+    )
+    summary_font, summary_lines = _fit_block(
+        draw, summary, "sans", 25, 705, 2, bold=False, minimum=17
+    )
+    # subline sits in its own band so a short headline never leaves a
+    # dead strip between the copy and the stats rule
+    y = 360 if len(hook_lines) <= 1 else 402
     for line in summary_lines:
-        draw.text((62, y), line, font=_font("sans", 24), fill="#514940")
-        y += 31
+        draw.text((62, y), line, font=summary_font, fill="#514940")
+        y += int(summary_font.size * 1.3)
 
     language = str(candidate.get("language") or "Open Source")
     draw.ellipse((885, 165, 1115, 395), outline="#b3342a", width=6)
@@ -243,7 +326,8 @@ def render_terminal_card(
 
     hook = "// " + str(generated.get("hook") or candidate.get("description") or "")
     y = 278
-    for line in _wrap(draw, hook, _font("mono", 27), 760, 3):
+    _hook_font, _hook_lines = _fit_block(draw, _short_copy(hook, 140), "mono", 27, 760, 3, bold=False, minimum=18)
+    for line in _hook_lines:
         draw.text((66, y), line, font=_font("mono", 27), fill="#76f79a")
         y += 36
 

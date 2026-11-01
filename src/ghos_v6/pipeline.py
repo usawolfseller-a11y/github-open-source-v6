@@ -128,9 +128,14 @@ def alert_owner(config: Config, title: str, details: str = "") -> None:
         logger.exception("Owner alert failed")
 
 
-def collect_command(config: Config, store: StateStore) -> dict[str, Any]:
+def collect_command(
+    config: Config,
+    store: StateStore,
+    *,
+    extra_pages: list[int] | None = None,
+) -> dict[str, Any]:
     started = iso_now()
-    candidates = collect_candidates(config)
+    candidates = collect_candidates(config, extra_pages=extra_pages or [])
     candidates = [candidate for candidate in candidates if not store.is_published(candidate)]
     candidates = rank_candidates(candidates)
     api = GitHubApi(config.GitHub_token)

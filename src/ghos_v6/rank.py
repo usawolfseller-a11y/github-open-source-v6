@@ -52,6 +52,12 @@ def score_candidate(candidate: dict[str, Any], *, now: datetime | None = None) -
         content += 1.5
     content = min(15.0, content)
 
+    # Repo farms: an owner with many young, similarly named repos is
+    # usually farming the trending page rather than shipping software.
+    same_owner = int(candidate.get("owner_repo_count") or 0)
+    if same_owner >= 5:
+        momentum -= min(10.0, (same_owner - 4) * 2.0)
+
     base = quality + freshness + momentum + content
     # Reserve up to 15 points for diversity at selection time. Give a small
     # neutral baseline so single-candidate scores remain on a 0..100 scale.

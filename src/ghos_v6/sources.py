@@ -59,6 +59,62 @@ def repo_url(full_name: str) -> str:
     return f"https://github.com/{full_name}"
 
 
+_TEXT_ONLY_TOPICS = {
+    "awesome",
+    "awesome-list",
+    "list",
+    "resources",
+    "roadmap",
+    "guide",
+    "guides",
+    "tutorial",
+    "tutorials",
+    "book",
+    "books",
+    "notes",
+    "cheatsheet",
+    "interview",
+    "interview-questions",
+    "learning",
+    "course",
+    "prompts",
+    "prompt-library",
+}
+_MEDIA_TOPICS = {"wallpapers", "images", "photos", "videos", "music", "dataset"}
+
+
+def non_software_reason(item: dict[str, Any]) -> str:
+    """Return why a repository is content rather than software.
+
+    GitHub's "language" is the primary signal: guides, prompt packs and
+    media collections are almost always detected as Markdown or empty.
+    """
+    language = str(item.get("language") or "").strip().lower()
+    topics = {str(topic).lower() for topic in item.get("topics") or []}
+    description = str(item.get("description") or "").lower()
+    name = str(item.get("name") or "").lower()
+
+    if language in {"markdown", "tex", "asciidoc", "rst"}:
+        return f"language:{language}"
+    if topics & _TEXT_ONLY_TOPICS:
+        return f"topic:{sorted(topics & _TEXT_ONLY_TOPICS)[0]}"
+    if topics & _MEDIA_TOPICS:
+        return f"topic:{sorted(topics & _MEDIA_TOPICS)[0]}"
+    if name.startswith(("awesome-", "awesome_", "best-of-", "best_of-")):
+        return "name:awesome"
+    for marker in (
+        "curated list",
+        "a list of",
+        "collection of prompts",
+        "cheat sheet",
+        "interview questions",
+        "roadmap to",
+    ):
+        if marker in description:
+            return f"description:{marker.replace(' ', '-')}"
+    return ""
+
+
 def map_repo(item: dict[str, Any], source: str) -> dict[str, Any]:
     full_name = str(item.get("full_name") or "")
     return {
@@ -87,6 +143,7 @@ def map_repo(item: dict[str, Any], source: str) -> dict[str, Any]:
         "default_branch": item.get("default_branch") or "main",
         "sources": [source],
         "source_name": source,
+        "non_software_reason": non_software_reason(item),
     }
 
 
@@ -119,10 +176,23 @@ class GitHubApi:
             parsed = {}
         return response.status_code, parsed, response
 
-    def search(self, query: str, *, sort: str = "stars", per_page: int = 25) -> list[dict[str, Any]]:
+    def search(
+        self,
+        query: str,
+        *,
+        sort: str = "stars",
+        per_page: int = 25,
+        page: int = 1,
+    ) -> list[dict[str, Any]]:
         status, data, _ = self.get_json(
             "/search/repositories",
-            params={"q": query, "sort": sort, "order": "desc", "per_page": per_page},
+            params={
+                "q": query,
+                "sort": sort,
+                "order": "desc",
+                "per_page": per_page,
+                "page": max(1, min(page, 10)),
+            },
         )
         if status != 200:
             logger.warning("GitHub search failed status=%s query=%r", status, query)
@@ -161,11 +231,23 @@ class GitHubApi:
 
 
 def build_search_queries(now: datetime | None = None) -> list[tuple[str, str]]:
+    """Rotation that favours *new arrivals* over the same evergreen hits.
+
+    The previous rotation sorted broad queries by "stars", so every run
+    returned the same top-100 by popularity (LangChain, Unsloth, …).
+    Because the pipeline deduplicates by repository forever, that
+    silently consumed the whole universe of "famous" repos and the feed
+    would run dry.  Now most queries are bounded by creation date and
+    sorted by recency/velocity, with a small "evergreen but actively
+    developed" lane so older projects are not lost entirely.
+    """
     now = now or datetime.now(timezone.utc)
+    pushed_14 = (now - timedelta(days=14)).date().isoformat()
     pushed_45 = (now - timedelta(days=45)).date().isoformat()
-    pushed_21 = (now - timedelta(days=21)).date().isoformat()
-    created_240 = (now - timedelta(days=240)).date().isoformat()
-    created_120 = (now - timedelta(days=120)).date().isoformat()
+    created_7 = (now - timedelta(days=7)).date().isoformat()
+    created_30 = (now - timedelta(days=30)).date().isoformat()
+    created_90 = (now - timedelta(days=90)).date().isoformat()
+
     languages_by_day = [
         ["Python", "TypeScript", "Rust"],
         ["Go", "JavaScript", "Java"],
@@ -176,23 +258,37 @@ def build_search_queries(now: datetime | None = None) -> list[tuple[str, str]]:
         ["Rust", "Python", "Swift"],
     ]
     languages = languages_by_day[now.weekday() % len(languages_by_day)]
+
     queries: list[tuple[str, str]] = []
+    # 1. fresh arrivals, any language, sorted by momentum
+    queries.append((f"created:>={created_7} stars:>=10 archived:false fork:false", "stars"))
+    queries.append((f"created:>={created_30} stars:>=50 archived:false fork:false", "stars"))
+    queries.append((f"created:>={created_90} stars:>=150 archived:false fork:false", "stars"))
+    # 2. per-language fresh lane (birthday problem avoided: daily rotation)
     for language in languages:
         queries.append(
-            (
-                f"stars:100..30000 pushed:>={pushed_45} archived:false fork:false language:{language}",
-                "stars",
-            )
+            (f"created:>={created_30} stars:>=25 archived:false fork:false language:{language}", "stars")
         )
-    queries.extend(
-        [
-            (f"stars:1000..100000 pushed:>={pushed_21} archived:false fork:false", "updated"),
-            (f"stars:30..600 created:>={created_120} pushed:>={pushed_21} archived:false fork:false", "stars"),
-            (f"created:>={created_240} stars:>=100 pushed:>={pushed_21} archived:false fork:false topic:developer-tools", "stars"),
-            (f"stars:>=100 pushed:>={pushed_21} archived:false fork:false topic:self-hosted", "updated"),
-            (f"stars:>=100 pushed:>={pushed_21} archived:false fork:false topic:ai", "updated"),
-        ]
-    )
+    # 3. topic firehose: new projects in areas our audience cares about
+    topics_by_day = [
+        ["ai-agents", "llm", "developer-tools"],
+        ["self-hosted", "cli", "automation"],
+        ["security", "observability", "database"],
+        ["mcp", "rag", "productivity"],
+        ["webdev", "terminal", "rust"],
+        ["ai-agents", "self-hosted", "devops"],
+        ["llm", "developer-tools", "homelab"],
+    ]
+    for topic in topics_by_day[now.weekday() % len(topics_by_day)]:
+        queries.append(
+            (f"topic:{topic} created:>={created_30} stars:>=20 archived:false fork:false", "stars")
+        )
+    # 4. evergreen lane: older but genuinely active projects, mid-size
+    queries.append((f"pushed:>={pushed_14} stars:300..6000 archived:false fork:false", "updated"))
+    for language in languages[:2]:
+        queries.append(
+            (f"pushed:>={pushed_45} stars:100..5000 archived:false fork:false language:{language}", "updated")
+        )
     return queries
 
 
@@ -218,48 +314,63 @@ def merge_candidate(target: dict[str, dict[str, Any]], candidate: dict[str, Any]
             existing[field] = candidate[field]
 
 
-def collect_GitHub_search(api: GitHubApi, merged: dict[str, dict[str, Any]]) -> None:
-    for query, sort in build_search_queries():
-        for item in api.search(query, sort=sort, per_page=25):
-            merge_candidate(merged, map_repo(item, "github_search"))
+def collect_GitHub_search(
+    api: GitHubApi,
+    merged: dict[str, dict[str, Any]],
+    *,
+    pages: list[int] | None = None,
+) -> None:
+    now = datetime.now(timezone.utc)
+    page_list = pages or [(now.timetuple().tm_yday % 4) + 1]
+    for query, sort in build_search_queries(now):
+        for page in page_list:
+            for item in api.search(query, sort=sort, per_page=25, page=page):
+                merge_candidate(merged, map_repo(item, "github_search"))
         time.sleep(0.15)
 
 
-def collect_hn(merged: dict[str, dict[str, Any]], *, days: int = 14) -> None:
+def collect_hn(merged: dict[str, dict[str, Any]], *, days: int = 7) -> None:
+    """Hacker News stories that link to a repository.
+
+    Pages 1-3 of the last N days; each hit carries its points so rank.py
+    can value community validation instead of raw star count.
+    """
     since = int((datetime.now(timezone.utc) - timedelta(days=days)).timestamp())
-    status, data, _ = request_json(
-        "GET",
-        "https://hn.algolia.com/api/v1/search_by_date",
-        params={
-            "query": "github.com",
-            "tags": "story",
-            "hitsPerPage": 100,
-            "numericFilters": f"created_at_i>{since},points>=5",
-        },
-        retries=1,
-    )
-    if status != 200 or not isinstance(data, dict):
-        logger.warning("HN Algolia failed status=%s", status)
-        return
-    for hit in data.get("hits") or []:
-        text = " ".join(
-            str(hit.get(key) or "") for key in ("url", "story_url", "story_text", "title")
-        )
-        full_name = full_name_from_url(text)
-        if not full_name:
-            continue
-        merge_candidate(
-            merged,
-            {
-                "full_name": full_name,
-                "name": full_name.split("/")[-1],
-                "url": repo_url(full_name),
-                "sources": ["hacker_news"],
-                "source_name": "hacker_news",
-                "hn_points": int(hit.get("points") or 0),
-                "hn_title": hit.get("title") or "",
+    for page in range(3):
+        status, data, _ = request_json(
+            "GET",
+            "https://hn.algolia.com/api/v1/search_by_date",
+            params={
+                "query": "github.com",
+                "tags": "story",
+                "hitsPerPage": 100,
+                "page": page,
+                "numericFilters": f"created_at_i>{since},points>=5",
             },
+            retries=1,
         )
+        if status != 200 or not isinstance(data, dict):
+            logger.warning("HN Algolia failed status=%s page=%s", status, page)
+            return
+        hits = data.get("hits") or []
+        if not hits:
+            return
+        for hit in hits:
+            url = str(hit.get("url") or "")
+            full_name = full_name_from_url(url)
+            if not full_name:
+                continue
+            merge_candidate(
+                merged,
+                {
+                    "full_name": full_name,
+                    "name": full_name.split("/")[-1],
+                    "url": repo_url(full_name),
+                    "hn_points": int(hit.get("points") or 0),
+                    "sources": ["hacker_news"],
+                    "source_name": "hacker_news",
+                },
+            )
 
 
 def collect_telegram_web(merged: dict[str, dict[str, Any]], channels: tuple[str, ...]) -> None:
@@ -292,13 +403,37 @@ def collect_telegram_web(merged: dict[str, dict[str, Any]], channels: tuple[str,
             )
 
 
-def collect_candidates(config: Any) -> list[dict[str, Any]]:
+DEFAULT_TELEGRAM_SOURCES = (
+    "open_source_friend",
+    "github_repos",
+    "githubtrending",
+    "gitradar_",
+    "gitbless",
+)
+
+
+def collect_candidates(
+    config: Any,
+    *,
+    extra_pages: list[int] | None = None,
+) -> list[dict[str, Any]]:
     api = GitHubApi(config.GitHub_token)
     merged: dict[str, dict[str, Any]] = {}
-    collect_GitHub_search(api, merged)
+    collect_GitHub_search(api, merged, pages=extra_pages)
     collect_hn(merged)
-    if config.telegram_source_channels:
-        collect_telegram_web(merged, config.telegram_source_channels)
+    channels = tuple(config.telegram_source_channels or DEFAULT_TELEGRAM_SOURCES)
+    collect_telegram_web(merged, channels)
+
+    # Repo farms: one owner shipping a dozen near-identical repos should
+    # not take over the queue.  Counting here keeps rank/gate cheap.
+    per_owner: dict[str, int] = {}
+    for candidate in merged.values():
+        owner = str(candidate.get("full_name") or "").split("/")[0].lower()
+        if owner:
+            per_owner[owner] = per_owner.get(owner, 0) + 1
+    for candidate in merged.values():
+        owner = str(candidate.get("full_name") or "").split("/")[0].lower()
+        candidate["owner_repo_count"] = per_owner.get(owner, 0)
     return list(merged.values())
 
 
