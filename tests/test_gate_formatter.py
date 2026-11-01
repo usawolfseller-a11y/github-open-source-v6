@@ -243,3 +243,26 @@ def test_missing_values_degrade_to_a_dash_not_a_fake_zero():
     font = _font("sans", 20, True)
     assert _glyph_safe("—", font) == "—"  # DejaVu has the em dash
     assert _glyph_safe("\U0001f527", font) == "-"  # emoji would be tofu
+
+
+def test_photo_caption_fits_telegrams_1024_ceiling():
+    """Telegram rejects a caption longer than 1024 chars — the old flow fell
+    back to a link preview, which is displayed even smaller than the card."""
+    from ghos_v6.formatter import CAPTION_LIMIT, format_project_caption, utf16_len, visible_text
+
+    project = {
+        "name": "dbx",
+        "full_name": "t8y2/dbx",
+        "stars": 28443,
+        "forks": 2598,
+        "language": "Rust",
+        "license": {"spdx_id": "Apache-2.0"},
+        "pushed_at": "2026-10-31T00:00:00Z",
+        "hook": "Manage over 100 different database types " * 4,
+        "key_features": ["Connect to over 100 databases " * 3] * 6,
+        "discussion_question": "Which database do you query most?",
+    }
+    caption = format_project_caption(project)
+    assert CAPTION_LIMIT == 1024
+    assert utf16_len(visible_text(caption)) <= CAPTION_LIMIT
+    assert "@GitHub_Open_Source" in caption

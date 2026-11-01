@@ -423,3 +423,67 @@ def format_project_post(
     if utf16_len(visible_text(out)) > max_visible:  # pathological metadata; hard fallback
         out = render(features[:3], [], _clip(summary, 200), False)
     return out
+
+
+CAPTION_LIMIT = 1024  # Telegram's hard limit for photo captions
+
+
+def format_project_caption(project: dict[str, Any], *, limit: int = CAPTION_LIMIT) -> str:
+    """Photo caption that fits Telegram's 1024-character ceiling.
+
+    A photo post and a text post are not the same medium: anything longer
+    than ``CAPTION_LIMIT`` cannot be sent as a caption at all, and the old
+    pipeline fell back to a link preview — which is displayed even smaller
+    than the card itself. The caption therefore keeps only what a reader
+    needs to decide whether to open the card: name, hook, proof line and a
+    question. The full breakdown lives behind the button.
+    """
+    name = _esc(str(project.get("name") or "Unknown project"))
+    hook = _clip(str(project.get("hook") or project.get("description") or ""), 190)
+    lang = str(project.get("language") or "").strip()
+    lic = _license_name(project)
+    activity_icon, activity_label = _activity_parts(project)
+    stats = (
+        f"⭐ <b>{_fmt_num(project.get('stars'))}</b> stars · "
+        f"🍴 <b>{_fmt_num(project.get('forks'))}</b> forks"
+    )
+    stack_bits = []
+    if lang:
+        stack_bits.append(f"{_language_icon(project)} <b>{_esc(lang)}</b>")
+    if lic:
+        stack_bits.append(f"📜 <b>{_esc(lic)}</b>")
+    if activity_label:
+        stack_bits.append(f"{activity_icon} <b>{_esc(activity_label)}</b>")
+    parts = [f"🚀 <b>{name}</b>"]
+    if hook:
+        parts.append(f"<b>{hook}</b>")
+    parts.append("──────────────")
+    parts.append(stats)
+    if stack_bits:
+        parts.append(" · ".join(stack_bits))
+    features = [_clip(str(f), 110) for f in (project.get("key_features") or []) if str(f).strip()][:3]
+    if features:
+        parts.append("")
+        parts.append("✨ <b>What stands out</b>")
+        parts.extend(f"▸ {_feature_html(feature)}" for feature in features)
+    question = _clip(str(project.get("discussion_question") or ""), 150)
+    if question:
+        parts.append("")
+        parts.append(f"💬 <i>{_esc(question)}</i>")
+    parts.append("")
+    parts.append(f'📣 <a href="https://t.me/GitHub_Open_Source"><b>@GitHub_Open_Source</b></a> — daily open-source picks')
+    caption = "\n".join(parts)
+    if utf16_len(visible_text(caption)) <= limit:
+        return caption
+    # Trim bullets first, then features, never the footer.
+    while features and utf16_len(visible_text(caption)) > limit:
+        features = features[:-1]
+        parts = [p for p in parts if not str(p).startswith("▸ ")]
+        if features:
+            insert_at = parts.index("✨ <b>What stands out</b>") + 1
+            for offset, feature in enumerate(features):
+                parts.insert(insert_at + offset, f"▸ {_feature_html(feature)}")
+        else:
+            parts = [p for p in parts if p != "✨ <b>What stands out</b>"]
+        caption = "\n".join(parts)
+    return caption

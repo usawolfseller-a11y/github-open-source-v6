@@ -518,7 +518,10 @@ def render_editorial_card(
     draw.line((55, 92, 1145, 92), fill="#1b1710", width=4)
     draw.line((55, 103, 1145, 103), fill="#b3342a", width=3)
     draw.text((58, 116), date_line, font=_font("sans", 18, True), fill="#5c5c5c")
-    draw.text((1142, 112), issue, font=_font("serif", 24, True), fill="#b3342a", anchor="ra")
+    # 24 px serif renders ~20 px per character in caps: 300 px is not enough
+    # for "OPEN SOURCE FILE" and the label would cross the right rule.
+    issue_font = _fit(draw, issue, "serif", 24, 470, True, 14)
+    draw.text((1142, 112), issue, font=issue_font, fill="#b3342a", anchor="ra")
     kicker = "HIDDEN GEM FILE" if candidate.get("is_hidden_gem") else "PROJECT FILE"
     draw.text((58, 145), kicker, font=_font("sans", 17, True), fill="#b3342a")
 
@@ -576,7 +579,14 @@ def render_editorial_card(
     # Copy sits directly under the name: reading order matters more than
     # filling the band. Any leftover space stays above the stats rule,
     # which acts as the visual anchor of the lower half.
-    y = band_top
+    # Without a stack row the band has spare height; push the copy down a
+    # little so the gap above the stats rule does not read as a mistake.
+    if not has_stack:
+        leftover = band_bottom - (band_top + hook_height + 12 + sub_height)
+        y_offset = int(min(46, max(0, leftover) * 0.36))
+    else:
+        y_offset = 0
+    y = band_top + y_offset
     for index, line in enumerate(hook_lines):
         color = "#b3342a" if index == len(hook_lines) - 1 and len(hook_lines) > 1 else "#393126"
         draw.text((62, y), line, font=hook_font, fill=color)
@@ -825,14 +835,14 @@ def render_project_card(
     output_path: Path,
     *,
     issue_number: int | None = None,
-    portrait: bool = True,
+    portrait: bool = False,
 ) -> tuple[Path, str]:
     """Render the card for a Telegram post.
 
-    ``portrait=True`` uses the 4:5 layout: Telegram displays a 1200x630 card
-    about 420 px wide and every 15 px label shrinks to ~5 px, which is what
-    made the first live posts look smeared. The portrait card fills the same
-    column with roughly twice the type size.
+    Landscape (1200x630) is the owner's choice as of 2026-11-01. The 4:5
+    portrait layout stays available behind ``portrait=True`` for feed tests;
+    it fills the same phone column with roughly twice the type size, but the
+    horizontal card is what the channel uses.
     """
     if _is_terminal(candidate, generated):
         return render_terminal_card(candidate, generated, output_path), "neon_terminal"

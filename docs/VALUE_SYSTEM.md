@@ -83,6 +83,22 @@ model is not written at all — a two-sample "insight" is noise.
 the model is fighting the editorial score. Read the raw posts before
 trusting it.
 
+## 3b. Photo posts vs text posts
+
+Telegram caps a **photo caption at 1024 characters**. The first pipeline sent
+a 2 000–2 500 character text with a preview image, which Telegram renders as
+a small link preview — smaller than the card itself. That is why the live
+channel looked smeared.
+
+The publish path is now:
+
+1. upload the card as a photo (`sendPhoto`),
+2. caption = name + hook + proof line + three features + one question
+   (`format_project_caption`, hard-limited to 1024),
+3. buttons = GitHub / Homepage / Full breakdown,
+4. the full text is still produced (`format_project_post`) for Telegraph and
+   for the text-only fallback.
+
 ## 4. Weekly cycle
 
 | When (UTC) | What | Where |
