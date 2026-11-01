@@ -158,6 +158,22 @@ def telegram_cta_line(record: dict[str, Any], *, compact: bool = False) -> str:
     )
 
 
+def facebook_media_url(record: dict[str, Any]) -> str:
+    """Public image URL for the Page post, or ``""``.
+
+    ``opengraph.githubassets.com`` is reachable only from GitHub's own
+    pages for the repo owner context — Meta often fails to fetch it, and the
+    result is a Page post with no picture. Better to hand make.com an empty
+    string and let the scenario fall back than to ship a dead URL.
+    """
+    url = str(record.get("image_url") or "")
+    if not url.startswith("https://"):
+        return ""
+    if "opengraph.githubassets.com" in url:
+        return ""
+    return url
+
+
 def Facebook_link_url(record: dict[str, Any]) -> str:
     return breakdown_url(record) or repo_url(record)
 

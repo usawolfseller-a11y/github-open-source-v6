@@ -955,7 +955,7 @@ def facebook_handoff_command(config: Config, store: StateStore, *, limit: int = 
     Sheets settings exist. Everything is logged, and a Sheets outage never
     stops the Telegram pipeline.
     """
-    from .content_adapters import build_Facebook_text
+    from .content_adapters import build_Facebook_text, facebook_media_url
     from .sheets import append_rows, row_for
 
     pending = [
@@ -973,7 +973,7 @@ def facebook_handoff_command(config: Config, store: StateStore, *, limit: int = 
     for record in selected:
         generated = record.get("generated") or {}
         text = build_Facebook_text(record, generated)
-        rows.append(row_for(record, text, media_url=str(record.get("image_url") or "")))
+        rows.append(row_for(record, text, media_url=facebook_media_url(record)))
     result = append_rows(
         config.sheets_spreadsheet_id,
         rows,

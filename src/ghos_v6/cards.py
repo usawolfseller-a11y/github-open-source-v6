@@ -497,7 +497,7 @@ def _draw_stack_row(
     for text, glyph in plans:
         image.paste(glyph, (cursor, top), glyph)
         if text:
-            draw.text((cursor + size + gaps["icon_text"], top + 9), text, font=font, fill="#514940")
+            draw.text((cursor + size + gaps["icon_text"], top + 9), text, font=font, fill="#4a4a4a")
             cursor += size + gaps["icon_text"] + int(draw.textlength(text, font=font)) + gaps["item"]
         else:
             cursor += size + gaps["icon_only"]
@@ -517,7 +517,7 @@ def render_editorial_card(
     draw.text((600, 36), "THE OPEN SOURCE DAILY", font=_font("serif", 34, True), fill="#1b1710", anchor="ma")
     draw.line((55, 92, 1145, 92), fill="#1b1710", width=4)
     draw.line((55, 103, 1145, 103), fill="#b3342a", width=3)
-    draw.text((58, 116), date_line, font=_font("sans", 17, True), fill="#655c4d")
+    draw.text((58, 116), date_line, font=_font("sans", 18, True), fill="#5c5c5c")
     draw.text((1142, 112), issue, font=_font("serif", 24, True), fill="#b3342a", anchor="ra")
     kicker = "HIDDEN GEM FILE" if candidate.get("is_hidden_gem") else "PROJECT FILE"
     draw.text((58, 145), kicker, font=_font("sans", 17, True), fill="#b3342a")
@@ -529,7 +529,7 @@ def render_editorial_card(
     if draw.textlength(name, font=title_font) > _TITLE_MAX_W:
         _condensed_text(image, (56, 165), name, title_font, "#17130d", _TITLE_MAX_W)
     else:
-        draw.text((56, 165), name, font=title_font, fill="#17130d")
+        draw.text((56, 165), name, font=title_font, fill="#111111")
 
     hook = _short_copy(
         str(generated.get("card_hook") or generated.get("hook") or candidate.get("description") or ""),
@@ -583,7 +583,7 @@ def render_editorial_card(
         y += int(hook_font.size * 1.22)
     y += 12
     for line in sub_lines:
-        draw.text((62, y), line, font=sub_font, fill="#514940")
+        draw.text((62, y), line, font=sub_font, fill="#4a4a4a")
         y += int(sub_font.size * 1.32)
 
     language = str(candidate.get("language") or "Open Source")
@@ -621,7 +621,7 @@ def render_editorial_card(
     # "Built with" row: language + tools detected from topics/description.
     if has_stack:
         _draw_stack_row(image, draw, candidate, right_limit=1140)
-        draw.line((55, 460, 1145, 460), fill="#d8cdb8", width=2)
+        draw.line((55, 460, 1145, 460), fill="#cdbfa6", width=3)
 
     y = 492
     draw.line((55, y, 1145, y), fill="#1b1710", width=3)
@@ -639,16 +639,16 @@ def render_editorial_card(
             label_x = x + 28
         else:
             label_x = x
-        draw.text((label_x, y + 17), label, font=_font("sans", 17, True), fill="#655c4d")
+        draw.text((label_x, y + 17), label, font=_font("sans", 18, True), fill="#5c5c5c")
         value_font = _fit(draw, str(value), "serif", 35, 220, True, 20)
         draw.text((x, y + 44), _glyph_safe(str(value), value_font), font=value_font, fill="#1b1710")
     draw.line((55, 585, 1145, 585), fill="#1b1710", width=3)
     clock = load_ui_icon("clock", 16)
     if clock is not None:
         image.paste(clock, (58, 596), clock)
-        draw.text((80, 594), _freshness(candidate), font=_font("sans", 17, True), fill="#514940")
+        draw.text((80, 594), _freshness(candidate), font=_font("sans", 17, True), fill="#4a4a4a")
     else:
-        draw.text((58, 594), _freshness(candidate), font=_font("sans", 17, True), fill="#514940")
+        draw.text((58, 594), _freshness(candidate), font=_font("sans", 17, True), fill="#4a4a4a")
     draw.text((1145, 594), BRAND, font=_font("sans", 19, True), fill="#b3342a", anchor="ra")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     image.save(output_path)
@@ -771,7 +771,7 @@ def render_ai_brief_card(
     cell_widths = (430, 250, 200)
     x = 145
     for (key, value), width in zip(cells, cell_widths):
-        draw.text((x, 472), key, font=_font("sans", 15, True), fill=(150, 205, 255))
+        draw.text((x, 472), key, font=_font("sans", 17, True), fill=(150, 205, 255))
         value_font = _fit(draw, value, "sans", 26, width - 20, True, 15)
         draw.text((x, 497), value, font=value_font, fill="white")
         x += width
@@ -787,7 +787,7 @@ def render_digest_card(records: Iterable[dict[str, Any]], output_path: Path) -> 
     draw.line((55, 82, 1145, 82), fill="#1b1710", width=4)
     draw.line((55, 92, 1145, 92), fill="#b3342a", width=3)
     draw.text((58, 110), "SUNDAY EDITION · WEEK IN REVIEW", font=_font("sans", 18, True), fill="#b3342a")
-    draw.text((56, 138), "Top 5 of the Week", font=_font("serif", 72, True), fill="#17130d")
+    draw.text((56, 138), "Top 5 of the Week", font=_font("serif", 72, True), fill="#111111")
     y = 240
     for index, record in enumerate(list(records)[:5], 1):
         name = str(record.get("name") or record.get("full_name") or "Project")
@@ -799,11 +799,11 @@ def render_digest_card(records: Iterable[dict[str, Any]], output_path: Path) -> 
         else:
             metric = f"score {float(record.get('score') or 0):.0f}"
         draw.text((62, y), str(index), font=_font("serif", 38, True), fill="#b3342a")
-        draw.text((115, y), name, font=_fit(draw, name, "sans", 32, 560, True, 19), fill="#17130d")
-        draw.text((700, y + 4), meta, font=_font("sans", 21), fill="#655c4d")
-        draw.text((1135, y), metric, font=_font("serif", 29, True), fill="#17130d", anchor="ra")
+        draw.text((115, y), name, font=_fit(draw, name, "sans", 32, 560, True, 19), fill="#111111")
+        draw.text((700, y + 4), meta, font=_font("sans", 21), fill="#5c5c5c")
+        draw.text((1135, y), metric, font=_font("serif", 29, True), fill="#111111", anchor="ra")
         y += 58
-        draw.line((60, y - 10, 1140, y - 10), fill="#d8cdb8", width=2)
+        draw.line((60, y - 10, 1140, y - 10), fill="#cdbfa6", width=3)
     top = list(records)[:5]
     measured = sum(1 for r in top if r.get("views_at_24h") or r.get("views"))
     if measured == len(top) and measured:
@@ -812,7 +812,7 @@ def render_digest_card(records: Iterable[dict[str, Any]], output_path: Path) -> 
         note = "Views where measured · editorial score otherwise"
     else:
         note = "Ranked by editorial score until view metrics are connected"
-    draw.text((58, 562), note, font=_font("sans", 19), fill="#655c4d")
+    draw.text((58, 562), note, font=_font("sans", 19), fill="#5c5c5c")
     draw.text((1145, 590), BRAND, font=_font("sans", 19, True), fill="#b3342a", anchor="ra")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     image.save(output_path)
@@ -825,7 +825,19 @@ def render_project_card(
     output_path: Path,
     *,
     issue_number: int | None = None,
+    portrait: bool = True,
 ) -> tuple[Path, str]:
+    """Render the card for a Telegram post.
+
+    ``portrait=True`` uses the 4:5 layout: Telegram displays a 1200x630 card
+    about 420 px wide and every 15 px label shrinks to ~5 px, which is what
+    made the first live posts look smeared. The portrait card fills the same
+    column with roughly twice the type size.
+    """
     if _is_terminal(candidate, generated):
         return render_terminal_card(candidate, generated, output_path), "neon_terminal"
+    if portrait:
+        from .cards_portrait import render_portrait_card
+
+        return render_portrait_card(candidate, generated, output_path, issue_number=issue_number), "editorial_portrait"
     return render_editorial_card(candidate, generated, output_path, issue_number=issue_number), "editorial_daily"

@@ -163,10 +163,19 @@ class TelegramClient:
             raise TelegramError("TELEGRAM_BOT_TOKEN is not set")
         import json as _json
 
+        from .upload import to_telegram_jpeg
+
+        # Encode once, ourselves: Telegram recompresses whatever it stores,
+        # and hairlines are the first casualty when it chooses the quality.
+        if photo.startswith(b"\x89PNG"):
+            from PIL import Image
+            import io as _io
+            photo = to_telegram_jpeg(Image.open(_io.BytesIO(photo)))
+
         data = {"chat_id": str(chat_id), "caption": caption_html, "parse_mode": "HTML"}
         if buttons:
             data["reply_markup"] = _json.dumps({"inline_keyboard": list(buttons)})
-        files = {"photo": (filename, photo, "image/png")}
+        files = {"photo": (filename.rsplit(".", 1)[0] + ".jpg", photo, "image/jpeg")}
         try:
             response = self.session.post(
                 f"{API_BASE}/bot{self.bot_token}/sendPhoto",

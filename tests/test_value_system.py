@@ -188,3 +188,31 @@ def test_facebook_handoff_never_crashes_the_post_when_sheets_is_down():
     result = append_rows("sheet", [["a"]], credentials_json="{}")
     assert result["ok"] is False
     assert result["appended"] == 0
+
+
+def test_facebook_never_hands_a_private_preview_to_the_page():
+    from ghos_v6.content_adapters import facebook_media_url
+
+    assert facebook_media_url({"image_url": "https://opengraph.githubassets.com/1/a/b"}) == ""
+    assert facebook_media_url({"image_url": "https://i.ibb.co/x/card.png"}) == "https://i.ibb.co/x/card.png"
+
+
+def test_portrait_card_fits_telegram_photo_limits():
+    from pathlib import Path
+    import tempfile
+
+    from PIL import Image
+
+    from ghos_v6.cards_portrait import render_portrait_card
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = render_portrait_card(
+            {"name": "obscura", "language": "Rust", "stars": 29900, "forks": 2254,
+             "contributors_count": 100, "license": {"spdx_id": "Apache-2.0"},
+             "topics": [], "pushed_at": "2026-10-31T00:00:00Z", "description": "x"},
+            {"card_hook": "Browse the web without Chrome", "card_subline": "Short."},
+            Path(tmp) / "p.png",
+            issue_number=5,
+        )
+        size = Image.open(path).size
+    assert size == (1080, 1350), "4:5 portrait is what fills a phone column"
