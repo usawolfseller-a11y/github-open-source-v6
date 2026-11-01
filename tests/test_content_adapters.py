@@ -127,7 +127,7 @@ def test_bluesky_truncation_never_cuts_a_word_and_adds_a_period():
 def test_tag_cleanup_and_public_telegram_discussion_link():
     record, generated = _record_and_generated()
     record["language"] = "TypeScript"
-    record["topics"] = ["agent-skills"]
+    record["topics"] = ["antidetect", "agent-skills"]
     record["telegram_link"] = "https://t.me/GitHub_Open_Source/123"
     generated["category"] = "Security and Analysis"
 
@@ -135,6 +135,7 @@ def test_tag_cleanup_and_public_telegram_discussion_link():
     assert "#TypeScript" in tags
     assert "#Security" in tags
     assert "SecurityAndAnalysis" not in tags
+    assert "Antidetect" not in tags
     assert devto_tags(record, generated) == ["opensource", "typescript", "security", "ai"]
 
     mastodon = build_mastodon_text(record, generated)

@@ -43,6 +43,12 @@ _DEVTO_TAG_ALIASES = {
 }
 
 _GENERIC_TOPICS = {"GitHub", "awesome", "awesome-list", "open-source", "opensource"}
+_BLOCKED_TAG_TERMS = ("antidetect", "undetected", "stealth", "bypass")
+
+
+def _blocked_tag_value(value: Any) -> bool:
+    normalized = re.sub(r"[^a-z0-9]+", "", str(value or "").lower())
+    return any(term in normalized for term in _BLOCKED_TAG_TERMS)
 
 
 def clean_text(value: Any) -> str:
@@ -260,7 +266,12 @@ def _raw_tag_values(record: dict[str, Any], generated: dict[str, Any]) -> list[s
         *(record.get("topics") or []),
     ):
         text = clean_text(value)
-        if text and text.lower() not in _GENERIC_TOPICS and text not in values:
+        if (
+            text
+            and not _blocked_tag_value(text)
+            and text.lower() not in _GENERIC_TOPICS
+            and text not in values
+        ):
             values.append(text)
     return values
 
@@ -292,6 +303,8 @@ def devto_tags(record: dict[str, Any], generated: dict[str, Any] | None = None) 
     tags: list[str] = []
 
     def add(value: Any) -> None:
+        if _blocked_tag_value(value):
+            return
         raw = clean_text(value).lower()
         raw = _DEVTO_TAG_ALIASES.get(raw, raw)
         tag = re.sub(r"[^a-z0-9]+", "", _LANG_TAG.get(raw, raw))[:30]

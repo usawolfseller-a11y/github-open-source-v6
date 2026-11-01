@@ -96,3 +96,19 @@ def test_ranking_is_bounded_and_sorted():
     assert 0 <= score_candidate(low) <= 100
     ranked = rank_candidates([low, high])
     assert ranked[0]["name"] == "High"
+
+
+def test_formatter_hashtags_use_category_and_block_evasion_terms():
+    project = _project(
+        name="BrowserTool",
+        hook="A fast browser automation tool",
+        readme_summary="Automates pages locally.",
+        key_features=["Runs browser tasks"],
+        category="DevTools",
+        topics=["antidetect", "antidetect-browser", "browser", "playwright"],
+    )
+    rendered = format_project_post(project)
+    assert rendered.startswith("🌐 ")
+    assert "#devtools" in rendered
+    assert "#browser" in rendered
+    assert "#antidetect" not in rendered

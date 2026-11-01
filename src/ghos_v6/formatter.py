@@ -34,6 +34,7 @@ _CATEGORY_EMOJI = [
     (("ai", "llm", "machine-learning", "ml", "agent"), "🤖"),
     (("cli", "terminal", "tui", "shell"), "🖥"),
     (("security", "pentest", "vulnerability"), "🛡️"),
+    (("browser", "headless", "playwright", "puppeteer"), "🌐"),
     (("web", "frontend", "react", "vue", "api", "backend"), "🌐"),
     (("data", "database", "analytics", "etl"), "📊"),
     (("game", "gamedev", "unity", "godot"), "🎮"),
@@ -98,7 +99,21 @@ _PRIORITY_TOPICS = [
     "backend",
     "devops",
     "automation",
+    "browser",
+    "browser-automation",
+    "headless",
+    "headless-browser",
+    "web-scraping",
+    "playwright",
+    "puppeteer",
 ]
+
+_CATEGORY_TAG_ALIASES = {
+    "developer_tools": "devtools",
+    "developer-tools": "devtools",
+    "security_and_analysis": "security",
+}
+_BLOCKED_HASHTAG_TERMS = ("antidetect", "anti_detect", "undetected", "stealth", "bypass")
 
 
 def _esc(value: Any) -> str:
@@ -167,12 +182,18 @@ def _hashtags(project: dict[str, Any], limit: int = 4) -> str:
 
     def add(raw: Any) -> None:
         tag = re.sub(r"[^a-zA-Z0-9_]+", "_", str(raw).strip().lower()).strip("_")
+        if any(term in tag for term in _BLOCKED_HASHTAG_TERMS):
+            return  # never use evasion terms as discovery hashtags
         if tag and tag not in tags and tag != "open_source" and len(tags) < limit:
             tags.append(tag)
 
     lang = str(project.get("language") or "").strip().lower()
     if lang:
         add(_LANG_HASHTAG.get(lang, re.sub(r"[^a-z0-9]+", "", lang)))
+    category = str(project.get("category") or "").strip()
+    if category:
+        category_key = re.sub(r"[^a-zA-Z0-9_]+", "_", category.lower()).strip("_")
+        add(_CATEGORY_TAG_ALIASES.get(category_key, category_key))
     topics = [str(topic).strip().lower() for topic in project.get("topics") or []]
     for priority in _PRIORITY_TOPICS:
         if priority in topics:

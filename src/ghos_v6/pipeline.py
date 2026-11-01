@@ -329,6 +329,7 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
                 "verdict": generated.get("verdict"),
                 "quick_start": generated.get("quick_start"),
                 "discussion_question": generated.get("discussion_question"),
+                "category": generated.get("category") or candidate.get("category"),
                 "is_dual_use": candidate.get("is_dual_use"),
             }
         )

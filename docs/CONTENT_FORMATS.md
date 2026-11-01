@@ -49,8 +49,9 @@ Format-v2 principles from the design/growth audit:
       rotating React / Forward / Save-comment CTA;
   12. GitHub, Telegraph and homepage links, each on its own icon-led
       line;
-  13. at most four hashtags, with broad searchable topics before
-      niche repository topics.
+  13. at most four hashtags: language and cleaned broad category
+      first, then searchable topics. Evasion terms (`antidetect`,
+      `undetected`, `stealth`, `bypass`) are never used as hashtags.
 - **Links:** inline body links survive forwards; buttons remain the
   convenient tap targets.
 

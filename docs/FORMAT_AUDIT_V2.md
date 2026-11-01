@@ -39,6 +39,17 @@ and no new facts are invented.
 | Discussion questions could require an expert mini-essay, suppressing comments. | The prompt asks for a specific one-line answer: a concrete use case or an either/or choice. |
 | Sentence clipping in the Telegram and AI Brief formatters could cut a word and append misleading punctuation. | Both clippers now prefer a complete sentence, otherwise backtrack to a word boundary and use an ellipsis. |
 
+## Found by the first private v2 test
+
+The first actual v2 test post exposed one more tag-quality flaw:
+repository order surfaced `#antidetect #antidetect_browser` for a
+browser-engine project. That private post was left as evidence, but
+the code was fixed before any public use: the generated broad
+category now feeds Telegram hashtags, browser/automation topics are
+prioritized, the same evasion terms are blocked in social/dev.to
+tags, and browser projects use the 🌐 category icon instead of the
+generic 🚀 fallback.
+
 ## Deliberately deferred
 
 - **README screenshot vs branded card:** the media cascade remains
