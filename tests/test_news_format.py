@@ -17,5 +17,6 @@ def test_ai_brief_has_primary_source_and_reaction_cta():
     assert 'href="https://example.com/changelog"' in rendered
     assert "Official changelog" in rendered
     assert "<b>React</b>" in rendered
+    assert "@GitHub_Open_Source" in rendered
     assert "#AINews #OpenSource" in rendered
     assert utf16_len(visible_text(rendered)) <= 2200

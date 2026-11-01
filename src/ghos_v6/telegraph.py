@@ -233,6 +233,12 @@ class TelegraphClient:
             body = response.json()
         except ValueError as exc:
             raise TelegraphError(f"Telegraph upload returned non-JSON HTTP {response.status_code}") from exc
+        if response.status_code >= 400:
+            raise TelegraphError(
+                f"Telegraph upload failed HTTP {response.status_code}: {sanitize(str(body))[:200]}"
+            )
+        if isinstance(body, str):
+            raise TelegraphError(f"Telegraph upload failed: {sanitize(body)[:200]}")
         if isinstance(body, dict) and body.get("error"):
             raise TelegraphError(f"Telegraph upload failed: {sanitize(str(body['error']))[:200]}")
         if not isinstance(body, list) or not body or not isinstance(body[0], dict):

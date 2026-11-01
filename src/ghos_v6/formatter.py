@@ -81,6 +81,10 @@ _LANGUAGE_ICON = {
 }
 
 _DIVIDER = "──────────────"
+_CHANNEL_SIGNATURE = (
+    '📣 <a href="https://t.me/GitHub_Open_Source"><b>@GitHub_Open_Source</b></a> '
+    "— daily open-source picks"
+)
 _PRIORITY_TOPICS = [
     "ai",
     "llm",
@@ -387,6 +391,9 @@ def format_project_post(
         lines += ["", _DIVIDER, "💬 <b>Your take?</b>", f"<i>{_esc(question)}</i>", cta]
         if links:
             lines += ["", *links]
+        # Signature is the durable path back to the channel when a post
+        # is forwarded, copied or screenshotted without its buttons.
+        lines += ["", _CHANNEL_SIGNATURE]
         ht = _hashtags(project)
         if ht:
             lines += ["", ht]

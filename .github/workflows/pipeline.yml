@@ -57,6 +57,7 @@ jobs:
       TELEGRAM_OWNER_CHAT_ID: ${{ vars.TELEGRAM_OWNER_CHAT_ID }}
       TELEGRAM_SOURCE_CHANNELS: ${{ vars.TELEGRAM_SOURCE_CHANNELS }}
       GH_API_TOKEN: ${{ github.token }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
       TELEGRAPH_ACCESS_TOKEN: ${{ secrets.TELEGRAPH_ACCESS_TOKEN }}

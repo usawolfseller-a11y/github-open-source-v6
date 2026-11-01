@@ -50,6 +50,33 @@ prioritized, the same evasion terms are blocked in social/dev.to
 tags, and browser projects use the 🌐 category icon instead of the
 generic 🚀 fallback.
 
+## Owner review follow-up — image and forwards
+
+The owner spotted that the Obscura test post showed the default
+GitHub OpenGraph image. That was **not** the intended design and the
+renderer was not skipped: state showed an Editorial card was
+rendered, and the local rerender is a valid 1200×630 PNG (73,399
+bytes). The Actions log showed `Card image upload failed:
+TelegraphError`; reproducing the upload returned HTTP 400 with the
+JSON string `"Unknown error"` from the undocumented
+`telegra.ph/upload` endpoint, after which the old code fell back to
+OpenGraph while still recording `visual_kind=card`.
+
+Fixes: rendered cards are now hosted first as monthly GitHub
+Release prerelease assets from the workflow token, Telegraph upload
+is only the legacy second attempt with the real error surfaced, and
+any OpenGraph fallback is recorded honestly as
+`visual_kind=opengraph` with a `card_host_failed` event. The same
+host helper is used for project, AI Brief and digest cards.
+
+The owner also asked how a forwarded post leads back to the channel.
+Native Telegram forwards can carry a source header, but buttons,
+copies and screenshots are not a reliable funnel. Telegram posts now
+end with a linked `@GitHub_Open_Source` signature; branded cards
+already print the handle on the image. A forwarded public post,
+copied text and a card screenshot therefore all retain a visible
+route back.
+
 ## Deliberately deferred
 
 - **README screenshot vs branded card:** the media cascade remains

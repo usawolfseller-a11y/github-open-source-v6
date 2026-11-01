@@ -399,6 +399,7 @@ def format_ai_brief(brief: dict[str, Any]) -> str:
             "💬 <b>Your take?</b>",
             f"<i>{_esc(question)}</i>",
             "❤️ <b>React</b> if you want more verified AI briefs like this.",
+            '📣 <a href="https://t.me/GitHub_Open_Source"><b>@GitHub_Open_Source</b></a> — daily open-source picks',
             "#AINews #OpenSource",
         ]
         return "\n".join(lines)

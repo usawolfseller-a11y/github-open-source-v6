@@ -87,6 +87,8 @@ def test_formatter_escapes_and_fits():
     assert rendered.index("⚡ <b>Quick start</b>") < rendered.index("<blockquote")
     assert any(marker in rendered for marker in ("<b>React</b>", "<b>Forward</b>", "<b>Save</b>"))
     assert "Give the repo" not in rendered
+    assert 'href="https://t.me/GitHub_Open_Source"' in rendered
+    assert "@GitHub_Open_Source" in rendered
     assert utf16_len(visible_text(rendered)) <= 4000
 
 

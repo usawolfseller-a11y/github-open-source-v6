@@ -153,6 +153,18 @@ compare per-post reactions, comments, saves/forwards and Telegram
 joins by CTA variant and by referring surface. Keep the variant only
 if it improves those outcomes without reducing link clicks or trust.
 
+## Media hosting rule
+
+Visual cascade stays: a valid large README demo (at least 800×250)
+→ locally rendered branded card → GitHub OpenGraph only as the final
+fallback. Rendered cards are hosted first as assets on a monthly
+GitHub **prerelease** in this repository (for example
+`media-2026-11`) using the workflow token; the legacy
+`telegra.ph/upload` endpoint is only a second attempt because it can
+return HTTP 400 `Unknown error` for external clients. If both hosts
+fail and OpenGraph is used, state records `visual_kind=opengraph`
+honestly and a `card_host_failed` event is written.
+
 ## Alt text rule
 
 Alt text is generated from facts, never from guessing pixels:
