@@ -83,21 +83,55 @@ model is not written at all — a two-sample "insight" is noise.
 the model is fighting the editorial score. Read the raw posts before
 trusting it.
 
-## 3b. Photo posts vs text posts
+## 3b. Post format — long text, card on top
 
-Telegram caps a **photo caption at 1024 characters**. The first pipeline sent
-a 2 000–2 500 character text with a preview image, which Telegram renders as
-a small link preview — smaller than the card itself. That is why the live
-channel looked smeared.
+Telegram caps a **photo caption at 1024 characters**, and a photo post
+deletes the long text. The owner's format is the opposite: the long post
+*is* the message, and the card rides above it as a large link preview.
 
-The publish path is now:
+1. text = `format_project_post`, up to 4 000 visible UTF-16 units,
+2. preview = the card, hosted on **ImgBB** (`prefer_large_media`,
+   `show_above_text`). GitHub release assets do not work: they answer
+   `application/octet-stream` with `content-disposition: attachment` and
+   Telegram silently drops the preview — that was the "no photo" bug,
+3. the preview upload is a ~70–90 KB web JPEG; crawlers time out on the
+   full PNG even with the right content type,
+4. the judgement block (who / why / verdict / quick start) is **open by
+   default** — a collapsed blockquote hides the verdict from most readers.
 
-1. upload the card as a photo (`sendPhoto`),
-2. caption = name + hook + proof line + three features + one question
-   (`format_project_caption`, hard-limited to 1024),
-3. buttons = GitHub / Homepage / Full breakdown,
-4. the full text is still produced (`format_project_post`) for Telegraph and
-   for the text-only fallback.
+## 3c. Editorial taste — is this interesting, or a library for ten people?
+
+`src/ghos_v6/audience.py`, wired into the gate and the ranking.
+
+| Layer | Rule |
+|---|---|
+| Narrow rejection | a repo that calls itself an SDK / bindings / ORM / adapter / boilerplate / plugin marketplace is rejected **unless** it shows at least one "a person can use this" signal |
+| Hard rejects | prompt dumps (`prompt-library`), curated lists, datasets, dotfiles, tutorials — regardless of description |
+| Appeal signals | desktop/GUI, editor, self-hosted, a named platform, a browser app, a creative medium, media, productivity, game, hardware, network, files, messaging, "replacement for X", installable **agent skills** |
+| Ranking | up to **+10** points for appeal, so a usable product outranks a bare library with the same stars |
+
+Owner decision, 2026-11-01: coding-agent skills *are* publishable — a skill
+that does something a person can run (an ffmpeg editor for agents) counts;
+a pack of prompts does not, and a plugin marketplace does not.
+
+Measured effect on a live collect: 7 prompt-skill repos and 2 plugin
+ecosystems rejected; the queue opens with Concat, m3e-canvas, Peach,
+solidcraft, torrentplayer instead of `google/artemis` and three DeepSeek
+plugin markets.
+
+## 3d. Where the score stands today
+
+| Part | State | Evidence |
+|---|---|---|
+| Anti-duplication | **ready** | 4 layers, 90-day milestone-only re-visits |
+| Gate (safety, licence, freshness, language, narrowness) | **ready** | 22 rejection reasons, all named in `events.jsonl` |
+| Ranking | **ready** | quality + freshness + momentum + content + appeal, 0–100 |
+| Measurement | **half** | views are live (public widget); votes need a poll that has actually closed; reactions are collected but not yet in the `value` formula |
+| Learning | **not exercised** | needs ≥ 5 posts of measured history; a fresh state dir has none |
+
+So the system is *complete in design and wired end to end*, but only the
+first half has been proven on live data. The honest status is "ready to
+run a cycle", not "validated by a cycle".
 
 ## 4. Weekly cycle
 
