@@ -306,3 +306,26 @@ def test_media_host_order_prefers_imgbb_and_never_github_release(monkeypatch):
     assert "ImgBBMediaHost" in body
     assert body.index("imgbb.configured") < body.index("TelegraphClient")
     assert "GitHubReleaseMediaHost(" not in body
+
+
+def test_scaffolding_never_reaches_a_public_post():
+    """Hand-typed probe lines ('TYPE TEST · NEON TERMINAL CARD') once went
+    live. The guard must refuse them, and must not cry wolf on real copy."""
+    import pytest
+
+    from ghos_v6.publish_guard import ScaffoldingError, assert_production_copy
+
+    clean = (
+        "opencodex intercepts requests at localhost and translates them on the fly.\n"
+        "Verdict: an essential utility if you run a local proxy."
+    )
+    assert assert_production_copy(clean) == clean
+
+    for bad in (
+        "TYPE TEST · NEON TERMINAL CARD",
+        "Type test card: CLI projects get their own card",
+        "The same data as the newspaper card, different room",
+        "preview probe — please ignore",
+    ):
+        with pytest.raises(ScaffoldingError):
+            assert_production_copy(bad)
