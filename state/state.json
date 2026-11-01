@@ -12,6 +12,11 @@
       },
       "started_at": "2026-11-01T10:19:57.939667Z"
     },
+    "publish:format-v2-test": {
+      "finished_at": "2026-11-01T11:43:27.733794Z",
+      "repo": "h4ckf0r0day/obscura",
+      "telegram_message_id": 5
+    },
     "publish:manual": {
       "finished_at": "2026-11-01T10:59:57.999032Z",
       "repo": "morluto/rea",
@@ -20,6 +25,101 @@
   },
   "news_topics": [],
   "published": {
+    "h4ckf0r0day/obscura": {
+      "articles": {},
+      "card_style": "editorial_daily",
+      "category": "DevTools",
+      "contributors_count": 100,
+      "created_at": "2026-04-13T10:31:41Z",
+      "crossposts": {
+        "Facebook": {
+          "attempts": 0,
+          "due_at": "2026-11-01T12:13:27.733575+00:00",
+          "status": "disabled"
+        },
+        "bluesky": {
+          "attempts": 0,
+          "due_at": "2026-11-01T12:13:27.733575+00:00",
+          "status": "disabled"
+        },
+        "mastodon": {
+          "attempts": 0,
+          "due_at": "2026-11-01T12:13:27.733575+00:00",
+          "status": "disabled"
+        }
+      },
+      "description": "The headless browser for AI agents and web scraping",
+      "forks": 2254,
+      "full_name": "h4ckf0r0day/obscura",
+      "generated": {
+        "article_markdown": "## What it is\n\nObscura is a headless browser engine implemented in Rust, designed specifically for web scraping pipelines and AI agent automation. Rather than launching a full instance of Chromium, Obscura executes JavaScript via an embedded V8 engine and supports the Chrome DevTools Protocol. This architecture allows it to serve as a drop-in replacement for existing automation frameworks while maintaining a significantly smaller footprint.\n\n## Why it matters\n\nStandard headless browsers require substantial system memory and considerable startup time, which creates bottlenecks when scaling web scraping operations or running concurrent AI agents. By eliminating external browser dependencies and optimizing core execution routines, Obscura provides an efficient alternative for environments where resource utilization directly impacts operational costs.\n\n## Key features\n\n- Execute JavaScript using an embedded V8 engine\n- Communicate via the Chrome DevTools Protocol\n- Capture screenshots and export PDF documents natively\n- Integrate directly with existing Puppeteer and Playwright scripts\n- Run inside a minimal distroless Docker container\n\n## Quick start\n\nTo fetch a page and evaluate an expression using a downloaded binary, run:\n\n```bash\n./obscura fetch https://example.com --eval \"document.title\"\n```\n\n## Who should try it\n\nDevelopers and engineers managing large-scale web scrapers, automated testing suites, or AI agents that interact with modern web applications will find Obscura's low memory profile and fast startup times valuable.\n\n## Verdict\n\nObscura delivers a practical, low-overhead browser engine for developers looking to bypass the performance constraints of traditional headless Chrome deployments.",
+        "article_title": "Obscura: A Lightweight Rust Headless Browser for Web Scraping and AI Agents",
+        "category": "DevTools",
+        "discussion_question": "Do you use Puppeteer or Playwright for your current web scraping setup?",
+        "hook": "Run a lightweight Rust headless browser that replaces Chrome for AI agents and web scraping.",
+        "key_features": [
+          "Execute JavaScript using an embedded V8 engine",
+          "Communicate via the Chrome DevTools Protocol",
+          "Capture screenshots and export PDF documents natively",
+          "Integrate directly with existing Puppeteer and Playwright scripts",
+          "Run inside a minimal distroless Docker container"
+        ],
+        "llm_used": true,
+        "quick_start": "./obscura fetch https://example.com --eval \"document.title\"",
+        "safety": "ok",
+        "safety_reason": "Legitimate web scraping and browser automation tool.",
+        "social_text": "Run a lightweight Rust headless browser that replaces Chrome for AI agents and web scraping.",
+        "summary": "Obscura is an independent browser engine built to execute JavaScript, render pages, and handle automation tasks natively without requiring a heavy Chromium installation. It supports the Chrome DevTools Protocol, allowing it to act as a drop-in replacement for Puppeteer and Playwright workflows while drastically reducing memory consumption and startup time. The project provides precompiled binaries and a containerized setup for deployment across multiple architectures.",
+        "verdict": "A high-performance alternative to Chromium for resource-constrained scraping and automation environments.",
+        "who_for": "Developers building web scraping pipelines or autonomous AI agents that require high-throughput browser automation.",
+        "why_now": "Traditional headless Chrome instances consume excessive RAM and startup slowly, making high-scale agent workflows resource-intensive."
+      },
+      "homepage": "https://obscura.sh",
+      "id": 1209343409,
+      "image_url": "https://opengraph.githubassets.com/1/h4ckf0r0day/obscura",
+      "is_dual_use": false,
+      "is_hidden_gem": false,
+      "language": "Rust",
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "node_id": "MDc6TGljZW5zZTI=",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0"
+      },
+      "media_urls": [
+        "https://raw.githubusercontent.com/h4ckf0r0day/obscura/main/assets/icon.png"
+      ],
+      "name": "obscura",
+      "open_issues": 210,
+      "published_at": "2026-11-01T11:43:27.733596Z",
+      "pushed_at": "2026-10-31T21:04:20Z",
+      "repo_id": 1209343409,
+      "score": 86.778,
+      "slot": "format-v2-test",
+      "sources": [
+        "github_search"
+      ],
+      "stars": 29921,
+      "telegram_chat_id": -1003909350927,
+      "telegram_link": "https://t.me/c/3909350927/5",
+      "telegram_message_id": 5,
+      "telegraph_url": "https://telegra.ph/Obscura-A-Lightweight-Rust-Headless-Browser-for-Web-Scraping-and-AI-Agents-11-01",
+      "topics": [
+        "antidetect",
+        "antidetect-browser",
+        "browser",
+        "browser-automation",
+        "cdp",
+        "headless",
+        "playwright",
+        "puppeteer",
+        "rust"
+      ],
+      "updated_at": "2026-11-01T10:16:50Z",
+      "url": "https://github.com/h4ckf0r0day/obscura",
+      "visual_kind": "card"
+    },
     "morluto/rea": {
       "articles": {},
       "card_style": "",
@@ -399,61 +499,6 @@
       ],
       "updated_at": "2026-11-01T09:18:45Z",
       "url": "https://github.com/esengine/DeepSeek-Reasonix"
-    },
-    {
-      "archived": false,
-      "contributors_count": 100,
-      "created_at": "2026-04-13T10:31:41Z",
-      "default_branch": "main",
-      "description": "The headless browser for AI agents and web scraping",
-      "disabled": false,
-      "fork": false,
-      "forks": 2254,
-      "forks_count": 2254,
-      "full_name": "h4ckf0r0day/obscura",
-      "has_readme": true,
-      "homepage": "https://obscura.sh",
-      "id": 1209343409,
-      "is_dual_use": false,
-      "is_hidden_gem": false,
-      "language": "Rust",
-      "license": {
-        "key": "apache-2.0",
-        "name": "Apache License 2.0",
-        "node_id": "MDc6TGljZW5zZTI=",
-        "spdx_id": "Apache-2.0",
-        "url": "https://api.github.com/licenses/apache-2.0"
-      },
-      "media_urls": [
-        "https://raw.githubusercontent.com/h4ckf0r0day/obscura/main/assets/icon.png"
-      ],
-      "name": "obscura",
-      "open_issues": 210,
-      "open_issues_count": 210,
-      "pushed_at": "2026-10-31T21:04:20Z",
-      "readme": "<p align=\"center\">\n  <img src=\"https://raw.githubusercontent.com/h4ckf0r0day/obscura/main/assets/icon.png\" alt=\"Obscura\" width=\"80\" />\n</p>\n<h2 align=\"center\">Obscura</h2>\n<p align=\"center\">\n  <a href=\"https://trendshift.io/repositories/25837?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-25837\" target=\"_blank\" rel=\"noopener noreferrer\"><img src=\"https://trendshift.io/api/badge/trendshift/repositories/25837/daily\" alt=\"h4ckf0r0day%2Fobscura | Trendshift\" width=\"250\" height=\"55\"/></a>\n</p>\n<p align=\"center\">\n  <a href=\"https://docs.obscura.sh\"><img src=\"https://img.shields.io/badge/Docs-1a1a1a?style=for-the-badge&logo=gitbook&logoColor=white\" alt=\"Documentation\" /></a>\n  <a href=\"https://obscura.sh\"><img src=\"https://img.shields.io/badge/Website-1a1a1a?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjE5MCAxNzAgNDIwIDQyMCI+PHBhdGggZmlsbD0iI0ZGRkZGRiIgZmlsbC1ydWxlPSJldmVub2RkIiBkPSJNNDA2LDE3NS4wMDA0MTIgQzQ0MC40OTg5MzIsMTc1LjAwMDM1MSA0NzQuNDk4MTA4LDE3NS4wODA5OTQgNTA4LjQ5NjczNSwxNzQuOTc1NjYyIEM1MzcuNzMzNjQzLDE3NC44ODUwODYgNTYxLjI3MDY5MSwxODcuMjIwNTUxIDU3OS45Mzk2MzYsMjA4Ljc4NjYyMSBDNTkwLjg0MTA2NCwyMjEuMzc5Nzc2IDU5Ny44ODM1NDUsMjM2LjM1MjY2MSA1OTkuOTgxODczLDI1My4yMjAzNjcgQzYwMC40NDU1NTcsMjU2Ljk0NzU0MCA2MDAuOTUxMTExLDI2MC43MDQ0MzcgNjAwLjk1NjYwNCwyNjQuNDQ4MzY0IEM2MDEuMDIyNjQ0LDMwOS42MTM1MjUgNjAxLjA3NTgwNiwzNTQuNzc5MDIyIDYwMC45NTE3ODIsMzk5Ljk0MzkzOSBDNjAwLjkxMzE0Nyw0MTQuMDMyMzQ5IDYwMC42NjMyNjksNDI4LjE0MDEwNiA1OTkuNzgyMjg4LDQ0Mi4xOTMzNTkgQzU5OS41NDEwMTYsNDQ2LjA0MDg5NCA1OTcuNTYwNzkxLDQ1MC42MTU2MDEgNTk0Ljg1MzIxMCw0NTMuMzQxMzA5IEM1NzEuMTc3NTUxLDQ3Ny4xNzUzMjMgNTQ3LjE4MDcyNSw1MDAuNjkwNzk2IDUyMy4yMjc5NjYsNTI0LjI0ODc3OSBDNTA2Ljc5OTgzNSw1NDAuNDA2MTI4IDQ5MC4yMDk5OTEsNTU2LjM5OTkwMiA0NzMuODY0NTYzLDU3Mi42NDAxMzcgQzQ2OC44MDA4NDIsNTc3LjY3MTIwNCA0NjMuMDgyODg2LDU4MC4wNTQxOTkgNDU1Ljk3MDYxMiw1ODAuMDQzODIzIEM0MDAuOTcyNDQzLDU3OS45NjM1MDEgMzQ1Ljk3MzY2Myw1ODAuMTMyMDE5IDI5MC45NzYwNDQsNTc5LjkzNjc2OCBDMjY3LjU4MDQxNCw1NzkuODUzNjk5IDI0Ni41NTEyMDgsNTcyLjA0MzU3OSAyMjguOTM5NzQzLDU1Ni44Mjc1MTUgQzIxMi44NDk2MjUsNTQyLjkyNTg0MiAyMDIuNzUxOTY4LDUyNC45MDIxMDAgMTk4LjE1NjE1OCw1MDQuMDM5NjczIEMxOTcuMjgyMTk2LDUwMC4wNzIyOTYgMTk3LjA1MjQxNCw0OTUuODk1Mzg2IDE5Ny4wNDczMzMsNDkxLjgxNDQ4NCBDMTk2Ljk3ODE0OSw0MzYuMTQ5NjU4IDE5Ny4wNTA3MjAsMzgwLjQ4NDYxOSAxOTYuOTMyNjE3LDMyNC44MTk5NDYgQzE5Ni45MTkxNDQsMzE4LjQ3MDkxNyAxOTkuMTg0ODQ1LDMxMy40MTYxOTkgMjAzLjQ5NTU3NSwzMDkuMTAwNTI1IEMyNDAuNTg3OTk3LDI3MS45NjU0MjQgMjc3LjY4MjQ5NSwyMzQuODMyMzA2IDMxNC44MzQ1NjQsMTk3Ljc1Njk1OCBDMzIwLjk1NjQyMSwxOTEuNjQ3Nzk3IDMyNy4yNjQ0MzUsMTg1LjcxNTI1NiAzMzMuNjczOTIwLDE3OS45MDgwODEgQzMzNy4zNzYwMzgsMTc2LjU1MzgzMyAzNDEuNzIxNDY2LDE3NC44NTMzMTcgMzQ3LjAwNTc5OCwxNzQuOTEyODcyIEMzNjYuNTAxNzA5LDE3NS4xMzI2MTQgMzg2LjAwMTYxNywxNzUuMDAwMzIwIDQwNiwxNzUuMDAwNDEyIFogTTUwMy4zNDQ2NjYsMjczLjg0MDE0OSBDNTA0LjEwMjcyMiwyNzYuMTY3NTcyIDUwNC45NDA5NDgsMjc4LjIxMTA5MCA1MDQuOTQzMjY4LDI4MC4yNTU1MjQgQzUwNS4wMTI4NDgsMzQxLjc0MjI0OSA1MDQuOTY5MTQ3LDQwMy4yMjkwNjUgNTA1LjAzMDc5Miw0NjQuNzE1NzkwIEM1MDUuMDQwODAyLDQ3NC42ODY0OTMgNDk2LjExNzQ2Miw0ODMuOTUzMTg2IDQ4NS43Nzc5MjQsNDgzLjk2NTI3MSBDNDI0LjYyNDQ1MSw0ODQuMDM2ODk2IDM2My40NzA5MTcsNDg0LjAwMzIzNSAzMDIuMzE3MzgzLDQ4My45OTY3MzUgQzI5NS41ODc3NjksNDgzLjk5NjAzMyAyOTMuMDAxMjUxLDQ4MS4zMDE2MDUgMjkzLjAwMDkxNiw0NzQuMzM4NTYyIEMyOTIuOTk3ODY0LDQxMy4zNTE2NTQgMjkzLjIwOTYyNSwzNTIuMzYzMzEyIDI5Mi43ODA3MDEsMjkxLjM3OTM5NSBDMjkyLjcxMzUzMSwyODEuODI4MDk0IDMwMy4yMTMwNDMsMjcwLjgyNDE1OCAzMTMuNDc4MjcxLDI3MC44OTQzMTggQzM1MS45NjgyMDEsMjcxLjE1NzQ0MCAzOTAuNDYwOTk5LDI3MC45OTk3ODYgNDI4Ljk1MjcyOCwyNzAuOTk5Nzg2IEM0NTEuMTE0NjI0LDI3MC45OTk3ODYgNDczLjI3NzI4MywyNzAuOTE3NDgwIDQ5NS40Mzc0NjksMjcxLjExMjE1MiBDNDk3Ljk3NzAyMCwyNzEuMTM0NDkxIDUwMC41MDI5MzAsMjcyLjcwNDM3NiA1MDMuMzQ0NjY2LDI3My44NDAxNDkgWiI+PC9wYXRoPjwvc3ZnPgo=&logoColor=white\" alt=\"Website\" /></a>\n  <a href=\"https://x.com/obscura_sh\" target=\"_blank\" rel=\"noopener noreferrer\"><img src=\"https://img.shields.io/badge/TWITTER%20%2F%20X-1a1a1a?style=for-the-badge&logo=x&logoColor=white\" alt=\"Obscura on Twitter/X\" /></a>\n  <a href=\"https://cal.com/obscura/quick-chat\"><img src=\"https://img.shields.io/badge/Book_a_Demo-1a1a1a?style=for-the-badge&logo=googlecalendar&logoColor=white\" alt=\"Book a demo\" /></a>\n  <a href=\"https://github.com/h4ckf0r0day/obscura/releases\"><img src=\"https://img.shields.io/badge/Releases-1a1a1a?style=for-the-badge&logo=github&logoColor=white\" alt=\"Releases\" /></a>\n</p>\n<p align=\"center\">\n  <strong>The open-source headless browser for AI agents and web scraping.</strong><br>\n  Lightweight, stealthy, and built in Rust.\n</p>\n<h3 align=\"center\">Native rendering is here. No Chromium required. 🎉 </h3>\n<p align=\"center\">\n  Capture screenshots, screencast live pages, and export PDFs directly with Obscura.\n</p>\n\n---\n\nObscura is a headless browser engine written in Rust, built for web scraping and AI agent automation. It runs real JavaScript via V8, supports the Chrome DevTools Protocol, and acts as a drop-in replacement for headless Chrome with Puppeteer and Playwright.\n\n### Why Obscura over headless Chrome?\n\n| Metric       | Obscura      | Headless Chrome |\n|--------------|--------------|------------------|\n| Memory       | **30 MB**    | 200+ MB          |\n| Binary size  | **~70 MiB**  | 300+ MB          |\n| Anti-detect  | **Built-in** | None          |\n| Page load    | **85 ms**    | ~500 ms          |\n| Startup      | **Instant**  | ~2s              |\n| Puppeteer    | **Yes**      | Yes              |\n| Playwright   | **Yes**      | Yes              |\n\n<table>\n  <tr>\n    <td width=\"90\" align=\"center\">\n      <a href=\"https://blog.cloudflare.com/kitesurf/\">\n        <img\n          src=\"https://cdn.simpleicons.org/cloudflare/F38020\"\n          alt=\"Cloudflare\"\n          width=\"54\"\n        />\n      </a>\n    </td>\n    <td>\n      <strong>Obscura inspired Cloudflare Kitesurf’s first prototype</strong>\n      <br>\n      Cloudflare began by porting Obscura to Workers while developing its\n      new agent-first browser.\n      <br>\n      <a href=\"https://blog.cloudflare.com/kitesurf/\">\n        Read Cloudflare’s engineering story →\n      </a>\n    </td>\n  </tr>\n</table>\n\n## Obscura Cloud\n\nWe are working on **Obscura Cloud** the hosted version, with managed infrastructure, residential proxies, and dedicated support. For people who want the engine without operating it themselves.\n\nThe open-source engine stays Apache-2.0, fully featured. No feature gating, ever.\n\n**[Get on the waitlist →](https://tally.so/r/gDWzdD)**\n<br>\n**[📅 Book a demo →](https://cal.com/obscura/quick-chat)**\n\n### Open Source Support\n\n<a href=\"https://vercel.com/open-source-program\">\n  <img alt=\"Vercel OSS Program\" src=\"https://vercel.com/oss/program-badge-2026.svg\" />\n</a>\n\n## Sponsors\n\n**Obscura** is supported by organizations helping us build independent open-source browser infrastructure.\n\nWant to sponsor? Email [hello@obscura.sh](mailto:hello@obscura.sh).\n\n<table>\n   <tr>\n    <td width=\"200\" align=\"center\" valign=\"middle\">\n      <a href=\"https://go.nodemaven.com/obscurareadmeoctober\" target=\"_blank\">\n        <img alt=\"NodeMaven\" src=\"assets/sponsors/nodemaven4.png\" width=\"180\"/>\n      </a>\n    </td>\n    <td valign=\"middle\">\n      <a href=\"https://go.nodemaven.com/obscurareadmeoctober\" target=\"_blank\"><b>NodeMaven</b></a>: The most efficient proxy provider for Web Scraping and Automation with the Highest Quality IP on the market.<br><br>\n      <b>Why <a href=\"https://go.nodemaven.com/obscurareadmeoctober\" target=\"_blank\">NodeMaven</a>?</b><br>\n      ZIP targeting<br>\n      99.9% uptime<br>\n      IP filtering: all proxies have fraud score &lt;97%<br>\n      No KYC required<br>\n      Check Nodemaven's new GitHub for more web scraping and automation solutions - https://github.com/nodemaven<br>\n      Unique free tools: Proxy Bandwidth Checker, Meta Tag Checker, IP Lookup and others!<br><br>\n      🎁 <b>Special codes for Obscura users:</b><br>\n      <b>OBSCURA35</b> - 35% off to Mobile and Residential Proxies<br>\n      <b>OBSCURA40</b> - 40% off to ISP (Static) Proxies\n    </td>\n</table>\n\n## Install\n\n### Download\n\nGrab the latest binary from [Releases](https://github.com/h4ckf0r0day/obscura/releases):\n\n```bash\n# Linux x86_64\ncurl -LO https://github.com/h4ckf0r0day/obscura/releases/latest/download/obscura-x86_64-linux.tar.gz\ntar xzf obscura-x86_64-linux.tar.gz\n./obscura fetch https://example.com --eval \"document.title\"\n\n# Linux ARM64 (aarch64)\ncurl -LO https://github.com/h4ckf0r0day/obscura/releases/latest/download/obscura-aarch64-linux.tar.gz\ntar xzf obscura-aarch64-linux.tar.gz\n\n# NixOS\nnix-env -iA nixpkgs.obscura\n\n# macOS Apple Silicon\ncurl -LO https://github.com/h4ckf0r0day/obscura/releases/latest/download/obscura-aarch64-macos.tar.gz\ntar xzf obscura-aarch64-macos.tar.gz\n\n# macOS Intel\ncurl -LO https://github.com/h4ckf0r0day/obscura/releases/latest/download/obscura-x86_64-macos.tar.gz\ntar xzf obscura-x86_64-macos.tar.gz\n\n# Windows\nDownload the `.zip` from the releases page and extract it manually.\n```\n\nNo Chrome, no Node.js, no dependencies. Release archives include both\n`obscura` and `obscura-worker`; keep them in the same directory for the\nparallel `scrape` command.\n\n| Archive suffix | Rendering | Stealth transport |\n|----------------|-----------|-------------------|\n| none | Yes | No |\n| `-stealth` | Yes | Yes |\n| `-no-render` | No | No |\n| `-no-render-stealth` | No | Yes |\n\nLinux release builds target Ubuntu 22.04 so the downloaded binary remains\nusable on common LTS servers with glibc 2.35+.\n\n### Docker\n\n```bash\ndocker run -d --name obscura -p 127.0.0.1:9222:9222 \\\n  -e OBSCURA_CDP_TOKEN=\"$(openssl rand -hex 32)\" \\\n  h4ckf0r0day/obscura\n```\n\nImage on [Docker Hub](https://hub.docker.com/r/h4ckf0r0day/obscura). Multi-stage build on `distroless/cc:nonroot` — no shell, no package manager, runs as uid 65532, ~57 MB compressed. A mounted `--storage-dir` must be writable by uid 65532. Publish to host loopback as above; `-p 9222:9222` exposes the port on every interface.\n\n### Build from source\n\n```bash\ngit clone https://github.com/h4ckf0r0day/obscura.git\ncd obscura\n\n# Rendering\ncargo build --release -p obscura-cli --bins --features render\n\n# Rendering and stealth\ncargo build --release -p obscura-cli --bins --features render,stealth\n\n# No rendering\ncargo build --release -p obscura-cli --bins --no-default-features\n\n# No rendering, with stealth\ncargo build --release -p obscura-cli --bins --no-default-features --features stealth\n```\n\nRequires Rust 1.75+ ([rustup.rs](https://rustup.rs)). First build takes ~5 min (V8 compiles from source, cached after).\nThe stealth build also compiles BoringSSL and generates bindings, so it needs\nCMake, Clang, and the libclang/LLVM development libraries. On Ubuntu/Debian:\n\n```bash\nsudo apt-get install build-essential cmake clang libclang-dev llvm-dev\n```\n\nThe rendering build uses rustls. The rendering-and-stealth build uses\nwreq/BoringSSL and therefore needs the additional build tools above.\n\n## Quick Start\n\n### Fetch a page\n\n```bash\n# Get the page title\nobscura fetch https://example.com --eval \"document.title\"\n\n# Extract all links\nobscura fetch https://example.com --dump links\n\n# Render JavaScript and dump HTML\nobscura fetch https://news.ycombinator.com --dump html\n\n# Write dump or eval output to a file\nobscura fetch https://example.com --dump text --output page.txt\n\n# Stream the raw response body verbatim (binary-safe; bypasses the JS/DOM layer).\n# Use this for images, JSON, JS, CSS, or any non-HTML resource.\nobscura fetch https://picsum.photos/200/300 --dump original > photo.jpg\n\n# List every sub-resource URL the page would fetch (NDJSON; one record per asset)\nobscura fetch https://example.com --dump assets\n\n# Fetch through an HTTP or SOCKS proxy\nobscura --proxy socks5://127.0.0.1:1080 fetch https://example.com --dump text\n\n# Wait for dynamic content\nobscura fetch https://example.com --wait-until networkidle0\n\n# Bound navigation time for slow or broken pages\nobscura fetch https://example.com --timeout 10\n\n# Capture the settled page as PNG\nobscura fetch https://example.com --screenshot page.png\n\n# The screenshot flag also has a short form\nobscura fetch https://example.com -s page.png\n\n### Testing against localhost / LAN dev servers\n\nObscura blocks fetches to private/internal IPs by default (SSRF protection).\nTo point it at a local dev server, pass `--allow-private-network` (or set\n`OBSCURA_ALLOW_PRIVATE_NETWORK=1`):\n\n```bash\nobscura fetch http://127.0.0.1:3000 --allow-private-network --dump text\n\n# Works on any subcommand, e.g. the CDP server for local Puppeteer/Playwright:\nobscura serve --port 9222 --allow-private-network\n```\n\nSee [docs/Environment-variables.md](docs/Environment-variables.md) for the\nfull allow/deny rules (DNS-resolution-time checks included).\n```\n\n## Rendering\n\nOfficial release archives and the Docker image include the rendering engine.\nIt provides CSS layout and paint, viewport and full-page screenshots,\nscroll-aware fixed and sticky geometry, activity-driven CDP screencasting, and\nraster PDF export without starting Chromium.\n\n```javascript\nawait page.setViewport({ width: 1440, height: 1000 });\nawait page.goto('https://example.com', { waitUntil: 'load' });\nawait page.screenshot({ path: 'page.png', fullPage: true });\nawait page.pdf({ path: 'page.pdf', format: 'A4', printBackground: true });\n```\n\nThe current implementation covers block, inline, flex, grid, table, float,\npositioning, overflow, transform, text, image, SVG, canvas, background, border,\nand animation paths. It remains an evolving independent\nengine: long-tail CSS, some Web APIs, media playback, compositor effects, and\nplatform font rasterization may differ from Chromium. The existing\n[Puppeteer](docs/Use-with-Puppeteer.md),\n[Playwright](docs/Use-with-Playwright.md), and\n[MCP](docs/Use-the-MCP-server.md) guides cover their capture APIs and limits.\n\n### Start the CDP server\n\n```bash\nobscura serve --port 9222\n\n# With stealth mode (anti-detection + tracker blocking)\nobscura serve --port 9222 --stealth\n```\n\n### Scrape in parallel\n\n```bash\nobscura scrap",
-      "readme_excerpt": "<p align=\"center\">\n  <img src=\"https://raw.githubusercontent.com/h4ckf0r0day/obscura/main/assets/icon.png\" alt=\"Obscura\" width=\"80\" />\n</p>\n<h2 align=\"center\">Obscura</h2>\n<p align=\"center\">\n  <a href=\"https://trendshift.io/repositories/25837?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-25837\" target=\"_blank\" rel=\"noopener noreferrer\"><img src=\"https://trendshift.io/api/badge/trendshift/repositories/25837/daily\" alt=\"h4ckf0r0day%2Fobscura | Trendshift\" width=\"250\" height=\"55\"/></a>\n</p>\n<p align=\"center\">\n  <a href=\"https://docs.obscura.sh\"><img src=\"https://img.shields.io/badge/Docs-1a1a1a?style=for-the-badge&logo=gitbook&logoColor=white\" alt=\"Documentation\" /></a>\n  <a href=\"https://obscura.sh\"><img src=\"https://img.shields.io/badge/Website-1a1a1a?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjE5MCAxNzAgNDIwIDQyMCI+PHBhdGggZmlsbD0iI0ZGRkZGRiIgZmlsbC1ydWxlPSJldmVub2RkIiBkPSJNNDA2LDE3NS4wMDA0MTIgQzQ0MC40OTg5MzIsMTc1LjAwMDM1MSA0NzQuNDk4MTA4LDE3NS4wODA5OTQgNTA4LjQ5NjczNSwxNzQuOTc1NjYyIEM1MzcuNzMzNjQzLDE3NC44ODUwODYgNTYxLjI3MDY5MSwxODcuMjIwNTUxIDU3OS45Mzk2MzYsMjA4Ljc4NjYyMSBDNTkwLjg0MTA2NCwyMjEuMzc5Nzc2IDU5Ny44ODM1NDUsMjM2LjM1MjY2MSA1OTkuOTgxODczLDI1My4yMjAzNjcgQzYwMC40NDU1NTcsMjU2Ljk0NzU0MCA2MDAuOTUxMTExLDI2MC43MDQ0MzcgNjAwLjk1NjYwNCwyNjQuNDQ4MzY0IEM2MDEuMDIyNjQ0LDMwOS42MTM1MjUgNjAxLjA3NTgwNiwzNTQuNzc5MDIyIDYwMC45NTE3ODIsMzk5Ljk0MzkzOSBDNjAwLjkxMzE0Nyw0MTQuMDMyMzQ5IDYwMC42NjMyNjksNDI4LjE0MDEwNiA1OTkuNzgyMjg4LDQ0Mi4xOTMzNTkgQzU5OS41NDEwMTYsNDQ2LjA0MDg5NCA1OTcuNTYwNzkxLDQ1MC42MTU2MDEgNTk0Ljg1MzIxMCw0NTMuMzQxMzA5IEM1NzEuMTc3NTUxLDQ3Ny4xNzUzMjMgNTQ3LjE4MDcyNSw1MDAuNjkwNzk2IDUyMy4yMjc5NjYsNTI0LjI0ODc3OSBDNTA2Ljc5OTgzNSw1NDAuNDA2MTI4IDQ5MC4yMDk5OTEsNTU2LjM5OTkwMiA0NzMuODY0NTYzLDU3Mi42NDAxMzcgQzQ2OC44MDA4NDIsNTc3LjY3MTIwNCA0NjMuMDgyODg2LDU4MC4wNTQxOTkgNDU1Ljk3MDYxMiw1ODAuMDQzODIzIEM0MDAuOTcyNDQzLDU3OS45NjM1MDEgMzQ1Ljk3MzY2Myw1ODAuMTMyMDE5IDI5MC45NzYwNDQsNTc5LjkzNjc2OCBDMjY3LjU4MDQxNCw1NzkuODUzNjk5IDI0Ni41NTEyMDgsNTcyLjA0MzU3OSAyMjguOTM5NzQzLDU1Ni44Mjc1MTUgQzIxMi44NDk2MjUsNTQyLjkyNTg0MiAyMDIuNzUxOTY4LDUyNC45MDIxMDAgMTk4LjE1NjE1OCw1MDQuMDM5NjczIEMxOTcuMjgyMTk2LDUwMC4wNzIyOTYgMTk3LjA1MjQxNCw0OTUuODk1Mzg2IDE5Ny4wNDczMzMsNDkxLjgxNDQ4NCBDMTk2Ljk3ODE0OSw0MzYuMTQ5NjU4IDE5Ny4wNTA3MjAsMzgwLjQ4NDYxOSAxOTYuOTMyNjE3LDMyNC44MTk5NDYgQzE5Ni45MTkxNDQsMzE4LjQ3MDkxNyAxOTkuMTg0ODQ1LDMxMy40MTYxOTkgMjAzLjQ5NTU3NSwzMDkuMTAwNTI1IEMyNDAuNTg3OTk3LDI3MS45NjU0MjQgMjc3LjY4MjQ5NSwyMzQuODMyMzA2IDMxNC44MzQ1NjQsMTk3Ljc1Njk1OCBDMzIwLjk1NjQyMSwxOTEuNjQ3Nzk3IDMyNy4yNjQ0MzUsMTg1LjcxNTI1NiAzMzMuNjczOTIwLDE3OS45MDgwODEgQzMzNy4zNzYwMzgsMTc2LjU1MzgzMyAzNDEuNzIxNDY2LDE3NC44NTMzMTcgMzQ3LjAwNTc5OCwxNzQuOTEyODcyIEMzNjYuNTAxNzA5LDE3NS4xMzI2MTQgMzg2LjAwMTYxNywxNzUuMDAwMzIwIDQwNiwxNzUuMDAwNDEyIFogTTUwMy4zNDQ2NjYsMjczLjg0MDE0OSBDNTA0LjEwMjcyMiwyNzYuMTY3NTcyIDUwNC45NDA5NDgsMjc4LjIxMTA5MCA1MDQuOTQzMjY4LDI4MC4yNTU1MjQgQzUwNS4wMTI4NDgsMzQxLjc0MjI0OSA1MDQuOTY5MTQ3LDQwMy4yMjkwNjUgNTA1LjAzMDc5Miw0NjQuNzE1NzkwIEM1MDUuMDQwODAyLDQ3NC42ODY0OTMgNDk2LjExNzQ2Miw0ODMuOTUzMTg2IDQ4NS43Nzc5MjQsNDgzLjk2NTI3MSBDNDI0LjYyNDQ1MSw0ODQuMDM2ODk2IDM2My40NzA5MTcsNDg0LjAwMzIzNSAzMDIuMzE3MzgzLDQ4My45OTY3MzUgQzI5NS41ODc3NjksNDgzLjk5NjAzMyAyOTMuMDAxMjUxLDQ4MS4zMDE2MDUgMjkzLjAwMDkxNiw0NzQuMzM4NTYyIEMyOTIuOTk3ODY0LDQxMy4zNTE2NTQgMjkzLjIwOTYyNSwzNTIuMzYzMzEyIDI5Mi43ODA3MDEsMjkxLjM3OTM5NSBDMjkyLjcxMzUzMSwyODEuODI4MDk0IDMwMy4yMTMwNDMsMjcwLjgyNDE1OCAzMTMuNDc4MjcxLDI3MC44OTQzMTggQzM1MS45NjgyMDEsMjcxLjE1NzQ0MCAzOTAuNDYwOTk5LDI3MC45OTk3ODYgNDI4Ljk1MjcyOCwyNzAuOTk5Nzg2IEM0NTEuMTE0NjI0LDI3MC45OTk3ODYgNDczLjI3NzI4MywyNzAuOTE3NDgwIDQ5NS40Mzc0NjksMjcxLjExMjE1MiBDNDk3Ljk3NzAyMCwyNzEuMTM0NDkxIDUwMC41MDI5MzAsMjcyLjcwNDM3NiA1MDMuMzQ0NjY2LDI3My44NDAxNDkgWiI+PC9wYXRoPjwvc3ZnPgo=&logoColor=white\" alt=\"Website\" /></a>\n  <a href=\"https://x.com/obscura_sh\" target=\"_blank\" rel=\"noopener noreferrer\"><img src=\"https://img.shields.io/badge/TWITTER%20%2F%20X-1a1a1a?style=for-the-badge&logo=x&logoColor=white\" alt=\"Obscura on Twitter/X\" /></a>\n  <a href=\"https://cal.com/obscura/quick-chat\"><img src=\"https://img.shields.io/badge/Book_a_Demo-1a1a1a?style=for-the-badge&logo=googlecalendar&logoColor=white\" alt=\"Book a demo\" /></a>\n  <a href=\"https://github.com/h4ckf0r0day/obscura/releases\"><img src=\"https://img.shields.io/badge/Releases-1a1a1a?style=for-the-badge&logo=github&logoColor=white\" alt=\"Releases\" /></a>\n</p>\n<p align=\"center\">\n  <strong>The open-source headless browser for AI agents and web scraping.</strong><br>\n  Lightweight, stealthy, and built in Rust.\n</p>\n<h3 align=\"center\">Native rendering is here. No Chromium required. 🎉 </h3>\n<p align=\"center\">\n  Capture screenshots, screencast live pages, and export PDFs directly with Obscura.\n</p>\n\n---\n\nObscura is a headless browser engine written in Rust, built for web scraping and AI agent automation. It runs real JavaScript via V8, supports the Chrome DevTools Protocol, and acts as a drop-in replacement for headless Chrome with Puppeteer and Playwright.\n\n### Why Obscura over headless Chrome?\n\n| Metric       | Obscura      | Headless Chrome |\n|--------------|--------------|------------------|\n| Memory       | **30 MB**    | 200+ MB          |\n| Binary size  | **~70 MiB**  | 300+ MB          |\n| Anti-detect  | **Built-in** | None          |\n| Page load    | **85 ms**    | ~500 ms          |\n| Startup      | **Instant**  | ~2s              |\n| Puppeteer    | **Yes**      | Yes              |\n| Playwright   | **Yes**      | Yes              |\n\n<table>\n  <tr>\n    <td width=\"90\" align=\"center\">\n      <a href=\"https://blog.cloudflare.com/kitesurf/\">\n        <img\n          src=\"https://cdn.simpleicons.org/cloudflare/F38020\"\n          alt=\"Cloudflare\"\n          width=\"54\"\n        />\n      </a>\n    </td>\n    <td>\n      <strong>Obscura inspired Cloudflare Kitesurf’s first prototype</strong>\n      <br>\n      Cloudflare began by porting Obscura to Workers while developing its\n      new agent-first browser.\n      <br>\n      <a href=\"https://blog.cloudflare.com/",
-      "repo_id": 1209343409,
-      "score": 86.778,
-      "source_name": "github_search",
-      "sources": [
-        "github_search"
-      ],
-      "stargazers_count": 29921,
-      "stars": 29921,
-      "topics": [
-        "antidetect",
-        "antidetect-browser",
-        "browser",
-        "browser-automation",
-        "cdp",
-        "headless",
-        "playwright",
-        "puppeteer",
-        "rust"
-      ],
-      "updated_at": "2026-11-01T10:16:50Z",
-      "url": "https://github.com/h4ckf0r0day/obscura"
     },
     {
       "archived": false,
@@ -2571,8 +2616,8 @@
     "h4ckf0r0day/obscura": {
       "first_seen_at": "2026-11-01T10:20:50.579791Z",
       "full_name": "h4ckf0r0day/obscura",
-      "last_decision": "queued",
-      "last_seen_at": "2026-11-01T10:20:50.579794Z",
+      "last_decision": "published",
+      "last_seen_at": "2026-11-01T11:43:27.733782Z",
       "repo_id": 1209343409,
       "sources": [
         "github_search"
