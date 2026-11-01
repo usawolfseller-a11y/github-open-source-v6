@@ -1,0 +1,71 @@
+name: Doctor
+
+on:
+  workflow_dispatch:
+    inputs:
+      hello:
+        description: Send a hello message to the resolved test channel
+        type: boolean
+        default: false
+      configure_bot:
+        description: Set bot commands and descriptions
+        type: boolean
+        default: false
+      news_spike:
+        description: Try Gemini analysis of the latest WorldofAI YouTube URL
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: doctor
+  cancel-in-progress: false
+
+jobs:
+  doctor:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: ${{ vars.APP_ENV }}
+      PUBLISH_TARGET: ${{ vars.PUBLISH_TARGET }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_TEST_CHANNEL_ID: ${{ vars.TELEGRAM_TEST_CHANNEL_ID }}
+      TELEGRAM_MAIN_CHANNEL_ID: ${{ vars.TELEGRAM_MAIN_CHANNEL_ID }}
+      TELEGRAM_OWNER_CHAT_ID: ${{ vars.TELEGRAM_OWNER_CHAT_ID }}
+      TELEGRAM_SOURCE_CHANNELS: ${{ vars.TELEGRAM_SOURCE_CHANNELS }}
+      GH_API_TOKEN: ${{ github.token }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+      TELEGRAPH_ACCESS_TOKEN: ${{ secrets.TELEGRAPH_ACCESS_TOKEN }}
+      DEV_API_KEY: ${{ secrets.DEV_API_KEY }}
+      BLUESKY_HANDLE: ${{ vars.BLUESKY_HANDLE }}
+      BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+      MASTODON_INSTANCE_URL: ${{ vars.MASTODON_INSTANCE_URL }}
+      MASTODON_ACCESS_TOKEN: ${{ secrets.MASTODON_ACCESS_TOKEN }}
+      FACEBOOK_PAGE_ID: ${{ vars.FACEBOOK_PAGE_ID }}
+      FACEBOOK_PAGE_ACCESS_TOKEN: ${{ secrets.FACEBOOK_PAGE_ACCESS_TOKEN }}
+      FEATURE_TELEGRAPH: ${{ vars.FEATURE_TELEGRAPH }}
+      FEATURE_DEVTO: ${{ vars.FEATURE_DEVTO }}
+      FEATURE_BLUESKY: ${{ vars.FEATURE_BLUESKY }}
+      FEATURE_MASTODON: ${{ vars.FEATURE_MASTODON }}
+      FEATURE_Facebook: ${{ vars.FEATURE_Facebook }}
+      FEATURE_AI_BRIEF: ${{ vars.FEATURE_AI_BRIEF }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+      - name: Doctor
+        shell: bash
+        run: |
+          args=()
+          if [ "${{ inputs.hello }}" = "true" ]; then args+=(--hello); fi
+          if [ "${{ inputs.configure_bot }}" = "true" ]; then args+=(--configure-bot); fi
+          if [ "${{ inputs.news_spike }}" = "true" ]; then args+=(--news-spike); fi
+          ghos-v6 doctor "${args[@]}"
