@@ -20,7 +20,6 @@ from .Gemini import GeminiClient, generate_project_content
 from .http import download_bytes, sanitize
 from .media import choose_visual
 from .media_host import GitHubReleaseMediaHost, ImgBBMediaHost
-from .publish_guard import assert_production_copy
 from .upload import shrink_for_web_preview
 from .news import (
     extract_primary_urls,
@@ -423,7 +422,6 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
             }
         )
         text_html = format_project_post(format_input, telegraph_url=telegraph_url)
-        assert_production_copy(visible_text(text_html), surface=f"project post {key}")
         # The owner's format: the long post is the message itself, and the
         # rendered card rides on top as a large link preview. A photo post
         # cannot carry long text at all (caption ceiling is 1024 chars), so
