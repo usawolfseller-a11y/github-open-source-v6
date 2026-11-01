@@ -100,19 +100,19 @@ def _emoji(project: dict[str, Any]) -> str:
     return "🚀"
 
 
-def _hashtags(project: dict[str, Any], limit: int = 6) -> str:
-    tags: list[str] = []
+def _hashtags(project: dict[str, Any], limit: int = 4) -> str:
+    """Telegram tags: four maximum, brand tag first, no tag wall."""
+    tags: list[str] = ["opensource"]
     lang = str(project.get("language") or "").strip().lower()
     if lang:
         tags.append(_LANG_HASHTAG.get(lang, re.sub(r"[^a-z0-9]+", "", lang)))
     for topic in project.get("topics") or []:
         tag = re.sub(r"[^a-zA-Z0-9_]+", "_", str(topic).strip().lower()).strip("_")
-        if tag and tag not in tags:
+        if tag and tag not in tags and tag != "open_source":
             tags.append(tag)
-    tags = [t for t in tags if t][:limit]
-    tags.append("opensource") if "opensource" not in tags and "open-source" not in tags else None
-    return " ".join(f"#{t}" for t in tags)
-
+        if len(tags) >= limit:
+            break
+    return " ".join(f"#{t}" for t in [t for t in tags if t][:limit])
 
 def visible_text(rendered_html: str) -> str:
     text = re.sub(r"<br\s*/?>", "\n", rendered_html)
@@ -162,9 +162,9 @@ def format_project_post(
 
     deep_parts: list[str] = []
     if project.get("who_for"):
-        deep_parts.append(f"<b>Who it's for:</b> {_esc(_clip(str(project['who_for']), 300))}")
+        deep_parts.append(f"<b>Who should try it:</b> {_esc(_clip(str(project['who_for']), 300))}")
     if project.get("why_now"):
-        deep_parts.append(f"<b>Why now:</b> {_esc(_clip(str(project['why_now']), 300))}")
+        deep_parts.append(f"<b>Why it matters now:</b> {_esc(_clip(str(project['why_now']), 300))}")
     if project.get("verdict"):
         deep_parts.append(f"<b>Verdict:</b> {_esc(_clip(str(project['verdict']), 280))}")
     if project.get("quick_start"):
@@ -198,7 +198,7 @@ def format_project_post(
         lines += ["", f"💬 <i>{_esc(question)}</i>"]
         if links:
             lines.append(" · ".join(links))
-        lines.append("⭐ <i>Enjoy it? Star the repo to support the author.</i>")
+        lines.append("<i>Useful? Give the repo a ⭐ — it helps the maintainers.</i>")
         ht = _hashtags(project)
         if ht:
             lines.append(ht)

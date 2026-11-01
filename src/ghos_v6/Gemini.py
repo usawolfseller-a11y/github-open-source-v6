@@ -208,14 +208,21 @@ Safety:
 - Otherwise safety="ok".
 
 Output constraints:
-- hook: one benefit-led sentence, <=120 chars
+- hook: one benefit-led sentence, <=120 chars. Rewrite; do not copy the
+  repository description verbatim. No hype words such as "insane",
+  "revolutionary" or "game-changing" unless quantified by the source.
 - summary: 2-4 sentences
-- key_features: 4-6 concrete items, each <=120 chars
+- key_features: 4-6 concrete items, each <=120 chars; start with a
+  capability or verb, not marketing adjectives.
 - who_for / why_now / verdict: concise, factual
 - quick_start: copy or closely paraphrase an actually documented command;
   if none is documented, use a GitHub clone command only
 - discussion_question: one specific question for developers
-- social_text: <=250 chars, no URL
+- social_text: <=220 chars, no URL, hashtags or emoji. This is source
+  copy for short social adapters: one concrete benefit, no generic
+  "Check out" opener.
+- article_title: search-friendly; include the project name and the main
+  task/use case a developer would search for. No clickbait.
 - article_markdown: 350-600 words with H2 sections:
   What it is; Why it matters; Key features; Quick start; Who should try it;
   Verdict. Include only a documented quick-start code block.
@@ -354,7 +361,7 @@ def normalize_project_content(
         "category": _clip_sentence(raw.get("category") or "developer-tools", 40),
         "safety": safety,
         "safety_reason": _clip_sentence(raw.get("safety_reason"), 240),
-        "social_text": _clip_sentence(raw.get("social_text") or raw.get("hook"), 260),
+        "social_text": _clip_sentence(raw.get("social_text") or raw.get("hook"), 240),
         "article_title": _clip_sentence(
             raw.get("article_title") or f"{candidate.get('name') or 'Project'}: a practical breakdown",
             140,

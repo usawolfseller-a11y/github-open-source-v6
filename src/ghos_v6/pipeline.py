@@ -10,8 +10,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from .cards import render_digest_card
+from .cards import render_ai_brief_card, render_digest_card
 from .config import Config, telegram_message_link
+from .content_adapters import build_crosspost_text, Facebook_link_url, image_alt_text
 from .formatter import format_project_post
 from .gate import GateConfig, evaluate
 from .Gemini import GeminiClient, generate_project_content
@@ -165,15 +166,48 @@ def _public_record_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
 
 
 def _article_markdown(record_candidate: dict[str, Any], generated: dict[str, Any]) -> str:
+    """Telegraph wrapper: standfirst + snapshot, then the long breakdown."""
     markdown = str(generated.get("article_markdown") or "").strip()
+    lines = markdown.splitlines()
+    if lines and lines[0].lstrip().startswith("# "):
+        markdown = "\n".join(lines[1:]).strip()
+    hook = str(generated.get("hook") or record_candidate.get("description") or "").strip()
+    lic = record_candidate.get("license")
+    license_name = ""
+    if isinstance(lic, dict):
+        license_name = str(lic.get("spdx_id") or lic.get("name") or "")
+    elif lic:
+        license_name = str(lic)
+    snapshot_bits = []
+    if record_candidate.get("full_name"):
+        snapshot_bits.append(f"Repository: {record_candidate['full_name']}")
+    if record_candidate.get("language"):
+        snapshot_bits.append(f"Language: {record_candidate['language']}")
+    if license_name:
+        snapshot_bits.append(f"License: {license_name}")
+    try:
+        snapshot_bits.append(f"Stars: {int(record_candidate.get('stars') or 0):,}".replace(",", " "))
+    except (TypeError, ValueError):
+        pass
+    intro = ""
+    if hook:
+        intro += hook + "\n\n"
+    if snapshot_bits:
+        intro += "*" + " · ".join(snapshot_bits) + "*\n\n"
     links = [
         f"- [GitHub repository]({record_candidate.get('url')})",
     ]
     if record_candidate.get("homepage"):
         links.append(f"- [Project homepage]({record_candidate['homepage']})")
     links.append("- [GitHub Open Source on Telegram](https://t.me/GitHub_Open_Source)")
-    return markdown + "\n\n## Links\n\n" + "\n".join(links) + "\n"
-
+    return (
+        intro
+        + markdown
+        + "\n\n## Links\n\n"
+        + "\n".join(links)
+        + "\n\n*Curated from the repository README and metadata. "
+        "No hands-on test is claimed; evaluate it in a sandbox before production use.*\n"
+    )
 
 def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dict[str, Any]:
     config.require("TELEGRAM_BOT_TOKEN")
@@ -381,10 +415,6 @@ def process_crossposts(config: Config, store: StateStore) -> dict[str, Any]:
     }
     for key, record in list(store.data.get("published", {}).items()):
         generated = record.get("generated") or {}
-        text = str(generated.get("social_text") or generated.get("hook") or record.get("description") or "")
-        if record.get("name") and str(record["name"]).lower() not in text.lower():
-            text = f"{record['name']}: {text}"
-        link = str(record.get("telegram_link") or record.get("url") or "")
         image_data, content_type = _download_record_image(record)
         for platform, status_info in list((record.get("crossposts") or {}).items()):
             if platform not in enabled:
@@ -401,16 +431,20 @@ def process_crossposts(config: Config, store: StateStore) -> dict[str, Any]:
             summary["processed"] += 1
             try:
                 client = client_for(platform)
+                # Native copy per surface: limits, link placement, tags
+                # and tone differ deliberately.  Private test-channel
+                # t.me/c links are never used in public social copy.
+                text = build_crosspost_text(platform, record, generated)
                 if platform == "Facebook":
-                    result = client.post(text, url=link)
+                    result = client.post(text, url=Facebook_link_url(record))
                     result_url = f"https://www.facebook.com/{result.get('id')}" if result.get("id") else ""
                 else:
                     result = client.post(
                         text,
-                        url=link,
+                        url="",
                         image_data=image_data,
                         content_type=content_type,
-                        image_alt=str(record.get("full_name") or record.get("name") or "Project cover"),
+                        image_alt=image_alt_text(record, generated),
                     )
                     result_url = str(result.get("url") or "")
                 status_info.update(
@@ -529,10 +563,27 @@ def news_command(config: Config, store: StateStore, *, force: bool = False) -> d
             row.append({"text": "Watch on WorldofAI", "url": str(entry["url"])})
         if row:
             buttons.append(row)
+        preview_url = str(entry.get("url") or "")
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                standfirst_items = brief.get("what_happened") or []
+                standfirst = str(standfirst_items[0] if standfirst_items else brief.get("why_devs") or "")
+                card_path = render_ai_brief_card(
+                    str(brief.get("headline") or "Verified AI update"),
+                    standfirst,
+                    str(brief.get("official_name") or "Primary source"),
+                    Path(tmp) / "ai-brief.png",
+                )
+                if config.telegraph_access_token:
+                    uploaded = TelegraphClient(config.telegraph_access_token).upload_image_path(card_path)
+                    if uploaded:
+                        preview_url = uploaded
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("AI Brief Glass Aurora card failed; using video preview: %s", type(exc).__name__)
         sent = telegram.send_text(
             chat_id,
             format_ai_brief(brief),
-            preview_url=str(entry.get("url") or ""),
+            preview_url=preview_url,
             buttons=buttons,
         )
         record = {
@@ -543,6 +594,7 @@ def news_command(config: Config, store: StateStore, *, force: bool = False) -> d
             "video_url": entry.get("url") or "",
             "published_at": iso_now(),
             "telegram_message_id": sent.get("message_id"),
+            "image_url": preview_url if preview_url != str(entry.get("url") or "") else "",
             "Gemini_video_input": video_input,
         }
         store.data.setdefault("news_topics", []).append(record)
@@ -588,16 +640,22 @@ def digest_command(config: Config, store: StateStore) -> dict[str, Any]:
         link = str(record.get("telegram_link") or record.get("url") or "")
         title = f'<a href="{html.escape(link, quote=True)}">{name}</a>' if link.startswith("https://") else name
         generated = record.get("generated") or {}
-        hook = html.escape(str(generated.get("hook") or record.get("description") or ""))[:220]
-        lines.append(f"{index}. <b>{title}</b>" + (f" — {hook}" if hook else ""))
+        hook = html.escape(str(generated.get("hook") or record.get("description") or "")[:220])
+        try:
+            stars = f" ⭐ {int(record.get('stars') or 0):,}".replace(",", " ")
+        except (TypeError, ValueError):
+            stars = ""
+        lines.append(f"{index}. <b>{title}</b>{stars}")
+        if hook:
+            lines.append(f"   {hook}")
     lines += ["", "Vote in the poll below: which one deserves Project of the Week?"]
     sent = telegram.send_text(chat_id, "\n".join(lines), preview_url=image_url)
     poll = None
     try:
         poll = telegram.send_poll(
             chat_id,
-            "Project of the Week?",
-            [str(record.get("name") or record.get("full_name") or "Project") for record in records[:4]],
+            "Which project should win Project of the Week?",
+            [str(record.get("name") or record.get("full_name") or "Project") for record in records],
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("Digest poll failed: %s", sanitize(str(exc))[:200])

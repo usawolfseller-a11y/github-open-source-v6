@@ -12,6 +12,7 @@ from typing import Any
 
 import requests
 
+from .content_adapters import build_devto_body, build_devto_title, devto_tags
 from .http import USER_AGENT, sanitize
 
 URL_RE = re.compile(r"https://[^\s<>\"')]+")
@@ -52,37 +53,25 @@ class DevToClient:
         return dict(response.json() or {})
 
     @staticmethod
-    def _tags(record: dict[str, Any]) -> list[str]:
-        raw = [record.get("language") or ""] + list(record.get("topics") or [])
-        tags: list[str] = []
-        for value in raw:
-            tag = re.sub(r"[^a-z0-9]+", "", str(value).lower())
-            if tag and tag not in tags:
-                tags.append(tag[:30])
-            if len(tags) >= 4:
-                break
-        if "opensource" not in tags and len(tags) < 4:
-            tags.append("opensource")
-        return tags[:4]
+    def _tags(record: dict[str, Any], generated: dict[str, Any] | None = None) -> list[str]:
+        return devto_tags(record, generated)
 
     def publish_article(self, record: dict[str, Any], generated: dict[str, Any]) -> dict[str, Any]:
         if not self.configured:
             raise PlatformError("DEV_API_KEY is not set")
-        markdown = str(generated.get("article_markdown") or "").strip()
-        if not markdown:
+        markdown = build_devto_body(record, generated).strip()
+        if not str(generated.get("article_markdown") or "").strip():
             raise PlatformError("dev.to article markdown is empty")
-        footer = (
-            "\n\n---\n\nOriginally curated for [GitHub Open Source on Telegram]"
-            "(https://t.me/GitHub_Open_Source)."
-        )
         article: dict[str, Any] = {
-            "title": str(generated.get("article_title") or record.get("name") or "Open-source project")[:128],
-            "body_markdown": markdown + footer,
+            "title": build_devto_title(record, generated),
+            "body_markdown": markdown,
             "published": True,
-            "tags": self._tags(record),
+            "tags": self._tags(record, generated),
+            "series": "Open Source Finds",
         }
-        if record.get("telegraph_url"):
-            article["canonical_url"] = record["telegraph_url"]
+        # No canonical_url to Telegraph: the dev.to version is adapted
+        # with its own TL;DR/discussion wrapper and should be indexable
+        # as the public article surface.
         if str(record.get("image_url") or "").startswith("https://"):
             article["main_image"] = record["image_url"]
         response = self.session.post(
@@ -96,15 +85,27 @@ class DevToClient:
 
 
 def build_link_facets(text: str) -> list[dict[str, Any]]:
+    """Build AT Protocol rich-text facets for links and hashtags.
+
+    Byte offsets are UTF-8 based, as required by Bluesky.  Hashtag
+    facets make our CamelCase tags clickable instead of plain text.
+    """
     facets: list[dict[str, Any]] = []
     encoded = text.encode("utf-8")
+    url_spans: list[tuple[int, int]] = []
+
+    def byte_range(start: int, value: str) -> tuple[int, int]:
+        byte_start = len(text[:start].encode("utf-8"))
+        return byte_start, byte_start + len(value.encode("utf-8"))
+
     for match in URL_RE.finditer(text):
-        prefix = text[: match.start()].encode("utf-8")
         value = match.group(0).rstrip(".,;:!?")
-        byte_start = len(prefix)
-        byte_end = byte_start + len(value.encode("utf-8"))
+        if not value:
+            continue
+        byte_start, byte_end = byte_range(match.start(), value)
         if byte_end > len(encoded):
             continue
+        url_spans.append((match.start(), match.start() + len(value)))
         facets.append(
             {
                 "index": {"byteStart": byte_start, "byteEnd": byte_end},
@@ -113,8 +114,24 @@ def build_link_facets(text: str) -> list[dict[str, Any]]:
                 ],
             }
         )
-    return facets
 
+    for match in re.finditer(r"(?<![A-Za-z0-9_#])#([A-Za-z0-9_]+)", text):
+        if any(start <= match.start() < end for start, end in url_spans):
+            continue
+        value = match.group(0)
+        byte_start, byte_end = byte_range(match.start(), value)
+        if byte_end > len(encoded):
+            continue
+        facets.append(
+            {
+                "index": {"byteStart": byte_start, "byteEnd": byte_end},
+                "features": [
+                    {"$type": "app.bsky.richtext.facet#tag", "tag": match.group(1)}
+                ],
+            }
+        )
+
+    return sorted(facets, key=lambda item: item["index"]["byteStart"])
 
 class BlueskyClient:
     def __init__(self, handle: str, app_password: str):

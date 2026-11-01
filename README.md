@@ -71,6 +71,7 @@ src/ghos_v6/
   telegraph.py   Telegraph pages and image upload
   telegram.py    Bot API client and ID discovery
   platforms.py   dev.to, Bluesky, Mastodon, Facebook adapters
+  content_adapters.py  platform-native copy, limits, tags and alt text
   news.py        WorldofAI RSS and verified AI Brief synthesis
   pipeline.py    collect/publish/crosspost/article/news/digest/report
   doctor.py      non-destructive integration checks
@@ -90,7 +91,8 @@ ghos-v6 doctor
 ```
 
 Real credentials belong only in GitHub Secrets/Variables. See
-`.env.example` for names and `docs/RUNBOOK.md` for rollout operations.
+`.env.example` for names, `docs/RUNBOOK.md` for rollout operations
+and `docs/CONTENT_FORMATS.md` for per-platform structure, size and tone.
 
 ## Safety principles
 
