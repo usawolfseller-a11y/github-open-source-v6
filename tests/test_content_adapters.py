@@ -102,3 +102,16 @@ def test_bluesky_facets_include_clickable_hashtags_with_utf8_offsets():
     }
     assert rendered["https://example.com/post"] == "app.bsky.richtext.facet#link"
     assert rendered["#OpenSource"] == "app.bsky.richtext.facet#tag"
+
+
+def test_bluesky_truncation_never_cuts_a_word_and_adds_a_period():
+    record, generated = _record_and_generated()
+    generated["summary"] = (
+        "ExampleTool connects local commands to a structured analysis "
+        "workflow for inspecting runtime behavior across many projects "
+        "without a hosted service or external account requirement today"
+    )
+    text = build_bluesky_text(record, generated)
+    assert len(text) <= 300
+    assert " be." not in text
+    assert "Captures stdout and stderr with timestamps" in text or "…" in text

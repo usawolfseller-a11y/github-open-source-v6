@@ -53,9 +53,10 @@ def clip_text(value: Any, limit: int) -> str:
     if limit <= 1:
         return "…"[:limit]
     cut = text[: limit - 1].rstrip()
-    sentence = cut.rsplit(". ", 1)[0]
-    if len(sentence) >= max(35, int(limit * 0.55)):
-        return sentence.rstrip(".") + "."
+    if ". " in cut:
+        sentence = cut.rsplit(". ", 1)[0]
+        if len(sentence) >= max(35, int(limit * 0.55)):
+            return sentence.rstrip(".") + "."
     word = cut.rsplit(" ", 1)[0]
     return (word or cut).rstrip(" ,;:") + "…"
 
@@ -290,13 +291,29 @@ def build_bluesky_text(record: dict[str, Any], generated: dict[str, Any] | None 
     tags = hashtags(record, generated, limit=2, camel=True)
     suffix = " ".join(part for part in [url, tags] if part)
     lead = _lead(record, generated)
-    detail = _detail(record, generated)
     body_budget = max(60, BLUESKY_LIMIT - len(suffix) - 2)
     lead = clip_text(lead, min(150, body_budget))
     remaining = body_budget - len(lead) - 2
     parts = [lead]
-    if detail and remaining >= 45:
-        parts.append(clip_text(detail, remaining))
+    if remaining >= 45:
+        # Prefer a complete concrete detail over an ellipsized summary.
+        candidates = [
+            *(_features(generated)[:2]),
+            clip_text(generated.get("verdict"), 180),
+            clip_text(generated.get("social_text"), 180),
+            clip_text(generated.get("why_now"), 190),
+            _detail(record, generated),
+        ]
+        detail = ""
+        for candidate in candidates:
+            candidate = clean_text(candidate)
+            if candidate and candidate.lower() not in lead.lower() and len(candidate) <= remaining:
+                detail = candidate
+                break
+        if not detail:
+            detail = clip_text(_detail(record, generated), remaining)
+        if detail:
+            parts.append(detail)
     if suffix:
         parts.append(suffix)
     return _fit_parts(parts, BLUESKY_LIMIT)
