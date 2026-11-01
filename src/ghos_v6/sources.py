@@ -477,19 +477,26 @@ def collect_telegram_web(merged: dict[str, dict[str, Any]], channels: tuple[str,
             )
 
 
-# Measured 2026-11-01 via the public t.me/s/ preview:
-#   open_source_friend  20 posts, 20 GitHub links, last post today  (owner's channel)
-#   github_repos        20 posts, 20 links, last post today
-#   gitbless            20 posts, 19 links, last post today
-#   githubtrending      20 posts, 20 links, last post 2026-09-23 (slow but alive)
-#   gitradar_            0 posts — the preview is empty, so it is dropped
+# Measured 2026-11-01 via the public t.me/s/ preview.  The owner's rule is
+# "channels that really post every day, not ones that wait weeks":
+#   open_source_friend   3.2 posts/day, 20/20 GitHub links  (owner's channel)
+#   github_repos         4.2 posts/day, 20/20 links
+#   gitbless             5.8 posts/day, 19/20 links
+#   bestofgithub         1.1 posts/day, 20/20 links
+# Dropped because they are dead or empty:
+#   githubtrending  last post 2026-09-23 (~40 days), 2.2/day while alive
+#   gitradar_       0 posts in the preview
+#   githubawesome   last post 2026-03-12
+#   opensource_ai   3 posts in 16 days, 0 GitHub links
+#   ai_newz         4 GitHub links in 18 days — a news channel, not a source
+#   opensourceprojects  last post 2020
 # Defaults must be channels that actually answer, so a missing env var
 # cannot quietly empty the Telegram half of the fuel supply.
 DEFAULT_TELEGRAM_SOURCES = (
     "open_source_friend",
     "github_repos",
     "gitbless",
-    "githubtrending",
+    "bestofgithub",
 )
 
 

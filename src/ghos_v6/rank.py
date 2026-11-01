@@ -6,6 +6,7 @@ from collections import Counter
 from datetime import datetime, timezone
 from typing import Any
 
+from .audience import appeal_signals
 from .gate import parse_dt
 
 
@@ -58,7 +59,12 @@ def score_candidate(candidate: dict[str, Any], *, now: datetime | None = None) -
     if same_owner >= 5:
         momentum -= min(10.0, (same_owner - 4) * 2.0)
 
-    base = quality + freshness + momentum + content
+    # "Interesting project" bonus: something a reader can open and use
+    # outranks another library with the same numbers. Capped so it nudges
+    # ordering inside the queue instead of overriding the gate.
+    appeal = min(10.0, len(appeal_signals(candidate)) * 3.5)
+
+    base = quality + freshness + momentum + content + appeal
     # Reserve up to 15 points for diversity at selection time. Give a small
     # neutral baseline so single-candidate scores remain on a 0..100 scale.
     return round(min(100.0, base + 10.0), 3)

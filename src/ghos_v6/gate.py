@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
+from .audience import is_narrow
+
 BLOCK_PATTERNS = [
     r"\bstealer\b",
     r"\bkeylogger\b",
@@ -87,6 +89,13 @@ class GateConfig:
     star_velocity_ceiling: float = 2500.0
     # and a sustained >6k stars/day across a whole month is a campaign
     star_daily_ceiling: float = 6000.0
+    # the owner's rule: "interesting projects, not technical libraries for a
+    # very narrow circle".  A project that calls itself a library/SDK/client
+    # must show at least this many "a person can use it" signals.
+    narrow_min_appeal: int = 1
+    # below this many appeal signals a project is technically passable but
+    # not worth a slot while better material is queued.
+    interesting_min_appeal: int = 1
 
 
 @dataclass
@@ -251,6 +260,11 @@ def evaluate(project: dict[str, Any], cfg: GateConfig = GateConfig()) -> GateDec
     description = str(project.get("description") or "").lower()
     if name.startswith(("awesome", "best-of", "best_of")) or "curated list" in description and "list" in name:
         reasons.append("curation_repo")
+
+    # Narrow audience: building blocks with nothing a reader can open.
+    narrow, narrow_reason = is_narrow(project, min_appeal=cfg.narrow_min_appeal)
+    if narrow:
+        reasons.append(f"narrow:{narrow_reason}")
 
     dual = is_dual_use(project)
     return GateDecision(

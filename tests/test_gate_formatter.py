@@ -369,3 +369,60 @@ def test_telegram_lane_is_not_starved_by_max_enrich(monkeypatch):
     src_mod.enrich_candidates(None, star_heavy + tg, max_enrich=5, telegram_reserve=2)
     assert "owner/one" in seen and "other/two" in seen
     assert seen.index("owner/one") < seen.index("other/two")
+
+
+def test_narrow_library_is_rejected_but_a_usable_product_is_not():
+    """Owner's rule: interesting projects, not technical libraries for a
+    very narrow circle."""
+    from ghos_v6.gate import GateConfig, evaluate
+
+    library = {
+        "full_name": "acme/foo-sdk",
+        "name": "foo-sdk",
+        "description": "Official Python SDK for the Foo API",
+        "topics": ["sdk"],
+        "license": {"spdx_id": "MIT"},
+        "pushed_at": "2026-10-30T00:00:00Z",
+        "stars": 5000,
+        "forks": 300,
+        "contributors_count": 40,
+        "created_at": "2024-01-01T00:00:00Z",
+        "has_readme": True,
+        "readme": "x" * 2000,
+    }
+    decision = evaluate(library, GateConfig())
+    assert not decision.ok
+    assert any(r.startswith("narrow:") for r in decision.reasons)
+
+    product = dict(library)
+    product.update(
+        {
+            "full_name": "acme/foo-studio",
+            "name": "foo-studio",
+            "description": "A desktop photo editor for raw files, Windows macOS and Linux",
+            "topics": ["photography", "editor"],
+        }
+    )
+    assert evaluate(product, GateConfig()).ok
+
+
+def test_appeal_bonus_orders_usable_projects_above_bare_libraries():
+    from ghos_v6.rank import score_candidate
+
+    base = {
+        "license": {"spdx_id": "MIT"},
+        "pushed_at": "2026-10-31T00:00:00Z",
+        "created_at": "2025-01-01T00:00:00Z",
+        "stars": 4000,
+        "forks": 200,
+        "contributors_count": 30,
+        "readme": "x" * 3000,
+    }
+    library = dict(base, full_name="acme/lib", name="acme-lib", description="A fast parser for JSON")
+    product = dict(
+        base,
+        full_name="acme/app",
+        name="acme-app",
+        description="A desktop app to edit photos, self-hosted and Windows ready",
+    )
+    assert score_candidate(product) > score_candidate(library)
