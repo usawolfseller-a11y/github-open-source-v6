@@ -31,6 +31,30 @@ _FONT_FILES = {
 }
 
 
+def _has_glyph(font, char: str) -> bool:
+    """True when the font actually has a glyph for ``char``.
+
+    DejaVu/Liberation cover Latin and punctuation but not emoji; drawing
+    an unsupported character silently produces a hollow box on the card.
+    """
+    try:
+        return bool(font.getmask(char).getbbox())
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _text_font(kind: str, size: int, bold: bool, text: str):
+    """Pick the requested font, but never one that boxes out characters."""
+    font = _font(kind, size, bold)
+    if all(_has_glyph(font, ch) for ch in text if not ch.isspace()):
+        return font
+    for fallback_kind in ("sans", "mono", "serif"):
+        candidate = _font(fallback_kind, size, bold)
+        if all(_has_glyph(candidate, ch) for ch in text if not ch.isspace()):
+            return candidate
+    return font
+
+
 def _font(kind: str = "sans", size: int = 32, bold: bool = False):
     for directory in _FONT_DIRS:
         for filename in _FONT_FILES.get((kind, bold), []):
@@ -119,6 +143,21 @@ def _fit_block(
         if len(lines) <= max_lines:
             return font, lines
     return font, _wrap(draw, " ".join(words), font, max_width, max_lines)
+
+
+_TRANSLITERATE = {
+    "—": "-", "–": "-", "‑": "-", "−": "-", "’": "'", "‘": "'",
+    "“": '"', "”": '"', "…": "", "×": "x", "•": "-",
+}
+
+
+def _ascii_safe(text: str) -> str:
+    """Replace typographic characters the mono font cannot draw."""
+    result = str(text or "")
+    for source, target in _TRANSLITERATE.items():
+        result = result.replace(source, target)
+    # drop any remaining non-Latin-1 symbol that would render as a box
+    return "".join(ch if ord(ch) < 0x2500 or ch.isascii() else " " for ch in result)
 
 
 def _short_copy(text: str, limit: int) -> str:
@@ -246,26 +285,53 @@ def render_editorial_card(
         str(generated.get("card_hook") or generated.get("hook") or candidate.get("description") or ""),
         74,
     )
-    hook_font, hook_lines = _fit_block(draw, hook, "serif", 40, 720, 2, minimum=26)
-    y = 288 + max(0, (2 - len(hook_lines)) * 12)
+    subline = _short_copy(
+        str(generated.get("card_subline") or generated.get("summary") or candidate.get("description") or ""),
+        150,
+    )
+
+    # Deterministic vertical layout: the copy block must fit between the
+    # project name and the stats rule (y=462) without overlaps or dead
+    # strips, whatever the name length does to the title size.
+    band_top = 165 + int(title_font.size * 1.26) + 10
+    band_bottom = 452
+    hook_font = sub_font = None
+    hook_lines: list[str] = []
+    sub_lines: list[str] = []
+    for hook_size in (40, 38, 36, 34, 32, 30, 28, 26):
+        for sub_size in (25, 24, 23, 22, 21, 20, 19, 18):
+            h_font = _font("serif", hook_size, True)
+            s_font = _font("sans", sub_size, False)
+            h_lines = _wrap(draw, hook, h_font, 720, 3)
+            s_lines = _wrap(draw, subline, s_font, 705, 3)
+            h_h = len(h_lines) * int(hook_size * 1.22)
+            s_h = len(s_lines) * int(sub_size * 1.32)
+            if band_top + h_h + 12 + s_h <= band_bottom and len(h_lines) <= 2 and len(s_lines) <= 2:
+                hook_font, sub_font = h_font, s_font
+                hook_lines, sub_lines = h_lines, s_lines
+                break
+        if hook_font:
+            break
+    if not hook_font:
+        hook_font, hook_lines = _fit_block(draw, hook, "serif", 26, 720, 2, minimum=20)
+        sub_font, sub_lines = _fit_block(draw, subline, "sans", 18, 705, 2, bold=False, minimum=15)
+
+    hook_height = len(hook_lines) * int(hook_font.size * 1.22)
+    sub_height = len(sub_lines) * int(sub_font.size * 1.32)
+    # Spread any leftover room between the two blocks instead of leaving
+    # a dead strip above the stats rule on short names.
+    # Copy sits directly under the name: reading order matters more than
+    # filling the band. Any leftover space stays above the stats rule,
+    # which acts as the visual anchor of the lower half.
+    y = band_top
     for index, line in enumerate(hook_lines):
         color = "#b3342a" if index == len(hook_lines) - 1 and len(hook_lines) > 1 else "#393126"
         draw.text((62, y), line, font=hook_font, fill=color)
         y += int(hook_font.size * 1.22)
-
-    summary = _short_copy(
-        str(generated.get("card_subline") or generated.get("summary") or candidate.get("description") or ""),
-        150,
-    )
-    summary_font, summary_lines = _fit_block(
-        draw, summary, "sans", 25, 705, 2, bold=False, minimum=17
-    )
-    # subline sits in its own band so a short headline never leaves a
-    # dead strip between the copy and the stats rule
-    y = 360 if len(hook_lines) <= 1 else 402
-    for line in summary_lines:
-        draw.text((62, y), line, font=summary_font, fill="#514940")
-        y += int(summary_font.size * 1.3)
+    y += 12
+    for line in sub_lines:
+        draw.text((62, y), line, font=sub_font, fill="#514940")
+        y += int(sub_font.size * 1.32)
 
     language = str(candidate.get("language") or "Open Source")
     draw.ellipse((885, 165, 1115, 395), outline="#b3342a", width=6)
@@ -320,11 +386,12 @@ def render_terminal_card(
     command = quick if quick and len(quick) <= 64 else f"$ {name.lower()}"
     if not command.startswith("$"):
         command = "$ " + command
+    command = command.replace("—", "-").replace("–", "-")
     draw.text((65, 108), command, font=_fit(draw, command, "mono", 32, 760, True, 20), fill="#00ff66")
-    title = "> " + name.upper()
+    title = "> " + _ascii_safe(name.upper())
     draw.text((62, 160), title, font=_fit(draw, title, "mono", 88, 760, True, 38), fill="#eaffef")
 
-    hook = "// " + str(generated.get("hook") or candidate.get("description") or "")
+    hook = "// " + _ascii_safe(str(generated.get("hook") or candidate.get("description") or ""))
     y = 278
     _hook_font, _hook_lines = _fit_block(draw, _short_copy(hook, 140), "mono", 27, 760, 3, bold=False, minimum=18)
     for line in _hook_lines:
