@@ -6,6 +6,7 @@ an Editorial "Sunday Edition" variant.
 """
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -716,6 +717,20 @@ def _gradient(first: tuple[int, int, int], second: tuple[int, int, int]) -> Imag
     return Image.composite(top, base, mask)
 
 
+def _short_host(url: str) -> str:
+    """``https://blog.google/technology/x/`` → ``blog.google``.
+
+    A raw URL in a stat cell always overflows: it has no spaces to wrap on
+    and no length discipline. The host is what a reader needs to judge the
+    source; the full link lives in the post text.
+    """
+    raw = str(url or "").strip()
+    if not raw:
+        return ""
+    host = re.sub(r"^https?://", "", raw).split("/")[0].lower()
+    return host[4:] if host.startswith("www.") else host
+
+
 def render_ai_brief_card(
     headline: str,
     standfirst: str,
@@ -748,11 +763,18 @@ def render_ai_brief_card(
     for line in _wrap(draw, standfirst, _font("sans", 29), 920, 3):
         draw.text((117, y), line, font=_font("sans", 29), fill=(225, 232, 255))
         y += 38
-    cells = [("OFFICIAL SOURCE", official_source or "Primary source"), ("SPOTTED VIA", "WorldofAI"), ("STATUS", "Confirmed")]
-    for index, (key, value) in enumerate(cells):
-        x = 145 + index * 320
+    cells = [
+        ("OFFICIAL SOURCE", _short_host(official_source) or "Primary source"),
+        ("SPOTTED VIA", "WorldofAI"),
+        ("STATUS", "Confirmed"),
+    ]
+    cell_widths = (430, 250, 200)
+    x = 145
+    for (key, value), width in zip(cells, cell_widths):
         draw.text((x, 472), key, font=_font("sans", 15, True), fill=(150, 205, 255))
-        draw.text((x, 497), value, font=_fit(draw, value, "sans", 26, 290, True, 17), fill="white")
+        value_font = _fit(draw, value, "sans", 26, width - 20, True, 15)
+        draw.text((x, 497), value, font=value_font, fill="white")
+        x += width
     output_path.parent.mkdir(parents=True, exist_ok=True)
     image.convert("RGB").save(output_path)
     return output_path
@@ -770,14 +792,27 @@ def render_digest_card(records: Iterable[dict[str, Any]], output_path: Path) -> 
     for index, record in enumerate(list(records)[:5], 1):
         name = str(record.get("name") or record.get("full_name") or "Project")
         meta = " · ".join(part for part in [str(record.get("language") or ""), str(record.get("category") or "")] if part)
-        metric = f"score {float(record.get('score') or 0):.0f}"
+        if record.get("views_at_24h"):
+            metric = f"{int(record['views_at_24h']):,} views".replace(",", " ")
+        elif record.get("views"):
+            metric = f"{int(record['views']):,} views".replace(",", " ")
+        else:
+            metric = f"score {float(record.get('score') or 0):.0f}"
         draw.text((62, y), str(index), font=_font("serif", 38, True), fill="#b3342a")
         draw.text((115, y), name, font=_fit(draw, name, "sans", 32, 560, True, 19), fill="#17130d")
         draw.text((700, y + 4), meta, font=_font("sans", 21), fill="#655c4d")
         draw.text((1135, y), metric, font=_font("serif", 29, True), fill="#17130d", anchor="ra")
         y += 58
         draw.line((60, y - 10, 1140, y - 10), fill="#d8cdb8", width=2)
-    draw.text((58, 562), "Ranked by editorial score until view metrics are connected", font=_font("sans", 19), fill="#655c4d")
+    top = list(records)[:5]
+    measured = sum(1 for r in top if r.get("views_at_24h") or r.get("views"))
+    if measured == len(top) and measured:
+        note = "Ranked by measured 24-hour views"
+    elif measured:
+        note = "Views where measured · editorial score otherwise"
+    else:
+        note = "Ranked by editorial score until view metrics are connected"
+    draw.text((58, 562), note, font=_font("sans", 19), fill="#655c4d")
     draw.text((1145, 590), BRAND, font=_font("sans", 19, True), fill="#b3342a", anchor="ra")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     image.save(output_path)

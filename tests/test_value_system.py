@@ -191,3 +191,12 @@ def test_learn_refuses_to_guess_from_two_posts():
         result = learn_command(object(), store)
     assert result["learned"] is False
     assert result["reason"] == "not_enough_samples"
+
+
+def test_channel_polls_must_be_anonymous():
+    """Telegram rejects non-anonymous polls in channels — silent failure otherwise."""
+    from ghos_v6.polls import is_channel
+
+    assert is_channel("@GitHub_Open_Source")
+    assert is_channel("-1003909350927")
+    assert not is_channel(8652931211)

@@ -80,6 +80,23 @@ daily 19:50 metrics, Thu 18:10 close + learn.
 
 Optional repository variable `REDIRECT_BASE_URL` enables the click layer
 (`infra/redirect/`). Unset = direct GitHub links, no click data, no failure.
+Setup walkthrough: `docs/CLOUDFLARE_SETUP.md`.
+
+## Post types on the test channel
+
+All four card families have been posted as real messages (1 Nov 2026):
+
+| Card | When it is used | Message |
+|---|---|---|
+| Editorial | default for library/app/web projects | 9 |
+| Neon Terminal | CLI/TUI projects | 6 |
+| AI Brief | verified AI news, 3×/week | 7 |
+| Sunday Digest | weekly Top 5 + poll | 8 |
+
+The week poll (message 10) was opened and closed in the same session to
+prove the `sendPoll` → `stopPoll` path. Note: **channel polls must be
+anonymous** — Telegram rejects named polls in channels, which the first
+attempt hit.
 
 `IMGBB_API_KEY` is optional at runtime: without it, cards fall back to
 the monthly GitHub release host, then to Telegraph upload, then to

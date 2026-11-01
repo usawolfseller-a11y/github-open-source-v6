@@ -144,6 +144,46 @@ class TelegramClient:
             ),
         )
 
+    def send_photo(
+        self,
+        chat_id: int | str,
+        photo: bytes,
+        caption_html: str,
+        *,
+        buttons: Sequence[Sequence[dict[str, str]]] = (),
+        filename: str = "card.png",
+    ) -> dict[str, Any]:
+        """Upload the card as the post itself (multipart, no external host).
+
+        Prefer this when a public image host is unavailable: Telegram takes
+        the bytes directly, so the card cannot silently degrade to a
+        GitHub OpenGraph preview the way a link-preview post does.
+        """
+        if not self.configured:
+            raise TelegramError("TELEGRAM_BOT_TOKEN is not set")
+        import json as _json
+
+        data = {"chat_id": str(chat_id), "caption": caption_html, "parse_mode": "HTML"}
+        if buttons:
+            data["reply_markup"] = _json.dumps({"inline_keyboard": list(buttons)})
+        files = {"photo": (filename, photo, "image/png")}
+        try:
+            response = self.session.post(
+                f"{API_BASE}/bot{self.bot_token}/sendPhoto",
+                data=data,
+                files=files,
+                timeout=90,
+            )
+            body = response.json()
+        except (requests.RequestException, ValueError) as exc:
+            raise TelegramError(f"Telegram sendPhoto network failure: {type(exc).__name__}") from exc
+        if not body.get("ok"):
+            raise TelegramError(
+                f"Telegram sendPhoto failed: {body.get('description') or 'unknown error'}",
+                error_code=body.get("error_code"),
+            )
+        return dict(body.get("result") or {})
+
     def send_owner(self, owner_chat_id: int | None, text_html: str) -> dict[str, Any] | None:
         if not owner_chat_id:
             return None
@@ -164,7 +204,7 @@ class TelegramClient:
             "chat_id": chat_id,
             "question": str(question)[:300],
             "options": clean_options,
-            "is_anonymous": False,
+            "is_anonymous": str(chat_id).strip().startswith(("@", "-100")),
             "allows_multiple_answers": False,
         }
         if open_period:

@@ -86,7 +86,7 @@ Order is fixed by risk, not preference:
 **Exit criteria:** each platform published at least one post from the queue, unattended.
 
 ### Phase D — Click layer (optional, owner decision) `[after C]`
-- [ ] Owner creates a free Cloudflare account (`wrangler` CLI, no card)
+- [x] Owner has a Cloudflare account — step-by-step in `docs/CLOUDFLARE_SETUP.md`
 - [ ] Deploy `infra/redirect/`, set `REDIRECT_BASE_URL`
 - [ ] Upload `ghos-v6 links-export` output to KV
 - [ ] Add clicks into the value score (weight already reserved)

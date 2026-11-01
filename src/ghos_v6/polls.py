@@ -14,6 +14,12 @@ MAX_POLL_DAYS = 10
 DEFAULT_WEEK_POLL_HOURS = 96  # Sunday → Thursday; closed before the digest
 
 
+def is_channel(chat_id: int | str) -> bool:
+    """Channels only accept anonymous polls (Bot API rule)."""
+    raw = str(chat_id).strip()
+    return raw.startswith("@") or raw.startswith("-100")
+
+
 def send_week_poll(
     telegram: TelegramClient,
     chat_id: int | str,
@@ -29,7 +35,9 @@ def send_week_poll(
             "chat_id": chat_id,
             "question": question[:300],
             "options": [o[:100] for o in options][:10],
-            "is_anonymous": False,
+            # Channels reject non-anonymous polls: "non-anonymous polls
+            # can't be sent to channel chats". Groups may keep names.
+            "is_anonymous": is_channel(chat_id),
             "allows_multiple_answers": False,
             "open_period": hours * 3600,
         },
