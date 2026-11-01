@@ -147,6 +147,23 @@ def map_repo(item: dict[str, Any], source: str) -> dict[str, Any]:
     }
 
 
+_SEARCH_SPACING_SECONDS = 2.2
+
+
+def _rate_limit_wait(response: Any, *, default: float = 8.0) -> float:
+    """Respect Retry-After / X-RateLimit-Reset when GitHub throttles us."""
+    headers = getattr(response, "headers", None) or {}
+    retry_after = str(headers.get("Retry-After") or "").strip()
+    if retry_after.isdigit():
+        return min(60.0, max(1.0, float(retry_after)))
+    reset = str(headers.get("X-RateLimit-Reset") or "").strip()
+    if reset.isdigit():
+        delta = float(reset) - time.time()
+        if 0 < delta <= 60:
+            return max(1.0, delta + 0.5)
+    return default
+
+
 class GitHubApi:
     def __init__(self, token: str = ""):
         self.token = token.strip()
@@ -184,20 +201,32 @@ class GitHubApi:
         per_page: int = 25,
         page: int = 1,
     ) -> list[dict[str, Any]]:
-        status, data, _ = self.get_json(
-            "/search/repositories",
-            params={
-                "q": query,
-                "sort": sort,
-                "order": "desc",
-                "per_page": per_page,
-                "page": max(1, min(page, 10)),
-            },
-        )
-        if status != 200:
-            logger.warning("GitHub search failed status=%s query=%r", status, query)
-            return []
-        return list(data.get("items") or [])
+        params = {
+            "q": query,
+            "sort": sort,
+            "order": "desc",
+            "per_page": per_page,
+            "page": max(1, min(page, 10)),
+        }
+        # Search API allows 30 requests/minute authenticated.  Spacing the
+        # calls keeps every lane alive instead of losing half of them to
+        # HTTP 403 secondary rate limits.
+        for attempt in range(3):
+            status, data, response = self.get_json("/search/repositories", params=params)
+            if status == 200 and isinstance(data, dict):
+                time.sleep(_SEARCH_SPACING_SECONDS)
+                return list(data.get("items") or [])
+            if status not in (403, 429):
+                break
+            wait = _rate_limit_wait(response, default=8 * (attempt + 1))
+            logger.info(
+                "GitHub search rate limited (status=%s); sleeping %.1fs before retry",
+                status,
+                wait,
+            )
+            time.sleep(wait)
+        logger.warning("GitHub search failed status=%s query=%r", status, query)
+        return []
 
     def repo(self, full_name: str) -> dict[str, Any] | None:
         status, data, _ = self.get_json(f"/repos/{full_name}")
