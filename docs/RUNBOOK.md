@@ -58,7 +58,7 @@ mapped to `GH_API_TOKEN`.
 |---|---|
 | `APP_ENV` | `test` |
 | `PUBLISH_TARGET` | `test` |
-| `GEMINI_MODEL` | `gemini-3.8-flash` |
+| `GEMINI_MODEL` | `gemini-3.5-flash-lite` |
 | `FEATURE_TELEGRAPH` | `true` |
 | `FEATURE_DEVTO` | `false` until article smoke test |
 | `FEATURE_BLUESKY` | `false` until social smoke test |

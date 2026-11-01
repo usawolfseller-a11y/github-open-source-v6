@@ -63,7 +63,7 @@ def _clean_text(text: str, limit: int) -> str:
     return text[:limit]
 
 
-def _readme_for_prompt(readme: str, limit: int = 14_000) -> str:
+def _readme_for_prompt(readme: str, limit: int = 10_000) -> str:
     text = re.sub(r"<!--.*?-->", "", readme or "", flags=re.S)
     text = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", text)
     return text[:limit]
@@ -78,7 +78,7 @@ def _clip_sentence(text: Any, limit: int) -> str:
 
 
 class GeminiClient:
-    def __init__(self, api_key: str, model: str = "gemini-3.8-flash"):
+    def __init__(self, api_key: str, model: str = "gemini-3.5-flash-lite"):
         self.api_key = api_key.strip()
         self.model = model.strip().lower().removeprefix("models/")
 
@@ -117,6 +117,10 @@ class GeminiClient:
         generation_config: dict[str, Any] = {
             "temperature": temperature,
             "responseMimeType": "application/json",
+            "maxOutputTokens": 8192,
+            # Gemini 3.x thinks at medium by default. Editorial extraction
+            # does not need deep deliberation; low keeps a slot timely.
+            "thinkingConfig": {"thinkingLevel": "low", "includeThoughts": False},
         }
         if schema:
             generation_config["responseSchema"] = schema
@@ -130,20 +134,21 @@ class GeminiClient:
             url,
             headers={"x-goog-api-key": self.api_key},
             json_body=body,
-            timeout=120,
-            retries=1,
+            timeout=180,
+            retries=2,
             retry_post=True,
         )
         if status == 400 and schema:
-            # Some preview models reject a schema dialect. JSON mode alone
-            # plus strict local validation is the safe fallback.
+            # Some preview models reject a schema or thinking dialect.
+            # JSON mode alone plus strict local validation is the safe fallback.
             body["generationConfig"].pop("responseSchema", None)
+            body["generationConfig"].pop("thinkingConfig", None)
             status, data, _ = request_json(
                 "POST",
                 url,
                 headers={"x-goog-api-key": self.api_key},
                 json_body=body,
-                timeout=120,
+                timeout=180,
                 retries=0,
             )
         if status != 200 or not isinstance(data, dict):
@@ -211,7 +216,7 @@ Output constraints:
   if none is documented, use a GitHub clone command only
 - discussion_question: one specific question for developers
 - social_text: <=250 chars, no URL
-- article_markdown: 450-750 words with H2 sections:
+- article_markdown: 350-600 words with H2 sections:
   What it is; Why it matters; Key features; Quick start; Who should try it;
   Verdict. Include only a documented quick-start code block.
 
