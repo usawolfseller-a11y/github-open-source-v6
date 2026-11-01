@@ -154,23 +154,27 @@ class TelegramClient:
         chat_id: int | str,
         question: str,
         options: list[str],
+        *,
+        open_period: int | None = None,
     ) -> dict[str, Any]:
         clean_options = [str(option)[:100] for option in options if str(option).strip()][:10]
         if len(clean_options) < 2:
             raise TelegramError("A poll needs at least two options")
-        return dict(
-            self.api(
-                "sendPoll",
-                {
-                    "chat_id": chat_id,
-                    "question": str(question)[:300],
-                    "options": clean_options,
-                    "is_anonymous": False,
-                    "allows_multiple_answers": False,
-                },
-            )
-            or {}
-        )
+        payload: dict[str, Any] = {
+            "chat_id": chat_id,
+            "question": str(question)[:300],
+            "options": clean_options,
+            "is_anonymous": False,
+            "allows_multiple_answers": False,
+        }
+        if open_period:
+            # Telegram caps open_period at 10 days; auto-close keeps the
+            # tally readable even if the closing run is late.
+            payload["open_period"] = max(300, min(int(open_period), 10 * 24 * 3600))
+        return dict(self.api("sendPoll", payload) or {})
+
+    def stop_poll(self, chat_id: int | str, message_id: int) -> dict[str, Any]:
+        return dict(self.api("stopPoll", {"chat_id": chat_id, "message_id": message_id}) or {})
 
     def delete_message(self, chat_id: int | str, message_id: int) -> bool:
         return bool(self.api("deleteMessage", {"chat_id": chat_id, "message_id": message_id}))

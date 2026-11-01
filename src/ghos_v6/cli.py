@@ -13,8 +13,11 @@ from .http import sanitize
 from .pipeline import (
     alert_owner,
     article_of_day,
+    close_poll_command,
     collect_command,
     digest_command,
+    learn_command,
+    metrics_command,
     moderation_command,
     news_command,
     process_crossposts,
@@ -47,6 +50,11 @@ def _parser() -> argparse.ArgumentParser:
 
     sub.add_parser("digest", help="Publish Sunday Top 5 and poll")
     sub.add_parser("report", help="Send the weekly owner report")
+    metrics = sub.add_parser("metrics", help="Read views for recent posts from the public widget")
+    metrics.add_argument("--limit", type=int, default=12)
+    sub.add_parser("poll-close", help="Stop this week's poll and store the tally")
+    sub.add_parser("learn", help="Update ranking multipliers from measured performance")
+    sub.add_parser("links-export", help="Print the redirect map for the click layer")
     sub.add_parser("moderation", help="Poll discussion updates and delete obvious spam")
 
     scheduled = sub.add_parser("scheduled", help="Dispatch by the GitHub cron string")
@@ -58,17 +66,28 @@ def _run_scheduled(config: Config, store: StateStore, schedule: str) -> dict[str
     normalized = " ".join(schedule.split())
     routes: dict[str, Any] = {
         "20 4 * * *": lambda: collect_command(config, store, extra_pages=[1, 2]),
+        # Three posts a day (owner decision): morning EU, evening EU, US peak.
         "10 7 * * *": lambda: publish_slot(config, store, "europe_morning"),
-        "40 12 * * *": lambda: publish_slot(config, store, "europe_us_morning"),
+        "40 12 * * *": lambda: publish_slot(config, store, "europe_midday"),
         "15 17 * * *": lambda: publish_slot(config, store, "us_peak"),
-        "35 22 * * *": lambda: publish_slot(config, store, "us_evening"),
         "*/30 * * * *": lambda: process_crossposts(config, store),
         "30 13 * * *": lambda: article_of_day(config, store),
         "40 15 * * 1,3,5": lambda: news_command(config, store),
+        # Weekly cycle: digest + poll on Sunday, poll closed on Thursday,
+        # metrics every evening, learning after closing.
         "10 16 * * 0": lambda: digest_command(config, store),
+        "10 18 * * 4": lambda: close_poll_command(config, store),
+        "50 19 * * *": lambda: metrics_command(config, store),
         "40 16 * * 0": lambda: report_command(config, store),
         "15 */6 * * *": lambda: moderation_command(config, store),
     }
+    # Some crons must run two commands in order (close the poll, then learn
+    # from the fresh tallies). Keeping them on one cron avoids a race where
+    # ``learn`` reads a poll that has not been closed yet.
+    pairs = {"10 18 * * 4": (close_poll_command, learn_command)}
+    if normalized in pairs:
+        results = [dict(func(config, store)) for func in pairs[normalized]]
+        return {"ok": all(r.get("ok", True) for r in results), "steps": results}
     action = routes.get(normalized)
     if action is None:
         raise RuntimeError(f"Unknown schedule: {normalized}")
@@ -108,6 +127,19 @@ def main(argv: list[str] | None = None) -> int:
             result = digest_command(config, store)
         elif args.command == "report":
             result = report_command(config, store)
+        elif args.command == "metrics":
+            result = metrics_command(config, store, limit=args.limit)
+        elif args.command == "poll-close":
+            result = close_poll_command(config, store)
+        elif args.command == "learn":
+            result = learn_command(config, store)
+        elif args.command == "links-export":
+            from .links import code_for
+            result = {
+                code_for(str(record.get("full_name") or "")): str(record.get("url") or "")
+                for record in store.published_records()
+                if record.get("full_name")
+            }
         elif args.command == "moderation":
             result = moderation_command(config, store)
         elif args.command == "scheduled":

@@ -167,3 +167,79 @@ def test_search_queries_favour_recent_repositories():
     created_bounded = [query for query in queries if "created:>=" in query]
     assert len(created_bounded) >= 6
     assert any("pushed:>=" in query for query in queries)  # evergreen lane kept
+
+
+# --- editorial card: icons, colour and edge cases -------------------------
+
+def test_icon_tables_only_reference_baked_artwork():
+    from ghos_v6.cards import ICON_DIR, _LANGUAGE_ICONS, _STACK_ICONS, _slug_file
+
+    slugs = set(_LANGUAGE_ICONS.values()) | set(_STACK_ICONS.values())
+    missing = [slug for slug in slugs if not _slug_file("brand", slug).exists()]
+    assert not missing, f"icons referenced but not shipped: {missing}"
+    ui = [name for name in ("star", "fork", "people", "license", "clock") if not (ICON_DIR / f"ui_{name}.png").exists()]
+    assert not ui, f"system icons missing: {ui}"
+
+
+def test_stack_icons_are_in_brand_colour_and_keep_language_first():
+    from ghos_v6.cards import stack_entries
+
+    entries = stack_entries({"language": "Python", "topics": ["docker", "postgresql"], "description": ""})
+    assert [label for label, *_ in entries] == ["Python", "Docker", "Postgres"]
+    assert entries[0][1] == "python"
+    assert all(colour is not None for *_rest, colour in entries)
+
+
+def test_stack_row_never_overflows_for_long_labels():
+    """Four long tool names must still fit; the row degrades to icons only."""
+    from PIL import Image, ImageDraw
+
+    from ghos_v6.cards import _draw_stack_row
+
+    image = Image.new("RGB", (1200, 630), "white")
+    draw = ImageDraw.Draw(image)
+    candidate = {
+        "language": "TypeScript",
+        "topics": ["kubernetes", "postgresql", "tailwindcss"],
+        "description": "nextjs",
+    }
+    _draw_stack_row(image, draw, candidate, right_limit=1140)
+    ink = image.convert("L").point(lambda v: 0 if v > 245 else 255)
+    assert ink.getbbox() is not None
+    assert ink.getbbox()[2] <= 1140
+
+
+def test_long_project_name_stays_left_of_the_hero_mark():
+    from pathlib import Path
+
+    from PIL import Image
+
+    from ghos_v6.cards import HERO_BOX, render_editorial_card
+
+    out = Path("/tmp/_longname.png")
+    render_editorial_card(
+        {
+            "name": "supercalifragilistic-expialidocious-service",
+            "language": "TypeScript",
+            "stars": 10,
+            "forks": 1,
+            "contributors_count": 2,
+            "topics": [],
+            "license": {"spdx_id": "MIT"},
+            "pushed_at": "2026-10-31T00:00:00Z",
+        },
+        {"card_hook": "Hook", "card_subline": "Sub"},
+        out,
+    )
+    image = Image.open(out).convert("L")
+    band = image.crop((0, 165, HERO_BOX[0], 300)).point(lambda v: 0 if v > 200 else 255)
+    assert band.getbbox() is not None, "title band is empty"
+    assert band.getbbox()[2] < HERO_BOX[0], "title crosses into the hero mark"
+
+
+def test_missing_values_degrade_to_a_dash_not_a_fake_zero():
+    from ghos_v6.cards import _glyph_safe, _font
+
+    font = _font("sans", 20, True)
+    assert _glyph_safe("—", font) == "—"  # DejaVu has the em dash
+    assert _glyph_safe("\U0001f527", font) == "-"  # emoji would be tofu

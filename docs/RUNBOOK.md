@@ -36,6 +36,35 @@ the main channel.
 Telegram retains unconfirmed bot updates for a limited period. If the
 discovery lists are empty, repeat steps 1–3 and run Doctor again.
 
+## Weekly operations (new in this cycle)
+
+| Command | What it does | Safe to re-run |
+|---|---|---|
+| `ghos-v6 metrics --limit 12` | Reads views for recent posts from the public widget | yes |
+| `ghos-v6 poll-close` | Stops the active poll, stores the tally | no-op when no poll is open |
+| `ghos-v6 learn` | Recomputes language/topic multipliers | yes, overwrites the model |
+| `ghos-v6 links-export` | Prints `{code: url}` for the click layer | yes |
+
+The scheduled workflow runs them automatically: Sun 16:10 digest + poll,
+daily 19:50 metrics, Thu 18:10 close + learn.
+
+### Reading the state
+
+- `state.json → published[*]` — one record per post: `value_score`,
+  `views`, `views_at_24h`, `revisit_of`, `description_fp`.
+- `state.json → poll_history` — every closed poll with per-option shares.
+- `state.json → value_model` — the multipliers currently influencing
+  selection, with the sample size that produced them.
+- `state/events.jsonl` — append-only audit trail; every duplicate skip and
+  every model update is a line here.
+
+### If a duplicate slips through
+
+1. Find it in `events.jsonl` (`project_published`).
+2. Add the missed variant to `dedup.check` only if it is a *new class* of
+   duplicate — otherwise the fingerprints already cover it.
+3. Never delete from `published`: the anti-dup keys off it.
+
 ## Required Secrets
 
 | Secret | Purpose |
@@ -47,7 +76,10 @@ discovery lists are empty, repeat steps 1–3 and run Doctor again.
 | `DEV_API_KEY` | Optional article-of-day |
 | `BLUESKY_APP_PASSWORD` | Optional Bluesky crossposts |
 | `MASTODON_ACCESS_TOKEN` | Optional Mastodon crossposts |
-| `FACEBOOK_PAGE_ACCESS_TOKEN` | Optional direct Facebook Page posts |
+| `FACEBOOK_PAGE_ACCESS_TOKEN` | Optional direct Facebook Page posts (needs a Page token, not a user token) |
+
+Optional repository variable `REDIRECT_BASE_URL` enables the click layer
+(`infra/redirect/`). Unset = direct GitHub links, no click data, no failure.
 
 `IMGBB_API_KEY` is optional at runtime: without it, cards fall back to
 the monthly GitHub release host, then to Telegraph upload, then to

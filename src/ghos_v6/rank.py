@@ -90,9 +90,30 @@ def diversity_bonus(candidate: dict[str, Any], published_today: list[dict[str, A
     return bonus
 
 
+def value_multiplier(candidate: dict[str, Any], model: dict[str, Any] | None) -> float:
+    """Deterministic nudge from what the audience actually watched.
+
+    The model is written by ``learn`` and is clamped to 0.85..1.15, so it can
+    reorder near-equal candidates but never overrule the gate or the score.
+    """
+    if not model:
+        return 1.0
+    weight = 1.0
+    language = str(candidate.get("language") or "").lower()
+    languages = model.get("language_multipliers") or {}
+    if language in languages:
+        weight *= float(languages[language])
+    topics = model.get("topic_multipliers") or {}
+    hits = [float(topics[t]) for t in (str(t).lower() for t in candidate.get("topics") or []) if t in topics]
+    if hits:
+        weight *= sum(hits) / len(hits)
+    return max(0.8, min(1.25, weight))
+
+
 def select_candidate(
     queue: list[dict[str, Any]],
     published_today: list[dict[str, Any]],
+    model: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     if not queue:
         return None
@@ -106,4 +127,8 @@ def select_candidate(
             continue
         eligible.append(candidate)
     pool = eligible or queue
-    return max(pool, key=lambda c: float(c.get("score") or 0) + diversity_bonus(c, published_today))
+    return max(
+        pool,
+        key=lambda c: (float(c.get("score") or 0) + diversity_bonus(c, published_today))
+        * value_multiplier(c, model),
+    )

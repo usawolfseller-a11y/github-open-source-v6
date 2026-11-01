@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from . import dedup, insights, links, polls
 from .cards import render_ai_brief_card, render_digest_card
 from .config import Config, telegram_message_link
 from .content_adapters import build_crosspost_text, Facebook_link_url, image_alt_text
@@ -301,7 +302,11 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
     while attempts < 10:
         attempts += 1
         published_today = _today_records(store)
-        candidate = select_candidate(list(store.data.get("queue") or []), published_today)
+        candidate = select_candidate(
+            list(store.data.get("queue") or []),
+            published_today,
+            store.data.get("value_model"),
+        )
         if candidate is None:
             store.event("publish_skipped", slot=slot, reason="no_candidate")
             store.save()
@@ -313,6 +318,17 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
             candidate["readme"] = str(candidate.get("readme") or "")[:20_000]
         except Exception as exc:  # noqa: BLE001
             logger.warning("Selected candidate refresh failed for %s: %s", key, type(exc).__name__)
+
+        verdict = dedup.check(candidate, store.data)
+        if verdict["verdict"] == "duplicate":
+            store.pop_queue_candidate(key)
+            store.mark_seen(candidate, f"duplicate:{verdict['reason']}")
+            store.event("publish_candidate_duplicate", repo=key, reason=verdict["reason"])
+            store.save()
+            continue
+        if verdict["verdict"] == "revisit":
+            candidate["revisit_of"] = key
+            candidate["revisit_reason"] = verdict["reason"]
 
         pre_decision = evaluate(candidate, gate_cfg)
         if not pre_decision.ok:
@@ -428,6 +444,11 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
                 "telegraph_url": telegraph_url,
                 "image_url": image_url,
                 "visual_kind": effective_visual_kind,
+                "description_fp": dedup.description_fingerprint(str(candidate.get("description") or "")),
+                "readme_fp": dedup.readme_fingerprint(str(candidate.get("readme") or "")),
+                "revisit_of": candidate.get("revisit_of") or "",
+                "revisit_reason": candidate.get("revisit_reason") or "",
+                "tracked_url": links.tracked_url(str(candidate.get("full_name") or "")),
                 "visual_host": visual_host,
                 "card_style": visual.card_style,
                 "crossposts": {
@@ -746,12 +767,25 @@ def digest_command(config: Config, store: StateStore) -> dict[str, Any]:
     ]
     sent = telegram.send_text(chat_id, "\n".join(lines), preview_url=image_url)
     poll = None
+    poll_labels = {
+        str(record.get("name") or record.get("full_name") or "Project"): str(record.get("full_name") or "")
+        for record in records
+    }
     try:
-        poll = telegram.send_poll(
+        poll = polls.send_week_poll(
+            telegram,
             chat_id,
             "Which project should win Project of the Week?",
-            [str(record.get("name") or record.get("full_name") or "Project") for record in records],
+            list(poll_labels),
+            hours=polls.DEFAULT_WEEK_POLL_HOURS,
         )
+        store.data["active_poll"] = {
+            "chat_id": chat_id,
+            "message_id": (poll or {}).get("message_id"),
+            "question": "Which project should win Project of the Week?",
+            "repos": poll_labels,
+            "opened_at": iso_now(),
+        }
     except Exception as exc:  # noqa: BLE001
         logger.warning("Digest poll failed: %s", sanitize(str(exc))[:200])
     store.event(
@@ -762,6 +796,153 @@ def digest_command(config: Config, store: StateStore) -> dict[str, Any]:
     )
     store.save()
     return {"ok": True, "published": True, "telegram_message_id": sent.get("message_id"), "count": len(records)}
+
+
+def _channel_handle(config: Config) -> str:
+    """Public handle usable by the embed widget, or ``""``.
+
+    The widget can only read *public* channels. A private test channel has
+    ids that collide with the main channel's post numbers, so measuring a
+    test-channel post against the main channel would attach somebody else's
+    views to our record. Refusing to measure is the only safe answer.
+    """
+    if not config.is_main_target:
+        return ""
+    raw = str(config.telegram_main_channel_id or "").strip().lstrip("@")
+    if raw.startswith("-") or raw.isdigit():
+        return "GitHub_Open_Source"
+    return raw
+
+
+def metrics_command(config: Config, store: StateStore, *, limit: int = 12) -> dict[str, Any]:
+    """Read views for recent posts from the public widget (no credentials).
+
+    Telegram gives nobody a client-side session here, so this is the only
+    free way to know whether a card worked. Runs are idempotent.
+    """
+    channel = _channel_handle(config)
+    if not channel:
+        store.event("metrics_skipped", reason="channel_not_public")
+        store.save()
+        return {
+            "ok": True,
+            "checked": 0,
+            "updated": 0,
+            "channel": "",
+            "reason": "channel_not_public",
+            "note": "Views are only readable for public channels; the test channel stays unmeasured.",
+        }
+    records = sorted(
+        (r for r in store.published_records() if r.get("telegram_message_id")),
+        key=lambda r: str(r.get("published_at") or ""),
+        reverse=True,
+    )[:limit]
+    updated = 0
+    for record in records:
+        stats = insights.fetch_post_stats(channel, int(record["telegram_message_id"]))
+        if not stats.get("ok"):
+            continue
+        history = record.setdefault("views_history", [])
+        history.append({"at": stats["fetched_at"], "views": stats["views"], "reactions": stats.get("reactions", 0)})
+        del history[:-8]  # keep the last eight samples per post
+        record["views"] = stats["views"]
+        record["reactions"] = stats.get("reactions", 0)
+        record["views_age_hours"] = round(insights.age_hours(record.get("published_at")), 1)
+        record["views_at_24h"] = round(
+            insights.views_at_reference(stats["views"], record["views_age_hours"])
+        )
+        record["value_score"] = insights.value_score(record, median_views=insights.median_views(store.published_records()))
+        updated += 1
+    store.event("metrics_collected", posts=len(records), updated=updated, channel=channel)
+    store.save()
+    return {"ok": True, "checked": len(records), "updated": updated, "channel": channel}
+
+
+def close_poll_command(config: Config, store: StateStore) -> dict[str, Any]:
+    """Close this week's poll and store the tally — the raw taste signal."""
+    config.require("TELEGRAM_BOT_TOKEN")
+    poll = store.data.get("active_poll") or {}
+    if not poll.get("message_id"):
+        return {"ok": True, "closed": False, "reason": "no_active_poll"}
+    telegram = TelegramClient(config.telegram_bot_token)
+    try:
+        tally = polls.close_poll(telegram, poll["chat_id"], int(poll["message_id"]))
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("stopPoll failed: %s", sanitize(str(exc))[:200])
+        return {"ok": False, "closed": False, "reason": "stop_poll_failed"}
+    entries = []
+    for option in tally.get("options") or []:
+        entries.append(
+            {
+                "label": option["text"],
+                "votes": option["votes"],
+                "share": option["share"],
+                "repo": (poll.get("repos") or {}).get(option["text"], ""),
+            }
+        )
+    store.data.setdefault("poll_history", []).append(
+        {
+            "closed_at": iso_now(),
+            "question": tally.get("question") or poll.get("question") or "",
+            "total_voters": tally.get("total_voters") or 0,
+            "options": entries,
+        }
+    )
+    winner = polls.winner({"options": entries})
+    store.data["active_poll"] = {}
+    store.event("poll_closed", total_voters=tally.get("total_voters"), winner=(winner or {}).get("label"))
+    store.save()
+    return {"ok": True, "closed": True, "winner": winner, "options": entries, "total_voters": tally.get("total_voters")}
+
+
+def learn_command(config: Config, store: StateStore) -> dict[str, Any]:
+    """Turn measured performance into deterministic ranking multipliers.
+
+    Deliberately simple and reviewable: for each language and topic we
+    compare the median value score of posts that had it against the overall
+    median, clamp the multiplier to 0.85..1.15, and write it to state so
+    the next selection can use it. No model, no hidden weights.
+    """
+    records = [r for r in store.published_records() if r.get("views") is not None]
+    if len(records) < 5:
+        return {"ok": True, "learned": False, "reason": "not_enough_samples", "samples": len(records)}
+    overall = insights.median_views(records)
+    for record in records:
+        # Recompute from views so `learn` works even if the daily metrics run
+        # missed a day; age normalisation is applied inside the score.
+        record["value_score"] = insights.value_score(record, median_views=overall)
+    scores = sorted(float(r["value_score"]) for r in records)
+    median_score = scores[len(scores) // 2]
+
+    def multiplier(groups: list[str]) -> float:
+        if not groups:
+            return 1.0
+        selected = [float(r["value_score"]) for r in records if set(groups) & set(r.get("_groups") or [])]
+        if len(selected) < 3:
+            return 1.0
+        selected.sort()
+        local = selected[len(selected) // 2]
+        return round(max(0.85, min(1.15, 1.0 + (local - median_score) / max(median_score, 1.0) * 0.5)), 3)
+
+    for record in records:
+        record["_groups"] = [str(record.get("language") or "").lower()] + [
+            str(t).lower() for t in (record.get("topics") or [])
+        ]
+    languages = {lang for r in records for lang in [str(r.get("language") or "").lower()] if lang}
+    topics = {str(t).lower() for r in records for t in (r.get("topics") or [])}
+    model = {
+        "updated_at": iso_now(),
+        "samples": len(records),
+        "median_score": round(median_score, 2),
+        "language_multipliers": {lang: multiplier([lang]) for lang in sorted(languages)},
+        "topic_multipliers": {topic: multiplier([topic]) for topic in sorted(topics)},
+    }
+    for record in records:
+        record.pop("_groups", None)
+    store.data["value_model"] = model
+    store.event("value_model_updated", samples=model["samples"], median=model["median_score"])
+    store.save()
+    return {"ok": True, "learned": True, **model}
 
 
 def report_command(config: Config, store: StateStore) -> dict[str, Any]:

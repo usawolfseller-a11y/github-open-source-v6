@@ -16,10 +16,51 @@ from .gate import parse_dt
 
 W, H = 1200, 630
 BRAND = "@GitHub_Open_Source"
+ICON_DIR = Path(__file__).resolve().parent / "assets" / "icons"
+_ICON_CACHE: dict[tuple[str, int], Image.Image | None] = {}
+
+# GitHub's language names → Simple Icons slugs (files were baked into
+# assets/icons at build time; runtime never touches the network).
+_LANGUAGE_ICONS = {
+    "rust": "rust", "python": "python", "typescript": "typescript",
+    "javascript": "javascript", "go": "go", "c++": "cplusplus", "c": "c",
+    "java": "openjdk", "kotlin": "kotlin", "swift": "swift", "php": "php",
+    "ruby": "ruby", "shell": "gnubash", "bash": "gnubash", "html": "html5",
+    "css": "css", "c#": "sharp",
+    "objective-c": "apple",
+    "elixir": "elixir", "kotlin": "kotlin", "zig": "zig", "lua": "lua", "dart": "dart",
+    "scala": "scala", "elixir": "elixir", "haskell": "haskell", "r": "r",
+    "julia": "julia", "perl": "perl", "vue": "vuedotjs", "svelte": "svelte",
+}
+# topic → stack icon, so a card can show "what is inside" without a changelog
+_STACK_ICONS = {
+    "docker": "docker", "kubernetes": "kubernetes", "postgresql": "postgresql",
+    "postgres": "postgresql", "sqlite": "sqlite", "redis": "redis",
+    "mongodb": "mongodb", "react": "react", "nodejs": "nodedotjs",
+    "node": "nodedotjs", "deno": "deno", "bun": "bun", "tailwindcss": "tailwindcss",
+    "nextjs": "nextdotjs", "vite": "vite", "webpack": "webpack",
+    "terraform": "terraform", "ansible": "ansible", "nginx": "nginx",
+    "graphql": "graphql", "prisma": "prisma", "supabase": "supabase",
+    "firebase": "firebase", "electron": "electron", "tauri": "tauri",
+    "flutter": "flutter", "gtk": "gtk", "qt": "qt", "opencv": "opencv",
+    "pytorch": "pytorch", "tensorflow": "tensorflow", "numpy": "numpy",
+    "pandas": "pandas", "fastapi": "fastapi", "django": "django", "flask": "flask",
+    "spring": "spring", "dotnet": "dotnet", "laravel": "laravel", "rails": "rubyonrails",
+}
+# Human labels for the stack row: a card shows "K8s", never "Kubernetes".
+_STACK_LABELS = {
+    "kubernetes": "K8s", "postgresql": "Postgres", "tailwindcss": "Tailwind",
+    "nextjs": "Next.js", "nodejs": "Node", "node": "Node", "vuedotjs": "Vue",
+    "rubyonrails": "Rails", "graphql": "GraphQL", "nodemon": "Node", "dotnet": ".NET",
+    "mongodb": "MongoDB", "tensorflow": "TensorFlow", "openjdk": "Java",
+}
 _FONT_DIRS = [
-    Path("/usr/share/fonts/truetype/DejaVu"),
+    Path("/usr/share/fonts/truetype/dejavu"),
     Path("/usr/share/fonts/truetype/liberation"),
+    Path("/usr/share/fonts/truetype/liberation2"),
     Path("/usr/share/fonts/truetype/freefont"),
+    Path("/usr/share/fonts/truetype/noto"),
+    Path("/usr/local/share/fonts"),
 ]
 _FONT_FILES = {
     ("sans", False): ["DejaVuSans.ttf", "LiberationSans-Regular.ttf"],
@@ -28,7 +69,109 @@ _FONT_FILES = {
     ("serif", True): ["DejaVuSerif-Bold.ttf", "LiberationSerif-Bold.ttf"],
     ("mono", False): ["DejaVuSansMono.ttf", "LiberationMono-Regular.ttf"],
     ("mono", True): ["DejaVuSansMono-Bold.ttf", "LiberationMono-Bold.ttf"],
+    ("serif-condensed", True): ["DejaVuSerifCondensed-Bold.ttf", "LiberationSerif-Bold.ttf"],
 }
+_FONT_CACHE: dict[tuple[str, int, bool], object] = {}
+
+
+def _slug_file(kind: str, name: str, sub: str = "") -> Path:
+    safe = name.replace("+", "p").replace("#", "s").replace(".", "_")
+    return ICON_DIR / sub / f"{kind}_{safe}.png" if sub else ICON_DIR / f"{kind}_{safe}.png"
+
+
+def load_brand_icon(name: str, size: int) -> Image.Image | None:
+    """Brand icon for a language/tool, or None when we have no artwork."""
+    key = (f"brand:{name}", size)
+    if key in _ICON_CACHE:
+        return _ICON_CACHE[key]
+    path = _slug_file("brand", name)
+    icon: Image.Image | None = None
+    if path.exists():
+        try:
+            icon = Image.open(path).convert("RGBA").resize((size, size), Image.LANCZOS)
+        except OSError:
+            icon = None
+    _ICON_CACHE[key] = icon
+    return icon
+
+
+def load_colour_icon(name: str, size: int) -> Image.Image | None:
+    """Brand icon in its own brand colour (already darkened for cream paper)."""
+    key = (f"colour:{name}", size)
+    if key in _ICON_CACHE:
+        return _ICON_CACHE[key]
+    path = _slug_file("brand", name, sub="colour")
+    icon: Image.Image | None = None
+    if path.exists():
+        try:
+            icon = Image.open(path).convert("RGBA").resize((size, size), Image.LANCZOS)
+        except OSError:
+            icon = None
+    _ICON_CACHE[key] = icon
+    return icon or load_brand_icon(name, size)
+
+
+def load_ui_icon(name: str, size: int) -> Image.Image | None:
+    """Hand-drawn system icon (star, fork, people, license, clock, trend)."""
+    key = (f"ui:{name}", size)
+    if key in _ICON_CACHE:
+        return _ICON_CACHE[key]
+    path = _slug_file("ui", name)
+    icon: Image.Image | None = None
+    if path.exists():
+        try:
+            icon = Image.open(path).convert("RGBA").resize((size, size), Image.LANCZOS)
+        except OSError:
+            icon = None
+    _ICON_CACHE[key] = icon
+    return icon
+
+
+def language_icon(language: str, size: int) -> Image.Image | None:
+    slug = _LANGUAGE_ICONS.get(str(language or "").strip().lower())
+    return load_brand_icon(slug, size) if slug else None
+
+
+def stack_icons(candidate: dict[str, Any], limit: int = 4) -> list[tuple[str, Image.Image]]:
+    """Best-effort "built with" row: language first, then detected tools."""
+    return [(label, icon) for label, _slug, icon, _colour in stack_entries(candidate, limit)]
+
+
+def stack_entries(
+    candidate: dict[str, Any], limit: int = 4, size: int = 34
+) -> list[tuple[str, str, Image.Image, Image.Image | None]]:
+    """``[(label, slug, ink_icon, colour_icon)]`` for the stack row."""
+    seen: set[str] = set()
+    found: list[tuple[str, str, Image.Image, Image.Image | None]] = []
+
+    def add(label: str, slug: str) -> None:
+        if not slug or slug in seen or len(found) >= limit:
+            return
+        icon = load_brand_icon(slug, size)
+        if icon is not None:
+            seen.add(slug)
+            found.append((label, slug, icon, load_colour_icon(slug, size)))
+
+    language = str(candidate.get("language") or "")
+    add(language or "", _LANGUAGE_ICONS.get(language.strip().lower(), ""))
+    haystack = " ".join(
+        [str(candidate.get("description") or ""), " ".join(candidate.get("topics") or [])]
+    ).lower()
+    for key, slug in _STACK_ICONS.items():
+        if key in haystack:
+            add(_STACK_LABELS.get(key, key.capitalize()), slug)
+    return found
+
+
+def _glyph_safe(text: str, font) -> str:
+    """Replace characters this font cannot draw (em dash in Liberation, emoji).
+
+    Drawing an unsupported character produces a hollow tofu box, which reads
+    as a placeholder bug on a printed card.
+    """
+    if not text:
+        return text
+    return "".join(ch if ch.isspace() or _has_glyph(font, ch) else "-" for ch in text)
 
 
 def _has_glyph(font, char: str) -> bool:
@@ -37,8 +180,14 @@ def _has_glyph(font, char: str) -> bool:
     DejaVu/Liberation cover Latin and punctuation but not emoji; drawing
     an unsupported character silently produces a hollow box on the card.
     """
+    if not char:
+        return True
     try:
-        return bool(font.getmask(char).getbbox())
+        mask = font.getmask(char)
+        reference = font.getmask("\uffff")
+        # DejaVu draws the same hollow "missing glyph" box for every
+        # character it does not have, so identical pixels mean "no glyph".
+        return mask.size != reference.size or mask.getbbox() != reference.getbbox()
     except Exception:  # noqa: BLE001
         return False
 
@@ -56,15 +205,21 @@ def _text_font(kind: str, size: int, bold: bool, text: str):
 
 
 def _font(kind: str = "sans", size: int = 32, bold: bool = False):
+    cached = _FONT_CACHE.get((kind, size, bold))
+    if cached is not None:
+        return cached
     for directory in _FONT_DIRS:
         for filename in _FONT_FILES.get((kind, bold), []):
             path = directory / filename
             if path.exists():
-                return ImageFont.truetype(str(path), size)
+                _FONT_CACHE[(kind, size, bold)] = ImageFont.truetype(str(path), size)
+                return _FONT_CACHE[(kind, size, bold)]
     try:
-        return ImageFont.load_default(size=size)
+        fallback = ImageFont.load_default(size=size)
     except TypeError:
-        return ImageFont.load_default()
+        fallback = ImageFont.load_default()
+    _FONT_CACHE[(kind, size, bold)] = fallback
+    return fallback
 
 
 def _fit(draw: ImageDraw.ImageDraw, text: str, kind: str, size: int, max_width: int, bold: bool = True, minimum: int = 30):
@@ -258,6 +413,95 @@ def _is_terminal(candidate: dict[str, Any], generated: dict[str, Any]) -> bool:
     )
 
 
+_TITLE_MAX_W = 752  # 56 → 808: leaves a gutter before the hero mark at 824
+HERO_BOX = (824, 176, 1176, 396)  # ink-safe area of the brand mark
+
+
+def _condensed_text(
+    image: Image.Image,
+    xy: tuple[int, int],
+    text: str,
+    font,
+    fill: str,
+    max_width: int,
+    *,
+    min_scale: float = 0.62,
+) -> None:
+    """Draw ``text`` horizontally condensed so it never crosses the hero mark.
+
+    Shrinking the type size to fit a 40-character repository name would make
+    it unreadable, so past a point we squeeze the glyphs instead of the size.
+    """
+    width = int(font.getlength(text))
+    if width <= max_width:
+        image.text(xy, text, font=font, fill=fill)
+        return
+    scale = max(min_scale, max_width / width)
+    mask = Image.new("L", (max(width, 1), int(font.size * 1.5)), 0)
+    ImageDraw.Draw(mask).text((0, 0), text, font=font, fill=255)
+    mask = mask.crop(mask.getbbox())
+    target_w = int(mask.width * scale)
+    scaled = mask.resize((target_w, mask.height), Image.LANCZOS)
+    if scaled.width > max_width:
+        scaled = scaled.crop((0, 0, max_width, scaled.height))
+    ink = Image.new("RGBA", scaled.size, fill)
+    image.paste(ink, xy, scaled)
+
+
+def _stack_label(label: str) -> str:
+    """Row labels are lowercase tool names by convention; single letters stay caps."""
+    text = label.strip()
+    if len(text) <= 1:
+        return text.upper()
+    return text if not text.isupper() else text
+
+
+def _draw_stack_row(
+    image: Image.Image,
+    draw: ImageDraw.ImageDraw,
+    candidate: dict[str, Any],
+    *,
+    right_limit: int,
+    top: int = 412,
+    size: int = 32,
+) -> None:
+    """Language + tools, in brand colour, kept inside the right rule.
+
+    Degrades in three steps so a 4-item stack never collides with the page
+    edge: full labels → shorter labels → icons only.
+    """
+    entries = stack_entries(candidate, limit=4, size=size)
+    if len(entries) <= 1:
+        return
+    font = _font("sans", 15, True)
+    gaps = {"icon_text": 7, "item": 30, "icon_only": 16}
+    plans: list[tuple[str, Image.Image]] = []
+    for limit_chars in (None, 8, 0):
+        cursor = 62
+        plans = []
+        for label, _slug, ink, colour in entries:
+            text = _stack_label(label)
+            if limit_chars == 0:
+                plans.append(("", colour or ink))
+                cursor += size + gaps["icon_only"]
+                continue
+            if limit_chars is not None:
+                text = text[:limit_chars]
+            width = int(draw.textlength(text, font=font)) if text else 0
+            plans.append((text, colour or ink))
+            cursor += size + (gaps["icon_text"] + width + gaps["item"] if text else gaps["icon_only"])
+        if cursor - gaps["item"] <= right_limit:
+            break
+    cursor = 62
+    for text, glyph in plans:
+        image.paste(glyph, (cursor, top), glyph)
+        if text:
+            draw.text((cursor + size + gaps["icon_text"], top + 9), text, font=font, fill="#514940")
+            cursor += size + gaps["icon_text"] + int(draw.textlength(text, font=font)) + gaps["item"]
+        else:
+            cursor += size + gaps["icon_only"]
+
+
 def render_editorial_card(
     candidate: dict[str, Any],
     generated: dict[str, Any],
@@ -279,7 +523,12 @@ def render_editorial_card(
 
     name = str(candidate.get("name") or "Open Source Project")
     title_font = _fit(draw, name, "serif", 104, 720, True, 44)
-    draw.text((56, 165), name, font=title_font, fill="#17130d")
+    # The hero mark starts at x=824; a 44 px fallback would still cross it,
+    # so long names condense horizontally instead of shrinking to nothing.
+    if draw.textlength(name, font=title_font) > _TITLE_MAX_W:
+        _condensed_text(image, (56, 165), name, title_font, "#17130d", _TITLE_MAX_W)
+    else:
+        draw.text((56, 165), name, font=title_font, fill="#17130d")
 
     hook = _short_copy(
         str(generated.get("card_hook") or generated.get("hook") or candidate.get("description") or ""),
@@ -292,9 +541,12 @@ def render_editorial_card(
 
     # Deterministic vertical layout: the copy block must fit between the
     # project name and the stats rule (y=462) without overlaps or dead
-    # strips, whatever the name length does to the title size.
+    # strips, whatever the name length does to the title size.  When a
+    # "built with" row is present the copy band gives up its space.
+    stack = stack_icons(candidate, limit=4)
+    has_stack = len(stack) > 1
     band_top = 165 + int(title_font.size * 1.26) + 10
-    band_bottom = 452
+    band_bottom = 398 if has_stack else 452
     hook_font = sub_font = None
     hook_lines: list[str] = []
     sub_lines: list[str] = []
@@ -334,32 +586,68 @@ def render_editorial_card(
         y += int(sub_font.size * 1.32)
 
     language = str(candidate.get("language") or "Open Source")
-    draw.ellipse((885, 165, 1115, 395), outline="#b3342a", width=6)
-    code = _lang_code(language)
-    code_font = _fit(draw, code, "serif", 84, 170, True, 36)
-    draw.text((1000, 218), code, font=code_font, fill="#b3342a", anchor="ma")
-    draw.text(
-        (1000, 332),
-        language.upper(),
-        font=_fit(draw, language.upper(), "sans", 19, 170, True, 12),
-        fill="#1b1710",
-        anchor="ma",
-    )
+    # Real brand mark, no decorative ring. Falls back to the typographic
+    # monogram when we have no artwork for the language.
+    icon = language_icon(language, 176)
+    if icon is not None:
+        image.paste(icon, (1000 - 88, 184), icon)
+        draw.text(
+            (1000, 388),
+            language.upper(),
+            font=_fit(draw, language.upper(), "sans", 19, 190, True, 12),
+            fill="#1b1710",
+            anchor="ma",
+        )
+    else:
+        # No artwork: a typographic monogram, ringless like the real marks.
+        # Rules as a frame, ink badge on top — no circle anywhere.
+        code = _lang_code(language)
+        draw.line((880, 214, 1120, 214), fill="#b3342a", width=3)
+        draw.line((880, 338, 1120, 338), fill="#b3342a", width=3)
+        mono_font = _fit(draw, code, "serif", 76, 150, True, 46)
+        badge_w = int(draw.textlength(code, font=mono_font)) + 44
+        badge_h = int(mono_font.size * 1.36)
+        _rounded(draw, (1000 - badge_w // 2, 276 - badge_h // 2, 1000 + badge_w // 2, 276 + badge_h // 2), 6, fill="#b3342a")
+        draw.text((1000, 276), code, font=mono_font, fill="#f7efde", anchor="mm")
+        draw.text(
+            (1000, 362),
+            language.upper(),
+            font=_fit(draw, language.upper(), "sans", 17, 190, True, 12),
+            fill="#1b1710",
+            anchor="ma",
+        )
+
+    # "Built with" row: language + tools detected from topics/description.
+    if has_stack:
+        _draw_stack_row(image, draw, candidate, right_limit=1140)
+        draw.line((55, 460, 1145, 460), fill="#d8cdb8", width=2)
 
     y = 492
     draw.line((55, y, 1145, y), fill="#1b1710", width=3)
     stats = [
-        ("STARS", _fmt(candidate.get("stars") or candidate.get("stargazers_count"))),
-        ("FORKS", _fmt(candidate.get("forks") or candidate.get("forks_count"))),
-        ("CONTRIB", _fmt(candidate.get("contributors_count"))),
-        ("LICENSE", _license(candidate)),
+        ("star", "STARS", _fmt(candidate.get("stars") or candidate.get("stargazers_count"))),
+        ("fork", "FORKS", _fmt(candidate.get("forks") or candidate.get("forks_count"))),
+        ("people", "CONTRIB", _fmt(candidate.get("contributors_count")) if candidate.get("contributors_count") else "—"),
+        ("license", "LICENSE", _license(candidate)),
     ]
-    for index, (label, value) in enumerate(stats):
+    for index, (glyph_name, label, value) in enumerate(stats):
         x = 70 + index * 275
-        draw.text((x, y + 17), label, font=_font("sans", 17, True), fill="#655c4d")
-        draw.text((x, y + 44), str(value), font=_fit(draw, str(value), "serif", 35, 220, True, 20), fill="#1b1710")
+        glyph = load_ui_icon(glyph_name, 20)
+        if glyph is not None:
+            image.paste(glyph, (x, y + 19), glyph)
+            label_x = x + 28
+        else:
+            label_x = x
+        draw.text((label_x, y + 17), label, font=_font("sans", 17, True), fill="#655c4d")
+        value_font = _fit(draw, str(value), "serif", 35, 220, True, 20)
+        draw.text((x, y + 44), _glyph_safe(str(value), value_font), font=value_font, fill="#1b1710")
     draw.line((55, 585, 1145, 585), fill="#1b1710", width=3)
-    draw.text((58, 594), _freshness(candidate), font=_font("sans", 17, True), fill="#514940")
+    clock = load_ui_icon("clock", 16)
+    if clock is not None:
+        image.paste(clock, (58, 596), clock)
+        draw.text((80, 594), _freshness(candidate), font=_font("sans", 17, True), fill="#514940")
+    else:
+        draw.text((58, 594), _freshness(candidate), font=_font("sans", 17, True), fill="#514940")
     draw.text((1145, 594), BRAND, font=_font("sans", 19, True), fill="#b3342a", anchor="ra")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     image.save(output_path)
