@@ -268,14 +268,24 @@ def test_photo_caption_fits_telegrams_1024_ceiling():
     assert "@GitHub_Open_Source" in caption
 
 
-def test_pipeline_publishes_cards_as_photos_not_link_previews():
-    """Regression: a 2k-char text with a preview image made Telegram show a
-    link preview instead of the card. The card must go out via sendPhoto."""
+def test_pipeline_publishes_long_text_with_large_card_preview():
+    """The owner's format: a long readable post with the card as a large
+    preview above it. A photo post caps the caption at 1024 chars, so it
+    cannot carry the story — guard against that regression."""
     from pathlib import Path
 
     src = Path(__file__).resolve().parents[1] / "src" / "ghos_v6" / "pipeline.py"
     text = src.read_text(encoding="utf-8")
-    assert "published_as_photo" in text
-    photo_branch = text.split("published_as_photo")[0]
-    assert "send_photo(" in photo_branch
-    assert "format_project_caption" in photo_branch
+    assert "published_as_text" in text
+    assert "send_project(" in text
+    branch = text.split("published_as_text")[0]
+    assert "preview_url = image_url" in branch
+    assert "send_photo(" not in branch
+
+
+def test_story_beats_render_and_empty_story_is_absent():
+    from ghos_v6.formatter import _story_html
+
+    assert _story_html({"scene": "A", "tension": "B", "turn": "C"}) == "A\n\nB\n\nC"
+    assert _story_html({"scene": "", "tension": "", "turn": ""}) == ""
+    assert _story_html({"scene": "Only one beat"}) == "Only one beat"

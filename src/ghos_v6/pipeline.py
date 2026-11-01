@@ -417,38 +417,20 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
             }
         )
         text_html = format_project_post(format_input, telegraph_url=telegraph_url)
-        photo_bytes = b""
-        if visual.kind == "card" and visual.data:
-            photo_bytes = visual.data
-        if photo_bytes:
-            # A photo post has a 1024-character caption; the long version is
-            # what the old pipeline sent, which forced Telegram to fall back
-            # to a small link preview. Caption + buttons is the honest split.
-            from .formatter import format_project_caption
-
-            caption = format_project_caption(format_input)
-            sent = telegram.send_photo(
-                chat_id,
-                photo_bytes,
-                caption,
-                buttons=build_buttons(
-                    github_url=str(candidate.get("url") or ""),
-                    telegraph_url=telegraph_url,
-                    homepage_url=str(candidate.get("homepage") or ""),
-                ),
-                filename=(visual.local_path.name if visual.local_path else "card.png"),
-            )
-            store.event("published_as_photo", repo=key, caption_chars=len(caption))
-        else:
-            preview_url = telegraph_url or image_url or str(candidate.get("url") or "")
-            sent = telegram.send_project(
-                chat_id,
-                text_html,
-                preview_url=preview_url,
-                github_url=str(candidate.get("url") or ""),
-                telegraph_url=telegraph_url,
-                homepage_url=str(candidate.get("homepage") or ""),
-            )
+        # The owner's format: the long post is the message itself, and the
+        # rendered card rides on top as a large link preview. A photo post
+        # cannot carry long text at all (caption ceiling is 1024 chars), so
+        # publishing as a photo would silently cost the story.
+        preview_url = image_url or telegraph_url or str(candidate.get("url") or "")
+        sent = telegram.send_project(
+            chat_id,
+            text_html,
+            preview_url=preview_url,
+            github_url=str(candidate.get("url") or ""),
+            telegraph_url=telegraph_url,
+            homepage_url=str(candidate.get("homepage") or ""),
+        )
+        store.event("published_as_text", repo=key, preview_host=visual_host or "none")
         message_id = int(sent.get("message_id") or 0)
         due = datetime.now(timezone.utc) + timedelta(minutes=30)
         record = _public_record_candidate(candidate)

@@ -241,6 +241,26 @@ def _language_icon(project: dict[str, Any]) -> str:
     return "💻"
 
 
+def _story_html(project: dict[str, Any]) -> str:
+    """The readable spine of the post: situation, cost, turn.
+
+    A live channel post is read as a story or skipped as a spec sheet.
+    These three beats come from the editor model (``scene``/``tension``/
+    ``turn``); when they are missing the block is simply absent rather
+    than faked, so a deterministic fallback never invents drama.
+    """
+    beats = []
+    for key in ("scene", "tension", "turn"):
+        value = str(project.get(key) or "").strip()
+        if value:
+            beats.append(_esc(value))
+    if not beats:
+        return ""
+    if len(beats) == 1:
+        return beats[0]
+    return "\n\n".join(beats)
+
+
 def _paragraphs(text: str) -> list[str]:
     sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", text) if part.strip()]
     if len(sentences) <= 2:
@@ -366,7 +386,11 @@ def format_project_post(
         # "Why now" answers the reader's first question — "why should I
         # care today?" — before any feature bullets.  Kept short so it
         # never becomes a second hook.
-        why_now_text = _clip(str(project.get("why_now") or ""), 180)
+        # When the story block is present its tension beat already answers
+        # "why should I care today?", and `why_now` still appears in the
+        # expandable block. Printing both made the post say it three times.
+        story = _story_html(project)
+        why_now_text = "" if story else _clip(str(project.get("why_now") or ""), 180)
         if why_now_text:
             lines += ["", f"⏱ <b>Why now:</b> {_esc(why_now_text)}"]
         lines.append(_DIVIDER)
@@ -377,8 +401,11 @@ def format_project_post(
                 "⚠️ <b>Dual-use security tool</b>",
                 "For research &amp; education. Use only on software you own or are authorized to analyze.",
             ]
+        if story:
+            lines += ["", story]
         if summ:
-            lines += ["", "🧭 <b>What it does</b>"]
+            heading = "🧭 <b>How it works</b>" if story else "🧭 <b>What it does</b>"
+            lines += ["", heading]
             for index, paragraph in enumerate(_paragraphs(summ)):
                 if index:
                     lines.append("")

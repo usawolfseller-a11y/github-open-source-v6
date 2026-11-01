@@ -27,6 +27,9 @@ PROJECT_SCHEMA: dict[str, Any] = {
         "key_features": {"type": "ARRAY", "items": {"type": "STRING"}},
         "who_for": {"type": "STRING"},
         "why_now": {"type": "STRING"},
+        "scene": {"type": "STRING"},
+        "tension": {"type": "STRING"},
+        "turn": {"type": "STRING"},
         "verdict": {"type": "STRING"},
         "quick_start": {"type": "STRING"},
         "discussion_question": {"type": "STRING"},
@@ -45,6 +48,9 @@ PROJECT_SCHEMA: dict[str, Any] = {
         "key_features",
         "who_for",
         "why_now",
+        "scene",
+        "tension",
+        "turn",
         "verdict",
         "quick_start",
         "discussion_question",
@@ -215,8 +221,23 @@ Write only facts supported by the metadata and README below. Never invent
 benchmarks, adoption, pricing, funding, or personal experience. Do not claim
 that you tested the project.
 
-Tone: clear, energetic and scannable; strong first-line hook; no clickbait.
-Explain why the project matters now without inherited hype.
+Voice: you are a human editor who actually used the tool, talking to a
+competent developer over coffee. Story first, specs second. Never write like
+a release note, never like a README restated, never like marketing. See
+docs/agents/EDITORIAL_VOICE.md for the full house style.
+
+Narrative spine (this is the difference between a post people read and a
+spec sheet they skip):
+- scene  = the concrete moment that makes the reader recognise their own
+  pain. A real situation, in present tense, no "in today's fast-paced world".
+  It is NOT the hook restated: it sets the stage the hook pays off.
+- tension = the specific cost of the status quo: what it wastes, breaks or
+  forces you to do. Concrete nouns and numbers where the sources allow it.
+- turn   = what this project changes about that situation, and honestly what
+  it does not change yet.
+Rules for all three: plain words, no filler, no "revolutionary", "seamless",
+"game-changing", "unleash", "empower"; no invented first-person fieldwork
+(do not claim "I ran this for a week"); no ellipsis; each 1-2 sentences.
 
 Safety:
 - Return safety="reject" for stealers, phishing, drainers, crackers,
@@ -227,8 +248,10 @@ Safety:
 
 Output constraints:
 - hook: one benefit-led sentence, <=120 chars. Rewrite; do not copy the
-  repository description verbatim. No hype words such as "insane",
-  "revolutionary" or "game-changing" unless quantified by the source.
+  repository description verbatim. Name something concrete (a number, a
+  platform, a file, a cost) so it could only be about this project.
+  No hype words such as "insane", "revolutionary" or "game-changing"
+  unless quantified by the source.
 - card_hook: the headline printed on the 1200x630 cover card. Maximum
   60 characters, one complete thought, no trailing punctuation, no
   ellipsis, no repository name (the card prints it separately). It must
@@ -237,24 +260,33 @@ Output constraints:
 - card_subline: one clarifying sentence for the card, maximum 130
   characters, plain language, no ellipsis. It explains who the project
   is for or what problem it removes.
-- summary: 2-4 sentences that add context beyond the hook; do not
-  restate the hook in different words.
+- summary: 2-4 sentences about the MECHANISM: how the thing actually
+  works, what it sits on top of, what it replaced for its users. It must
+  not restate the hook, must not repeat the pain from scene/tension, must
+  not repeat scene/tension/turn in other words, and must not list features
+  (they have their own field).
 - key_features: 4-6 concrete items, each <=120 chars; start with a
   capability or verb, not marketing adjectives. Each item must add a
   distinct capability or evidence point not already covered by summary.
+  Prefer the detail a developer would repeat to a colleague a day later
+  ("100+ databases in a 25 MB binary") over a generic capability list.
 - who_for: who benefits, one line.
 - why_now: one sentence a reader sees near the top: the concrete reason
   this project is worth attention at this moment (a capability that
   only became practical now, a gap it closes, a shift in the ecosystem).
   No "hot", "trending", "game-changing"; no invented news or funding.
-- verdict: one-line judgement, honest about limits.
+- verdict: one-line judgement with a real stance, honest about limits.
+  A readable opinion, not a neutral summary: name who it fits and who
+  should skip it.
 - category: one short broad label such as AI, DevTools, Security, Data,
   Web or CLI; never a long multiword phrase.
 - quick_start: copy or closely paraphrase an actually documented command;
   if none is documented, use a GitHub clone command only
 - discussion_question: one specific, low-friction question a developer
   can answer in one line (a concrete use case or either/or choice).
-  Avoid broad expert-essay questions.
+  Avoid broad expert-essay questions. Make it come out of the story, not
+  out of a survey: "Which one would you drop first?" beats "What do you
+  think about tooling?".
 - social_text: <=220 chars, no URL, hashtags or emoji. This is source
   copy for short social adapters: one concrete benefit, no generic
   "Check out" opener.
@@ -359,6 +391,9 @@ Worth a serious look if the problem matches your stack. Read the repository docu
         "key_features": features,
         "who_for": "Developers and teams looking for an inspectable open-source option in this space.",
         "why_now": "It is actively maintained and currently gaining community attention.",
+        "scene": "",
+        "tension": "",
+        "turn": "",
         "verdict": "Worth evaluating if the use case matches your stack.",
         "quick_start": quick_start,
         "discussion_question": "Would you run this in production, or keep it as a self-hosted tool? Why?",
@@ -396,6 +431,9 @@ def normalize_project_content(
         "key_features": features[:6],
         "who_for": _clip_sentence(raw.get("who_for"), 320),
         "why_now": _clip_sentence(raw.get("why_now"), 320),
+        "scene": _clip_sentence(raw.get("scene"), 420),
+        "tension": _clip_sentence(raw.get("tension"), 420),
+        "turn": _clip_sentence(raw.get("turn"), 420),
         "verdict": _clip_sentence(raw.get("verdict"), 300),
         "quick_start": str(raw.get("quick_start") or "").strip()[:500],
         "discussion_question": _clip_sentence(
