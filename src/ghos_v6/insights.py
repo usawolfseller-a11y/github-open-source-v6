@@ -41,6 +41,15 @@ W_VIEWS = 1.0
 W_VOTES = 6.0
 W_REACTIONS = 2.0
 
+# Sample-size floors. These are not tuning knobs picked by feel: they come
+# from the observed spread on the live channel (views 36/49/55, sd≈8, so
+# CV≈0.16).  With that spread a 95% half-width of ±7 views already needs
+# n≈5, and anything under ~20 posts cannot separate a 20% difference from
+# noise. See docs/agents/SAMPLE_SIZE.md for the arithmetic.
+MIN_MEASURED_POSTS = 20      # before `learn` writes any multiplier at all
+MIN_GROUP_POSTS = 10         # per language/topic before that group gets a weight
+MIN_POLL_VOTES = 100         # a share below this is not a share, it is noise
+
 
 def parse_views(value: str) -> int:
     """``'1.2K'``/``'12,4 тыс.'`` style counters → int."""
@@ -128,7 +137,13 @@ def value_score(sample: dict[str, Any], *, median_views: float | None = None) ->
     baseline = float(median_views or 0) or 1.0
     view_part = min(100.0, 50.0 * (views / baseline)) if views else 0.0
     score = view_part * W_VIEWS
-    score += min(20.0, float(sample.get("votes_share") or 0) * 20.0) * W_VOTES
+    voters = int(sample.get("total_voters") or 0)
+    share = float(sample.get("votes_share") or 0)
+    # A 60% share out of 5 voters is indistinguishable from a coin toss.
+    # Votes only enter the score once the poll has a usable sample, and are
+    # discounted by how far the sample is from a stable one.
+    if voters >= MIN_POLL_VOTES:
+        score += min(20.0, share * 20.0) * min(1.0, voters / (2 * MIN_POLL_VOTES)) * W_VOTES
     score += min(10.0, float(sample.get("reactions") or 0)) * W_REACTIONS
     return round(score, 2)
 

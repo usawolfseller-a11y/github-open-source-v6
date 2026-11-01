@@ -76,8 +76,14 @@ multiplier = clamp(0.85 … 1.15, 1 + (local_median − overall_median) / overal
 ```
 
 `select_candidate` multiplies the editorial score by the language and topic
-multipliers (final clamp 0.8–1.25). With fewer than 5 measured posts the
-model is not written at all — a two-sample "insight" is noise.
+multipliers (final clamp 0.8–1.25).
+
+**Sample floors** (see `docs/agents/SAMPLE_SIZE.md` for the arithmetic):
+`learn` writes nothing below **20** measured posts; a language or topic gets
+a weight only with **10+** posts of its own; a poll share enters the score
+only above **100** voters and is discounted until 200. Measured spread on the
+live channel is sd≈8 views on a median of 49, so five posts give a ±14%
+interval — wider than any effect the channel could act on.
 
 **Review rule:** if a multiplier sits at a clamp for two consecutive weeks,
 the model is fighting the editorial score. Read the raw posts before
@@ -127,7 +133,7 @@ plugin markets.
 | Gate (safety, licence, freshness, language, narrowness) | **ready** | 22 rejection reasons, all named in `events.jsonl` |
 | Ranking | **ready** | quality + freshness + momentum + content + appeal, 0–100 |
 | Measurement | **half** | views are live (public widget); votes need a poll that has actually closed; reactions are collected but not yet in the `value` formula |
-| Learning | **not exercised** | needs ≥ 5 posts of measured history; a fresh state dir has none |
+| Learning | **not exercised** | needs **20** measured posts (raised from 5 — see `docs/agents/SAMPLE_SIZE.md`); a fresh state dir has none |
 
 So the system is *complete in design and wired end to end*, but only the
 first half has been proven on live data. The honest status is "ready to

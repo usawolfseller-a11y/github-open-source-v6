@@ -914,8 +914,17 @@ def learn_command(config: Config, store: StateStore) -> dict[str, Any]:
     the next selection can use it. No model, no hidden weights.
     """
     records = [r for r in store.published_records() if r.get("views") is not None]
-    if len(records) < 5:
-        return {"ok": True, "learned": False, "reason": "not_enough_samples", "samples": len(records)}
+    # 5 posts is not a sample: with the observed spread (sd≈8 on a median of
+    # 49) five posts give a ±14% confidence interval, wider than any effect
+    # we could act on. The floor is 20 measured posts.
+    if len(records) < insights.MIN_MEASURED_POSTS:
+        return {
+            "ok": True,
+            "learned": False,
+            "reason": "not_enough_samples",
+            "samples": len(records),
+            "needed": insights.MIN_MEASURED_POSTS,
+        }
     overall = insights.median_views(records)
     for record in records:
         # Recompute from views so `learn` works even if the daily metrics run
@@ -928,7 +937,9 @@ def learn_command(config: Config, store: StateStore) -> dict[str, Any]:
         if not groups:
             return 1.0
         selected = [float(r["value_score"]) for r in records if set(groups) & set(r.get("_groups") or [])]
-        if len(selected) < 3:
+        # A group needs its own sample, not three posts that happen to share
+        # a topic. Below the floor the honest multiplier is 1.0 (no opinion).
+        if len(selected) < insights.MIN_GROUP_POSTS:
             return 1.0
         selected.sort()
         local = selected[len(selected) // 2]

@@ -453,3 +453,29 @@ def test_useful_agent_skills_are_allowed_but_prompt_dumps_are_not():
         "description": "The plugin market inside DeepSeek Harness",
     }
     assert is_narrow(plugin_market)[0] is True
+
+
+def test_learning_refuses_to_learn_from_a_handful_of_posts():
+    """Owner: '5 votes is probably too little for an insight'. With the
+    observed spread (sd≈8 on a median of 49) five posts give a ±14% interval,
+    wider than any effect we could act on, so `learn` must decline."""
+    import tempfile
+
+    from ghos_v6.pipeline import learn_command
+    from ghos_v6.state import StateStore
+
+    with tempfile.TemporaryDirectory() as tmp:
+        store = StateStore(tmp)
+        for index in range(5):
+            store.data["published"][f"o{index}/r{index}"] = {
+                "full_name": f"o{index}/r{index}",
+                "language": "Rust",
+                "views": 40 + index,
+                "published_at": "2026-10-20T00:00:00Z",
+            }
+        result = learn_command(object(), store)
+
+    assert result["learned"] is False
+    assert result["reason"] == "not_enough_samples"
+    assert result["needed"] == 20
+    assert "value_model" not in store.data or not store.data["value_model"]

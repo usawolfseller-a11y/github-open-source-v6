@@ -56,7 +56,14 @@ def test_value_score_rewards_above_median_and_votes():
     baseline = 200.0
     quiet = insights.value_score({"views": 100}, median_views=baseline)
     busy = insights.value_score({"views": 400}, median_views=baseline)
-    voted = insights.value_score({"views": 400, "votes_share": 0.4}, median_views=baseline)
+    # A share without a usable sample is noise: 5 voters cannot move the score.
+    assert insights.value_score(
+        {"views": 400, "votes_share": 0.9, "total_voters": 5}, median_views=baseline
+    ) == busy
+    # With a real poll sample the same share does count.
+    voted = insights.value_score(
+        {"views": 400, "votes_share": 0.4, "total_voters": 200}, median_views=baseline
+    )
     assert quiet < busy < voted
 
 
@@ -126,7 +133,12 @@ def test_learn_builds_a_model_from_measured_views():
 
     with tempfile.TemporaryDirectory() as tmp:
         store = StateStore(tmp)
+        # A real sample: below MIN_MEASURED_POSTS the model must not be written,
+        # so this test needs at least 20 measured posts.
         rows = [("Rust", 300), ("Rust", 280), ("Rust", 320), ("PHP", 90), ("PHP", 110), ("Go", 200)]
+        rows += [("Rust", 260 + index) for index in range(8)]
+        rows += [("PHP", 95 + index) for index in range(4)]
+        rows += [("Go", 190 + index) for index in range(8)]
         for index, (language, views) in enumerate(rows):
             store.data["published"][f"o{index}/r{index}"] = {
                 "full_name": f"o{index}/r{index}",
