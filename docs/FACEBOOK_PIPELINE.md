@@ -58,6 +58,12 @@ ghos-v6 facebook-handoff → строка в Sheet  → make.com → Facebook Pa
    - **Variable** `FACEBOOK_SHEETS_ID` — id таблицы.
    - **Variable** `FACEBOOK_SHEETS_RANGE` — лист и ячейка, по умолчанию `facebook!A1`.
    - **Variable** `FEATURE_SHEETS_HANDOFF=true` (по умолчанию выключено).
+
+`FACEBOOK_PAGE_ACCESS_TOKEN` для этой схемы **не нужен**: в Facebook
+публикует make.com, а v6 только пишет строку в таблицу. Токен остаётся
+необязательным для прямого `FacebookClient` и по умолчанию выключен
+(`FEATURE_Facebook=false`) — если когда-нибудь захочется публиковать мимо
+make. Пока переменная пустая, ничего не ломается и в логах тишина.
 3. Проверка без публикации:
 
 ```bash

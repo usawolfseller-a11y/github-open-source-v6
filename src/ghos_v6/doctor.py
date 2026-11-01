@@ -41,7 +41,10 @@ def run_doctor(
         "DEV_API_KEY": bool(config.dev_api_key),
         "BLUESKY_APP_PASSWORD": bool(config.bluesky_app_password),
         "MASTODON_ACCESS_TOKEN": bool(config.mastodon_access_token),
-        "FACEBOOK_PAGE_ACCESS_TOKEN": bool(config.Facebook_page_access_token),
+        # Not required: Facebook is published by make.com from a Sheet row.
+        # Kept only for the optional direct Graph API client.
+        "FACEBOOK_PAGE_ACCESS_TOKEN": bool(config.Facebook_page_access_token)
+        or not config.feature_Facebook,
     }
     checks["env_presence"] = presence
 
