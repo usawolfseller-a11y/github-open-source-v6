@@ -432,12 +432,19 @@ def collect_telegram_web(merged: dict[str, dict[str, Any]], channels: tuple[str,
             )
 
 
+# Measured 2026-11-01 via the public t.me/s/ preview:
+#   open_source_friend  20 posts, 20 GitHub links, last post today  (owner's channel)
+#   github_repos        20 posts, 20 links, last post today
+#   gitbless            20 posts, 19 links, last post today
+#   githubtrending      20 posts, 20 links, last post 2026-09-23 (slow but alive)
+#   gitradar_            0 posts — the preview is empty, so it is dropped
+# Defaults must be channels that actually answer, so a missing env var
+# cannot quietly empty the Telegram half of the fuel supply.
 DEFAULT_TELEGRAM_SOURCES = (
     "open_source_friend",
     "github_repos",
-    "githubtrending",
-    "gitradar_",
     "gitbless",
+    "githubtrending",
 )
 
 

@@ -307,3 +307,13 @@ def test_media_host_order_prefers_imgbb_and_never_github_release(monkeypatch):
     assert body.index("imgbb.configured") < body.index("TelegraphClient")
     assert "GitHubReleaseMediaHost(" not in body
 
+
+
+def test_default_telegram_sources_exclude_the_dead_channel():
+    """`gitradar_` has no posts in the public preview (checked 2026-11-01),
+    so it must not sit in the defaults and waste a fetch per run."""
+    from ghos_v6.sources import DEFAULT_TELEGRAM_SOURCES
+
+    assert "gitradar_" not in DEFAULT_TELEGRAM_SOURCES
+    assert "open_source_friend" in DEFAULT_TELEGRAM_SOURCES  # the owner's channel
+    assert len(DEFAULT_TELEGRAM_SOURCES) >= 4
