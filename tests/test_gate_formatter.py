@@ -426,3 +426,30 @@ def test_appeal_bonus_orders_usable_projects_above_bare_libraries():
         description="A desktop app to edit photos, self-hosted and Windows ready",
     )
     assert score_candidate(product) > score_candidate(library)
+
+
+def test_useful_agent_skills_are_allowed_but_prompt_dumps_are_not():
+    """Owner: coding-agent skills that do something useful are publishable;
+    prompt packs for a 'very narrow circle' are not."""
+    from ghos_v6.audience import is_narrow
+
+    usable = {
+        "name": "ffmpeg-skill",
+        "topics": ["agent-skills"],
+        "description": "Local video editor for coding agents, 42 ffmpeg tools",
+    }
+    assert is_narrow(usable)[0] is False
+
+    prompt_pack = {
+        "name": "best-prompts",
+        "topics": ["prompt-library"],
+        "description": "Collection of prompts for Claude Code",
+    }
+    assert is_narrow(prompt_pack) == (True, "topic:prompt-library")
+
+    plugin_market = {
+        "name": "dsh-market",
+        "topics": ["dsh-plugin"],
+        "description": "The plugin market inside DeepSeek Harness",
+    }
+    assert is_narrow(plugin_market)[0] is True

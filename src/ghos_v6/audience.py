@@ -35,7 +35,7 @@ _LIBRARY_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("protocol-impl", re.compile(r"\b(?:reference implementation|protocol implementation|codec)\b", re.I)),
     # most packages say it in their own first line
     ("plugin-ecosystem", re.compile(
-        r"\b(?:plugin (?:market|marketplace|ecosystem|aggregation)|plugins? for|skills? (?:that|for) (?:teach|agents?))\b",
+        r"\b(?:plugin (?:market|marketplace|ecosystem|aggregation)|plugins? (?:for|that))\b",
         re.I,
     )),
     ("generic-library", re.compile(
@@ -76,6 +76,9 @@ _APPEAL_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("browser", re.compile(r"\b(?:browser extension|chrome extension|firefox extension|web app|in the browser)\b", re.I)),
     ("creative", re.compile(r"\b(?:photo|video|audio|music|3d|render|animation|design|vector|cad|drawing|paint)\b", re.I)),
     ("replacement", re.compile(r"\b(?:replacement for|alternative to|instead of)\b", re.I)),
+    # installable skills/tools for coding agents: the owner explicitly wants
+    # these when they do something a person can use ("skills for Claude Code")
+    ("agent_skill", re.compile(r"\bskills?\b.*\b(?:claude code|codex|cursor|agents?)\b|\b(?:claude code|codex|cursor)\s+skills?\b", re.I)),
     ("media", re.compile(r"\b(?:stream|player|media library|gallery|subtitle|transcod|ffmpeg)\b", re.I)),
     ("productivity", re.compile(r"\b(?:notes?|tasks?|calendar|todo|kanban|wiki|read it later|bookmarks?)\b", re.I)),
     ("game", re.compile(r"\b(?:game|emulator|minecraft|mod loader|game engine)\b", re.I)),
@@ -90,7 +93,6 @@ _NARROW_TOPIC_HINTS = {
     "plugin",
     "plugins",
     "plugin-marketplace",
-    "agent-skills",
     "prompt-library",
     "dataset",
     "curated-list",
