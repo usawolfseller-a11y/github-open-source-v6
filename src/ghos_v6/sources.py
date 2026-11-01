@@ -605,14 +605,51 @@ def enrich_candidate(api: GitHubApi, candidate: dict[str, Any]) -> dict[str, Any
     return candidate
 
 
+def _telegram_lane_rank(candidate: dict[str, Any]) -> tuple[int, int]:
+    """Priority inside the Telegram lane: channels first, then the rest."""
+    sources = [str(s) for s in (candidate.get("sources") or [])]
+    owner_channel = any(s == "telegram:open_source_friend" for s in sources)
+    telegram = any(s.startswith("telegram:") for s in sources)
+    return (0 if owner_channel else 1 if telegram else 2, 0)
+
+
 def enrich_candidates(
     api: GitHubApi,
     candidates: list[dict[str, Any]],
     *,
     max_enrich: int = 90,
+    telegram_reserve: int = 30,
 ) -> list[dict[str, Any]]:
+    """Enrich the ranked list, but never starve the Telegram lane.
+
+    ``collect_candidates`` returns Telegram projects without stars (the
+    public preview has no numbers), so ranking by popularity pushed every
+    one of them past ``max_enrich`` and the owner's own channel never
+    reached the gate. A reserve slice is therefore filled from Telegram
+    sources first: owner channel, then other channels, then everyone by
+    rank.
+    """
+    ordered = list(candidates[:max_enrich])
+    chosen = {str(c.get("full_name") or "").lower() for c in ordered}
+    reserve: list[dict[str, Any]] = []
+    if telegram_reserve > 0:
+        free_slots = max(0, telegram_reserve)
+        pool = sorted(
+            (c for c in candidates if any(str(s).startswith("telegram:") for s in (c.get("sources") or []))),
+            key=_telegram_lane_rank,
+        )
+        for candidate in pool:
+            if free_slots <= 0:
+                break
+            key = str(candidate.get("full_name") or "").lower()
+            if key in chosen:
+                continue
+            reserve.append(candidate)
+            chosen.add(key)
+            free_slots -= 1
+    target = ordered + reserve
     enriched: list[dict[str, Any]] = []
-    for candidate in candidates[:max_enrich]:
+    for candidate in target:
         try:
             enriched.append(enrich_candidate(api, candidate))
         except (requests.RequestException, HttpError) as exc:

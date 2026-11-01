@@ -343,3 +343,29 @@ def test_enrichment_retries_past_the_secondary_rate_limit(monkeypatch):
     monkeypatch.setattr(src_mod.time, "sleep", lambda *_: None)
     assert api.repo("owner/repo") == {"id": 7, "stargazers_count": 10}
     assert calls["n"] == 2
+
+
+def test_telegram_lane_is_not_starved_by_max_enrich(monkeypatch):
+    """Ranking by popularity pushed every Telegram project (which arrives
+    without stars) past max_enrich, so the owner's channel never reached
+    the gate. A reserve slice must enrich them."""
+    from ghos_v6 import sources as src_mod
+
+    seen: list[str] = []
+
+    def fake_enrich(api, candidate):
+        seen.append(candidate["full_name"])
+        return candidate
+
+    monkeypatch.setattr(src_mod, "enrich_candidate", fake_enrich)
+    star_heavy = [
+        {"full_name": f"big/repo{i}", "stars": 10_000, "sources": ["github_search"]}
+        for i in range(10)
+    ]
+    tg = [
+        {"full_name": "owner/one", "sources": ["telegram:open_source_friend"]},
+        {"full_name": "other/two", "sources": ["telegram:gitbless"]},
+    ]
+    src_mod.enrich_candidates(None, star_heavy + tg, max_enrich=5, telegram_reserve=2)
+    assert "owner/one" in seen and "other/two" in seen
+    assert seen.index("owner/one") < seen.index("other/two")
