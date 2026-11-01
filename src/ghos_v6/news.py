@@ -355,8 +355,15 @@ def _clip(value: Any, limit: int) -> str:
     text = re.sub(r"\s+", " ", str(value or "")).strip()
     if len(text) <= limit:
         return text
-    cut = text[:limit].rsplit(". ", 1)[0]
-    return (cut + ".") if len(cut) > limit * 0.45 else text[: limit - 1].rstrip() + "…"
+    if limit <= 1:
+        return "…"[:limit]
+    cut = text[: limit - 1].rstrip()
+    if ". " in cut:
+        sentence = cut.rsplit(". ", 1)[0]
+        if len(sentence) > limit * 0.45:
+            return sentence.rstrip(".") + "."
+    word = cut.rsplit(" ", 1)[0]
+    return (word or cut).rstrip(" ,;:") + "…"
 
 
 def format_ai_brief(brief: dict[str, Any]) -> str:
@@ -366,21 +373,33 @@ def format_ai_brief(brief: dict[str, Any]) -> str:
     video_only = [_clip(item, 220) for item in brief.get("video_only_claims") or [] if str(item).strip()][:2]
     why = _clip(brief.get("why_devs") or brief.get("summary"), 520)
     question = _clip(brief.get("discussion_question") or "Will you try this in a real project?", 180)
+    official_url = str(brief.get("official_url") or "").strip()
+    official_name = _clip(brief.get("official_name") or "Primary source", 80)
+    source_line = (
+        f'🔗 <b>Source:</b> <a href="{html.escape(official_url, quote=True)}">{_esc(official_name)}</a>'
+        if official_url.startswith("https://")
+        else ""
+    )
 
     def render(happened_items: list[str], confirmed_items: list[str], video_items: list[str], why_text: str) -> str:
-        lines = [f"🛰️ <b>AI Brief — {_esc(headline)}</b>", "", "<b>What happened</b>"]
-        lines.extend(f"• {_esc(item)}" for item in happened_items)
+        lines = [f"🛰️ <b>AI Brief — {_esc(headline)}</b>", "──────────────", "🧭 <b>What happened</b>"]
+        lines.extend(f"▸ {_esc(item)}" for item in happened_items)
         if why_text:
-            lines += ["", "<b>Why developers should care</b>", _esc(why_text)]
+            lines += ["", "🎯 <b>Why developers should care</b>", _esc(why_text)]
         if confirmed_items or video_items:
-            lines += ["", "<b>Confirmed vs. video-only</b>"]
+            lines += ["", "🔍 <b>Confirmed vs. video-only</b>"]
             lines.extend(f"✅ {_esc(item)}" for item in confirmed_items)
             lines.extend(f"◻️ Video-only: {_esc(item)}" for item in video_items)
+        lines += ["", "──────────────"]
+        if source_line:
+            lines.append(source_line)
         lines += [
-            "",
             "Spotted via <b>WorldofAI</b>; written from the primary source.",
-            f"💬 <i>{_esc(question)}</i>",
-            "#ainews #opensource",
+            "",
+            "💬 <b>Your take?</b>",
+            f"<i>{_esc(question)}</i>",
+            "❤️ <b>React</b> if you want more verified AI briefs like this.",
+            "#AINews #OpenSource",
         ]
         return "\n".join(lines)
 

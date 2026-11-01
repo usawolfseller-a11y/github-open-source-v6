@@ -92,7 +92,8 @@ ghos-v6 doctor
 
 Real credentials belong only in GitHub Secrets/Variables. See
 `.env.example` for names, `docs/RUNBOOK.md` for rollout operations
-and `docs/CONTENT_FORMATS.md` for per-platform structure, size and tone.
+and `docs/CONTENT_FORMATS.md` for per-platform structure, size and tone
+(`docs/FORMAT_AUDIT_V2.md` records the audit findings behind format v2).
 
 ## Safety principles
 

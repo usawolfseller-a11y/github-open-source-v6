@@ -79,6 +79,14 @@ def test_formatter_escapes_and_fits():
     rendered = format_project_post(project, telegraph_url="https://telegra.ph/example")
     assert "<script>" not in rendered
     assert "Dual-use security tool" in rendered
+    assert "Use only on software you own or are authorized to analyze" in rendered
+    assert "──────────────" in rendered
+    assert "🐍 <b>Python</b>" in rendered
+    assert "<code>example/tool</code>" in rendered
+    assert "⚡ <b>Quick start</b>" in rendered
+    assert rendered.index("⚡ <b>Quick start</b>") < rendered.index("<blockquote")
+    assert any(marker in rendered for marker in ("<b>React</b>", "<b>Forward</b>", "<b>Save</b>"))
+    assert "Give the repo" not in rendered
     assert utf16_len(visible_text(rendered)) <= 4000
 
 

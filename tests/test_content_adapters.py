@@ -5,6 +5,7 @@ from ghos_v6.content_adapters import (
     build_Facebook_text,
     build_mastodon_text,
     devto_tags,
+    hashtags,
     image_alt_text,
 )
 from ghos_v6.platforms import build_link_facets
@@ -56,6 +57,8 @@ def test_bluesky_text_fits_and_uses_repo_not_private_telegram_link():
     assert len(text) <= 300
     assert "https://github.com/example/tool" in text
     assert "#OpenSource" in text
+    assert text.startswith("🐍 ")
+    assert "Daily picks: https://t.me/GitHub_Open_Source" in text
     assert "t.me/c/" not in text
 
 
@@ -66,6 +69,7 @@ def test_mastodon_text_fits_with_camelcase_tags_and_breakdown():
     assert "Repo: https://github.com/example/tool" in text
     assert "Breakdown: https://telegra.ph/example-tool" in text
     assert "#OpenSource" in text
+    assert "Daily open-source picks on Telegram: https://t.me/GitHub_Open_Source" in text
     assert "t.me/c/" not in text
 
 
@@ -73,9 +77,12 @@ def test_facebook_text_has_context_question_and_budget():
     record, generated = _record_and_generated()
     text = build_Facebook_text(record, generated)
     assert len(text) <= 1800
-    assert "Why it matters:" in text
+    assert "📌 WHY IT MATTERS" in text
+    assert "━━━━━━━━━━━━" in text
     assert "Would structured terminal reports help your code reviews?" in text
+    assert "Daily open-source picks on Telegram: https://t.me/GitHub_Open_Source" in text
     assert "GitHub: https://github.com/example/tool" in text
+    assert "Give the repo" not in text
 
 
 def test_devto_wrapper_and_alt_text():
@@ -115,3 +122,21 @@ def test_bluesky_truncation_never_cuts_a_word_and_adds_a_period():
     assert len(text) <= 300
     assert " be." not in text
     assert "Captures stdout and stderr with timestamps" in text or "…" in text
+
+
+def test_tag_cleanup_and_public_telegram_discussion_link():
+    record, generated = _record_and_generated()
+    record["language"] = "TypeScript"
+    record["topics"] = ["agent-skills"]
+    record["telegram_link"] = "https://t.me/GitHub_Open_Source/123"
+    generated["category"] = "Security and Analysis"
+
+    tags = hashtags(record, generated)
+    assert "#TypeScript" in tags
+    assert "#Security" in tags
+    assert "SecurityAndAnalysis" not in tags
+    assert devto_tags(record, generated) == ["opensource", "typescript", "security", "ai"]
+
+    mastodon = build_mastodon_text(record, generated)
+    assert "Discuss on Telegram: https://t.me/GitHub_Open_Source/123" in mastodon
+    assert "Discuss this pick on Telegram" in build_devto_body(record, generated)

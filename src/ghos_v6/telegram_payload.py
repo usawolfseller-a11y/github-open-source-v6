@@ -26,7 +26,7 @@ def build_buttons(
 ) -> list[list[dict[str, str]]]:
     row: list[dict[str, str]] = []
     if github_url.startswith("https://"):
-        row.append({"text": "⭐ GitHub", "url": github_url})
+        row.append({"text": "🔗 GitHub", "url": github_url})
     if telegraph_url.startswith("https://"):
         row.append({"text": "📖 Full breakdown", "url": telegraph_url})
     if homepage_url.startswith("https://") and homepage_url != github_url:

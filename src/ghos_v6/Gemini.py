@@ -211,13 +211,19 @@ Output constraints:
 - hook: one benefit-led sentence, <=120 chars. Rewrite; do not copy the
   repository description verbatim. No hype words such as "insane",
   "revolutionary" or "game-changing" unless quantified by the source.
-- summary: 2-4 sentences
+- summary: 2-4 sentences that add context beyond the hook; do not
+  restate the hook in different words.
 - key_features: 4-6 concrete items, each <=120 chars; start with a
-  capability or verb, not marketing adjectives.
+  capability or verb, not marketing adjectives. Each item must add a
+  distinct capability or evidence point not already covered by summary.
 - who_for / why_now / verdict: concise, factual
+- category: one short broad label such as AI, DevTools, Security, Data,
+  Web or CLI; never a long multiword phrase.
 - quick_start: copy or closely paraphrase an actually documented command;
   if none is documented, use a GitHub clone command only
-- discussion_question: one specific question for developers
+- discussion_question: one specific, low-friction question a developer
+  can answer in one line (a concrete use case or either/or choice).
+  Avoid broad expert-essay questions.
 - social_text: <=220 chars, no URL, hashtags or emoji. This is source
   copy for short social adapters: one concrete benefit, no generic
   "Check out" opener.
@@ -225,7 +231,8 @@ Output constraints:
   task/use case a developer would search for. No clickbait.
 - article_markdown: 350-600 words with H2 sections:
   What it is; Why it matters; Key features; Quick start; Who should try it;
-  Verdict. Include only a documented quick-start code block.
+  Verdict. The opening section must go deeper than summary rather than
+  restating it. Include only a documented quick-start code block.
 
 <repository_facts>
 {json.dumps(facts, ensure_ascii=False, indent=2)}

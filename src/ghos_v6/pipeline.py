@@ -166,7 +166,12 @@ def _public_record_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
 
 
 def _article_markdown(record_candidate: dict[str, Any], generated: dict[str, Any]) -> str:
-    """Telegraph wrapper: standfirst + snapshot, then the long breakdown."""
+    """Telegraph wrapper: standfirst + snapshot, then the long breakdown.
+
+    The article is part of the Telegram funnel: a small follow line up
+    top and a clear discussion/follow CTA at the end, not repo links
+    only.
+    """
     markdown = str(generated.get("article_markdown") or "").strip()
     lines = markdown.splitlines()
     if lines and lines[0].lstrip().startswith("# "):
@@ -178,33 +183,48 @@ def _article_markdown(record_candidate: dict[str, Any], generated: dict[str, Any
         license_name = str(lic.get("spdx_id") or lic.get("name") or "")
     elif lic:
         license_name = str(lic)
-    snapshot_bits = []
+
+    snapshot_lines: list[str] = []
     if record_candidate.get("full_name"):
-        snapshot_bits.append(f"Repository: {record_candidate['full_name']}")
+        snapshot_lines.append(f"- **Repository:** {record_candidate['full_name']}")
     if record_candidate.get("language"):
-        snapshot_bits.append(f"Language: {record_candidate['language']}")
+        snapshot_lines.append(f"- **Language:** {record_candidate['language']}")
     if license_name:
-        snapshot_bits.append(f"License: {license_name}")
+        snapshot_lines.append(f"- **License:** {license_name}")
     try:
-        snapshot_bits.append(f"Stars: {int(record_candidate.get('stars') or 0):,}".replace(",", " "))
+        snapshot_lines.append(
+            f"- **Stars:** {int(record_candidate.get('stars') or 0):,}".replace(",", " ")
+        )
     except (TypeError, ValueError):
         pass
+    try:
+        if record_candidate.get("forks") is not None:
+            snapshot_lines.append(
+                f"- **Forks:** {int(record_candidate.get('forks') or 0):,}".replace(",", " ")
+            )
+    except (TypeError, ValueError):
+        pass
+
     intro = ""
     if hook:
-        intro += hook + "\n\n"
-    if snapshot_bits:
-        intro += "*" + " · ".join(snapshot_bits) + "*\n\n"
+        intro += f"**{hook}**\n\n"
+    if snapshot_lines:
+        intro += "**Repository snapshot**\n\n" + "\n".join(snapshot_lines) + "\n\n"
+    intro += "*Daily open-source picks: [GitHub Open Source on Telegram](https://t.me/GitHub_Open_Source)*\n\n"
+
     links = [
+        "- [Discuss this pick and get daily finds on Telegram](https://t.me/GitHub_Open_Source)",
         f"- [GitHub repository]({record_candidate.get('url')})",
     ]
     if record_candidate.get("homepage"):
         links.append(f"- [Project homepage]({record_candidate['homepage']})")
-    links.append("- [GitHub Open Source on Telegram](https://t.me/GitHub_Open_Source)")
     return (
         intro
         + markdown
-        + "\n\n## Links\n\n"
+        + "\n\n## Continue exploring\n\n"
         + "\n".join(links)
+        + "\n\n**Get the next pick in Telegram:** "
+        "[Follow GitHub Open Source](https://t.me/GitHub_Open_Source)"
         + "\n\n*Curated from the repository README and metadata. "
         "No hands-on test is claimed; evaluate it in a sandbox before production use.*\n"
     )
@@ -645,10 +665,16 @@ def digest_command(config: Config, store: StateStore) -> dict[str, Any]:
             stars = f" ⭐ {int(record.get('stars') or 0):,}".replace(",", " ")
         except (TypeError, ValueError):
             stars = ""
-        lines.append(f"{index}. <b>{title}</b>{stars}")
-        if hook:
-            lines.append(f"   {hook}")
-    lines += ["", "Vote in the poll below: which one deserves Project of the Week?"]
+        lines.append(f"{index}. <b>{title}</b>")
+        detail = " — ".join(part for part in [stars.strip(), hook] if part)
+        if detail:
+            lines.append(f"   {detail}")
+        lines.append("")
+    lines += [
+        "──────────────",
+        "↗️ <b>Forward this Top 5</b> to a teammate who should see it.",
+        "🗳️ Vote in the poll below: which one deserves Project of the Week?",
+    ]
     sent = telegram.send_text(chat_id, "\n".join(lines), preview_url=image_url)
     poll = None
     try:

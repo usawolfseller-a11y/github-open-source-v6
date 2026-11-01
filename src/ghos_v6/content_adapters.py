@@ -18,6 +18,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from .formatter import _language_icon as _shared_language_icon
+
 BLUESKY_LIMIT = 300
 MASTODON_LIMIT = 500
 FACEBOOK_TARGET = 1800
@@ -31,7 +33,10 @@ _LANG_TAG = {
 }
 
 _DEVTO_TAG_ALIASES = {
+    "agent-skills": "ai",
     "developer-tools": "devtools",
+    "security-and-analysis": "security",
+    "security and analysis": "security",
     "developertools": "devtools",
     "machine-learning": "machinelearning",
     "open-source": "opensource",
@@ -117,6 +122,36 @@ def breakdown_url(record: dict[str, Any]) -> str:
     return public_telegram_link(record)
 
 
+TELEGRAM_CHANNEL_URL = "https://t.me/GitHub_Open_Source"
+
+
+def language_icon(record: dict[str, Any]) -> str:
+    return _shared_language_icon(record)
+
+
+def telegram_cta_url(record: dict[str, Any]) -> str:
+    """Best public Telegram destination: this post, else the channel."""
+    return public_telegram_link(record) or TELEGRAM_CHANNEL_URL
+
+
+def telegram_cta_line(record: dict[str, Any], *, compact: bool = False) -> str:
+    """Return-loop CTA for external surfaces.
+
+    External posts must grow the Telegram channel, not only send
+    readers to a third-party repository. Private ``t.me/c`` test links
+    are filtered by :func:`public_telegram_link`, so test crossposts
+    fall back to the public channel URL.
+    """
+    specific = public_telegram_link(record)
+    if specific:
+        return f"Discuss: {specific}" if compact else f"💬 Discuss on Telegram: {specific}"
+    return (
+        f"Daily picks: {TELEGRAM_CHANNEL_URL}"
+        if compact
+        else f"📣 Daily open-source picks on Telegram: {TELEGRAM_CHANNEL_URL}"
+    )
+
+
 def Facebook_link_url(record: dict[str, Any]) -> str:
     return breakdown_url(record) or repo_url(record)
 
@@ -171,8 +206,34 @@ def _detail(record: dict[str, Any], generated: dict[str, Any]) -> str:
     return features[0] if features else summary
 
 
+_RAW_TAG_ALIASES = {
+    "agent-skills": "ai agents",
+    "developer-tools": "devtools",
+    "security-and-analysis": "security",
+    "security and analysis": "security",
+}
+
+_TAG_WORD_SPECIAL = {
+    "ai": "AI",
+    "api": "API",
+    "cli": "CLI",
+    "css": "CSS",
+    "devtools": "DevTools",
+    "html": "HTML",
+    "javascript": "JavaScript",
+    "llm": "LLM",
+    "mcp": "MCP",
+    "ml": "ML",
+    "opensource": "OpenSource",
+    "typescript": "TypeScript",
+    "ui": "UI",
+    "ux": "UX",
+}
+
+
 def _tag_words(value: Any) -> list[str]:
     raw = clean_text(value).lower()
+    raw = _RAW_TAG_ALIASES.get(raw, raw)
     raw = _LANG_TAG.get(raw, raw)
     return [word for word in re.split(r"[^a-z0-9]+", raw) if word]
 
@@ -183,8 +244,7 @@ def _camel_tag(value: Any) -> str:
         return ""
     if words == ["opensource"] or words == ["open", "source"]:
         return "OpenSource"
-    return "".join(word[:1].upper() + word[1:] for word in words)
-
+    return "".join(_TAG_WORD_SPECIAL.get(word, word[:1].upper() + word[1:]) for word in words)
 
 def _lower_tag(value: Any) -> str:
     raw = clean_text(value).lower()
@@ -286,13 +346,35 @@ def _fit_parts(parts: list[str], limit: int) -> str:
 
 
 def build_bluesky_text(record: dict[str, Any], generated: dict[str, Any] | None = None) -> str:
+    """One complete Bluesky post: hook + detail + repo + Telegram loop.
+
+    The Telegram return CTA outranks hashtags; both are included only
+    when the 300-character budget leaves room for a useful body.
+    """
     generated = _generated(record, generated)
     url = repo_url(record) or breakdown_url(record)
-    tags = hashtags(record, generated, limit=2, camel=True)
-    suffix = " ".join(part for part in [url, tags] if part)
+    tg_line = telegram_cta_line(record, compact=True)
+    tags = hashtags(record, generated, limit=1, camel=True)
+    suffix_candidates: list[str] = []
+    if url and tg_line and tags:
+        suffix_candidates.append(f"{url}\n{tg_line} {tags}")
+    if url and tg_line:
+        suffix_candidates.append(f"{url}\n{tg_line}")
+    if url:
+        suffix_candidates.append(url)
+    elif tg_line:
+        suffix_candidates.append(tg_line)
+    suffix = next(
+        (candidate for candidate in suffix_candidates if BLUESKY_LIMIT - len(candidate) - 2 >= 95),
+        suffix_candidates[-1] if suffix_candidates else "",
+    )
+
     lead = _lead(record, generated)
+    icon = language_icon(record)
+    if lead and icon:
+        lead = f"{icon} {lead}"
     body_budget = max(60, BLUESKY_LIMIT - len(suffix) - 2)
-    lead = clip_text(lead, min(150, body_budget))
+    lead = clip_text(lead, max(70, min(132, body_budget - 55)))
     remaining = body_budget - len(lead) - 2
     parts = [lead]
     if remaining >= 45:
@@ -318,84 +400,120 @@ def build_bluesky_text(record: dict[str, Any], generated: dict[str, Any] | None 
         parts.append(suffix)
     return _fit_parts(parts, BLUESKY_LIMIT)
 
-
 def build_mastodon_text(record: dict[str, Any], generated: dict[str, Any] | None = None) -> str:
+    """Readable Mastodon post with repo, breakdown and Telegram loop.
+
+    Long breakdown URLs are dropped before either useful bullets or
+    the Telegram CTA; the channel loop is a growth requirement.
+    """
     generated = _generated(record, generated)
     lead = clip_text(_lead(record, generated), 190)
+    icon = language_icon(record)
+    if lead and icon:
+        lead = f"{icon} {lead}"
     bullets = [f"• {feature}" for feature in _features(generated)[:2]]
     if not bullets:
         detail = clip_text(_detail(record, generated), 180)
         bullets = [detail] if detail else []
-    links: list[str] = []
+    bullet_text = "\n".join(bullets)
     url = repo_url(record)
-    if url:
-        links.append(f"Repo: {url}")
     breakdown = breakdown_url(record)
-    if breakdown and breakdown != url:
-        links.append(f"Breakdown: {breakdown}")
-    tags = hashtags(record, generated, limit=4, camel=True)
-    parts = [lead, "\n".join(bullets), "\n".join(links), tags]
-    text = _fit_parts([part for part in parts if part], MASTODON_LIMIT)
-    if len(text) > MASTODON_LIMIT and breakdown:
-        parts = [lead, "\n".join(bullets), f"Repo: {url}" if url else "", tags]
-        text = _fit_parts([part for part in parts if part], MASTODON_LIMIT)
-    return text
+    tags = hashtags(record, generated, limit=3, camel=True)
+    tg_line = telegram_cta_line(record)
 
+    def make_suffix(*, include_breakdown: bool) -> str:
+        link_lines: list[str] = []
+        if url:
+            link_lines.append(f"Repo: {url}")
+        if include_breakdown and breakdown and breakdown != url:
+            link_lines.append(f"Breakdown: {breakdown}")
+        link_lines.append(tg_line)
+        suffix = "\n".join(line for line in link_lines if line)
+        return (suffix + f"\n\n{tags}").strip() if tags else suffix
+
+    def join_parts(bullets_value: str, suffix: str) -> str:
+        return "\n\n".join(part for part in [lead, bullets_value, suffix] if part)
+
+    suffix = make_suffix(include_breakdown=True)
+    text = join_parts(bullet_text, suffix)
+    if len(text) <= MASTODON_LIMIT:
+        return text
+    suffix = make_suffix(include_breakdown=False)
+    text = join_parts(bullet_text, suffix)
+    if len(text) <= MASTODON_LIMIT:
+        return text
+    first_bullet = bullets[0] if bullets else ""
+    text = join_parts(first_bullet, suffix)
+    if len(text) <= MASTODON_LIMIT:
+        return text
+    return _fit_parts([lead, first_bullet, suffix], MASTODON_LIMIT)
 
 def build_Facebook_text(record: dict[str, Any], generated: dict[str, Any] | None = None) -> str:
+    """Structured plain-text Facebook post with a Telegram return loop."""
     generated = _generated(record, generated)
     name = record_name(record)
     hook = _hook(record, generated)
-    title = f"🚀 {name} — {hook}" if hook and not hook.lower().startswith(name.lower()) else f"🚀 {hook or name}"
+    icon = language_icon(record)
+    title = (
+        f"{icon} {name} — {hook}"
+        if hook and not hook.lower().startswith(name.lower())
+        else f"{icon} {hook or name}"
+    ).strip()
     proof_bits = [
         f"⭐ {_fmt_num(record.get('stars'))} stars" if record.get("stars") is not None else "",
-        clean_text(record.get("language") or ""),
-        license_name(record),
+        f"🍴 {_fmt_num(record.get('forks'))} forks" if record.get("forks") is not None else "",
+        f"{icon} {clean_text(record.get('language') or '')}" if clean_text(record.get("language") or "") else "",
+        f"📜 {license_name(record)}" if license_name(record) else "",
     ]
     proof = " · ".join(bit for bit in proof_bits if bit)
     summary = _sentences(_summary(record, generated), 460)
     why = clip_text(generated.get("why_now") or generated.get("verdict"), 280)
     who = clip_text(generated.get("who_for"), 240)
-    quick = str(generated.get("quick_start") or "").strip()
+    quick = str(generated.get("quick_start") or record.get("quick_start") or "").strip()
     quick_lines = "\n".join(line.rstrip() for line in quick.splitlines()[:5])[:360]
     question = clip_text(
         generated.get("discussion_question") or "Would you try this in a real project? Why?",
         180,
     )
-    features = _features(generated)[:3]
+    features = _features(generated)[:4]
     parts = [title]
     if proof:
         parts.append(proof)
+    parts.append("━━━━━━━━━━━━")
     if record.get("is_dual_use") or generated.get("safety") == "dual_use":
         parts.append("⚠️ Dual-use security tool — shared for security research and education.")
     if summary:
-        parts.append(summary)
+        parts.append(f"🧭 WHAT IT DOES\n{summary}")
     if features:
-        parts.append("What stands out:\n" + "\n".join(f"• {feature}" for feature in features))
+        parts.append("✨ WHAT STANDS OUT\n" + "\n".join(f"• {feature}" for feature in features))
     if why:
-        parts.append(f"Why it matters: {why}")
+        parts.append(f"📌 WHY IT MATTERS\n{why}")
     if who:
-        parts.append(f"Good fit for: {who}")
+        parts.append(f"🎯 GOOD FIT FOR\n{who}")
     if quick_lines:
-        parts.append("Quick start:\n" + quick_lines)
-    parts.append(question)
-    links: list[str] = []
+        parts.append("⚡ QUICK START\n" + quick_lines)
+
+    final_lines = ["━━━━━━━━━━━━"]
+    if question:
+        final_lines.append(f"💬 {question}")
+    final_lines.append(telegram_cta_line(record))
     url = repo_url(record)
     if url:
-        links.append(f"GitHub: {url}")
+        final_lines.append(f"GitHub: {url}")
     breakdown = breakdown_url(record)
     if breakdown and breakdown != url:
-        links.append(f"Full breakdown: {breakdown}")
-    if links:
-        parts.append("\n".join(links))
-    parts.append(hashtags(record, generated, limit=3, camel=True))
+        final_lines.append(f"Full breakdown: {breakdown}")
+    tags = hashtags(record, generated, limit=3, camel=True)
+    if tags:
+        final_lines.append(tags)
+    parts.append("\n".join(final_lines))
+
     text = "\n\n".join(part for part in parts if part).strip()
     if len(text) <= FACEBOOK_TARGET:
         return text
-    # Facebook can carry more, but the editorial target keeps it readable.
-    shorter = [title, proof, summary, f"Why it matters: {why}" if why else "", question, "\n".join(links), hashtags(record, generated, limit=3, camel=True)]
-    return clip_text("\n\n".join(part for part in shorter if part), FACEBOOK_TARGET)
-
+    # The final block (question + Telegram loop + links) is one part,
+    # so fitting preserves the funnel instead of clipping it away.
+    return _fit_parts(parts, FACEBOOK_TARGET)
 
 def build_crosspost_text(
     platform: str,
@@ -418,6 +536,8 @@ def build_devto_title(record: dict[str, Any], generated: dict[str, Any] | None =
     hook = _hook(record, generated).rstrip(".")
     generated_title = clean_text(generated.get("article_title") or "")
     generic = "what it does and why" in generated_title.lower()
+    if generated_title and not generic and len(generated_title) <= 125:
+        return generated_title
     if hook and not hook.lower().startswith(name.lower()):
         candidate = f"{name}: {hook[0].upper() + hook[1:] if len(hook) > 1 else hook.upper()}"
         if len(candidate) <= 125:
@@ -455,14 +575,20 @@ def build_devto_body(record: dict[str, Any], generated: dict[str, Any] | None = 
         intro_lines.append(f"> **Best for:** {who}")
     if proof:
         intro_lines.append(f"> **Repository snapshot:** {proof}")
+    intro_lines.append(
+        f"> **Daily picks:** [Follow GitHub Open Source on Telegram]({TELEGRAM_CHANNEL_URL})"
+    )
     links = []
+    if public_telegram_link(record):
+        links.append(f"- [Discuss this pick on Telegram]({telegram_cta_url(record)})")
+    else:
+        links.append(f"- [More open-source finds on Telegram]({TELEGRAM_CHANNEL_URL})")
     url = repo_url(record)
     if url:
         links.append(f"- [GitHub repository]({url})")
     breakdown = breakdown_url(record)
     if breakdown and breakdown != url:
         links.append(f"- [Full breakdown]({breakdown})")
-    links.append("- [More open-source finds on Telegram](https://t.me/GitHub_Open_Source)")
     question = clip_text(
         generated.get("discussion_question") or "Would you use this in production? Why?",
         190,

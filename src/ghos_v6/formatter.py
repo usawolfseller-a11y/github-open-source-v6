@@ -43,6 +43,63 @@ _CATEGORY_EMOJI = [
 
 _LANG_HASHTAG = {"c++": "cpp", "c#": "csharp", "f#": "fsharp", "objective-c": "objc"}
 
+#: One consistent icon per language/stack.  Icons are scanning aids,
+#: never the only carrier of meaning: the language name stays in text.
+_LANGUAGE_ICON = {
+    "python": "🐍",
+    "javascript": "🟨",
+    "typescript": "🔷",
+    "rust": "🦀",
+    "go": "🐹",
+    "java": "☕",
+    "kotlin": "🟣",
+    "swift": "🕊️",
+    "dart": "🎯",
+    "php": "🐘",
+    "ruby": "💎",
+    "c": "🔵",
+    "c++": "➕",
+    "c#": "♯",
+    "shell": "🐚",
+    "bash": "🐚",
+    "html": "🌐",
+    "css": "🎨",
+    "vue": "💚",
+    "svelte": "🧡",
+    "lua": "🌙",
+    "r": "📊",
+    "scala": "🔴",
+    "haskell": "λ",
+    "elixir": "💧",
+    "erlang": "📡",
+    "zig": "⚡",
+    "solidity": "⛓️",
+    "dockerfile": "🐳",
+    "jupyter notebook": "📓",
+    "notebook": "📓",
+}
+
+_DIVIDER = "──────────────"
+_PRIORITY_TOPICS = [
+    "ai",
+    "llm",
+    "mcp",
+    "cli",
+    "terminal",
+    "developer-tools",
+    "devtools",
+    "security",
+    "self-hosted",
+    "selfhosted",
+    "api",
+    "database",
+    "web",
+    "frontend",
+    "backend",
+    "devops",
+    "automation",
+]
+
 
 def _esc(value: Any) -> str:
     return html.escape(str(value or "").strip(), quote=False)
@@ -67,27 +124,31 @@ def _license_name(project: dict[str, Any]) -> str:
     return str(lic or "").strip()
 
 
-def _activity(project: dict[str, Any]) -> str:
+def _activity_parts(project: dict[str, Any]) -> tuple[str, str]:
     raw = project.get("last_commit_date") or project.get("pushed_at") or project.get("updated_at")
     if not raw:
-        return ""
+        return "", ""
     try:
         dt = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
     except ValueError:
-        return ""
+        return "", ""
     days = max(0, (datetime.now(timezone.utc) - dt).days)
     if days == 0:
-        return "🟢 commit today"
+        return "🟢", "commit today"
     if days == 1:
-        return "🟢 commit yesterday"
+        return "🟢", "commit yesterday"
     if days < 30:
-        return f"🟢 commit {days}d ago"
+        return "🟢", f"commit {days}d ago"
     if days < 365:
-        return f"🟡 commit {days // 30}mo ago"
-    return f"🔴 commit {days // 365}y ago"
+        return "🟡", f"commit {days // 30}mo ago"
+    return "🔴", f"commit {days // 365}y ago"
 
+
+def _activity(project: dict[str, Any]) -> str:
+    icon, label = _activity_parts(project)
+    return f"{icon} {label}" if label else ""
 
 def _emoji(project: dict[str, Any]) -> str:
     haystack = " ".join(
@@ -101,18 +162,24 @@ def _emoji(project: dict[str, Any]) -> str:
 
 
 def _hashtags(project: dict[str, Any], limit: int = 4) -> str:
-    """Telegram tags: four maximum, brand tag first, no tag wall."""
+    """Telegram tags: four maximum, searchable topics before niche ones."""
     tags: list[str] = ["opensource"]
+
+    def add(raw: Any) -> None:
+        tag = re.sub(r"[^a-zA-Z0-9_]+", "_", str(raw).strip().lower()).strip("_")
+        if tag and tag not in tags and tag != "open_source" and len(tags) < limit:
+            tags.append(tag)
+
     lang = str(project.get("language") or "").strip().lower()
     if lang:
-        tags.append(_LANG_HASHTAG.get(lang, re.sub(r"[^a-z0-9]+", "", lang)))
-    for topic in project.get("topics") or []:
-        tag = re.sub(r"[^a-zA-Z0-9_]+", "_", str(topic).strip().lower()).strip("_")
-        if tag and tag not in tags and tag != "open_source":
-            tags.append(tag)
-        if len(tags) >= limit:
-            break
-    return " ".join(f"#{t}" for t in [t for t in tags if t][:limit])
+        add(_LANG_HASHTAG.get(lang, re.sub(r"[^a-z0-9]+", "", lang)))
+    topics = [str(topic).strip().lower() for topic in project.get("topics") or []]
+    for priority in _PRIORITY_TOPICS:
+        if priority in topics:
+            add(priority)
+    for topic in topics:
+        add(topic)
+    return " ".join(f"#{t}" for t in tags[:limit])
 
 def visible_text(rendered_html: str) -> str:
     text = re.sub(r"<br\s*/?>", "\n", rendered_html)
@@ -128,9 +195,63 @@ def _clip(text: str, limit: int) -> str:
     text = " ".join(str(text or "").split())
     if len(text) <= limit:
         return text
-    cut = text[:limit].rsplit(". ", 1)[0]
-    return (cut + ".") if len(cut) > limit * 0.5 else text[: limit - 1].rstrip() + "…"
+    if limit <= 1:
+        return "…"[:limit]
+    cut = text[: limit - 1].rstrip()
+    if ". " in cut:
+        sentence = cut.rsplit(". ", 1)[0]
+        if len(sentence) > limit * 0.5:
+            return sentence.rstrip(".") + "."
+    word = cut.rsplit(" ", 1)[0]
+    return (word or cut).rstrip(" ,;:") + "…"
 
+
+def _language_icon(project: dict[str, Any]) -> str:
+    lang = str(project.get("language") or "").strip().lower()
+    if lang in _LANGUAGE_ICON:
+        return _LANGUAGE_ICON[lang]
+    topics = " ".join(str(topic).lower() for topic in project.get("topics") or [])
+    if "docker" in topics or "kubernetes" in topics:
+        return "🐳"
+    return "💻"
+
+
+def _paragraphs(text: str) -> list[str]:
+    sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", text) if part.strip()]
+    if len(sentences) <= 2:
+        return [text] if text else []
+    first = " ".join(sentences[:2])
+    rest = " ".join(sentences[2:])
+    return [part for part in [first, rest] if part]
+
+
+def _feature_html(feature: str) -> str:
+    """Bold a real lead-in (``Term: rest``); otherwise keep clean text."""
+    value = str(feature or "").strip()
+    if ":" in value:
+        lead, rest = value.split(":", 1)
+        if 2 <= len(lead.strip()) <= 42 and rest.strip():
+            return f"<b>{_esc(lead.strip())}:</b> {_esc(rest.strip())}"
+    return _esc(value)
+
+
+def _engagement_cta(project: dict[str, Any]) -> str:
+    """One rotating engagement ask: react, forward, or save/comment.
+
+    No star-begging for third-party repos: the channel's feedback loop
+    is reactions, comments and forwards on *our* post.
+    """
+    import hashlib
+
+    seed_source = str(project.get("full_name") or project.get("name") or "project")
+    variant = int(hashlib.sha256(seed_source.encode("utf-8")).hexdigest()[:2], 16) % 3
+    language = str(project.get("language") or "").strip()
+    if variant == 0:
+        label = f" <b>{_esc(language)}</b>" if language else ""
+        return f"❤️ <b>React</b> if you want more{label} tools like this."
+    if variant == 1:
+        return "↗️ <b>Forward</b> this to a dev who should see it."
+    return "🔖 <b>Save</b> it for later — and drop your use case in the comments."
 
 def format_project_post(
     project: dict[str, Any],
@@ -139,82 +260,132 @@ def format_project_post(
     expandable_deep_dive: bool = True,
     max_visible: int = MAX_VISIBLE_UTF16,
 ) -> str:
-    """Render one project as Telegram HTML text (<= ``max_visible`` visible chars)."""
-    name = _esc(project.get("name") or "Unknown project")
-    hook = _clip(str(project.get("hook") or project.get("description") or ""), 140)
+    """Render one project as Telegram HTML text (<= ``max_visible``).
+
+    Layout v2 is componentized, not a wall of text:
+    header (repo + path) -> bold hook -> divider -> icon proof lines ->
+    What it does -> Key features -> visible short Quick start ->
+    expandable judgement sections -> divider -> engagement -> links.
+    """
+    name_raw = str(project.get("name") or "Unknown project")
+    name = _esc(name_raw)
+    full_name_raw = str(project.get("full_name") or "")
+    hook = _clip(str(project.get("hook") or project.get("description") or ""), 150)
     url = _safe_url(project.get("url") or project.get("html_url"))
     homepage = _safe_url(project.get("homepage"))
     telegraph_url = _safe_url(telegraph_url)
 
-    stats_bits = [f"⭐ {_fmt_num(project.get('stars'))}", f"🍴 {_fmt_num(project.get('forks'))}"]
-    lic = _license_name(project)
-    if lic:
-        stats_bits.append(f"📜 {_esc(lic)}")
-    activity = _activity(project)
-    if activity:
-        stats_bits.append(activity)
     lang = str(project.get("language") or "").strip()
+    lic = _license_name(project)
+    activity_icon, activity_label = _activity_parts(project)
+    meta_lines = [
+        f"⭐ <b>{_fmt_num(project.get('stars'))}</b> stars · 🍴 <b>{_fmt_num(project.get('forks'))}</b> forks"
+    ]
+    stack_bits: list[str] = []
     if lang:
-        stats_bits.append(f"💻 {_esc(lang)}")
+        stack_bits.append(f"{_language_icon(project)} <b>{_esc(lang)}</b>")
+    if lic:
+        stack_bits.append(f"📜 <b>{_esc(lic)}</b>")
+    if activity_label:
+        stack_bits.append(f"{activity_icon} <b>{_esc(activity_label)}</b>")
+    if stack_bits:
+        meta_lines.append(" · ".join(stack_bits))
+    try:
+        contributors = int(project.get("contributors_count") or 0)
+    except (TypeError, ValueError):
+        contributors = 0
+    if contributors >= 3:
+        meta_lines.append(f"👥 <b>{_fmt_num(contributors)}</b> contributors")
 
     features = [_clip(str(f), 150) for f in (project.get("key_features") or []) if str(f).strip()][:6]
     summary = _clip(str(project.get("readme_summary") or project.get("primary_use_case") or ""), 650)
+    quick_raw = str(project.get("quick_start") or "").strip()[:400]
+    quick_visible_default = bool(quick_raw) and len(quick_raw) <= 120 and quick_raw.count("\n") <= 1
 
-    deep_parts: list[str] = []
+    deep_parts: list[tuple[str, str, str, bool]] = []
     if project.get("who_for"):
-        deep_parts.append(f"<b>Who should try it:</b> {_esc(_clip(str(project['who_for']), 300))}")
+        deep_parts.append(("🎯", "Who should try it", _clip(str(project["who_for"]), 300), False))
     if project.get("why_now"):
-        deep_parts.append(f"<b>Why it matters now:</b> {_esc(_clip(str(project['why_now']), 300))}")
+        deep_parts.append(("📌", "Why it matters now", _clip(str(project["why_now"]), 300), False))
     if project.get("verdict"):
-        deep_parts.append(f"<b>Verdict:</b> {_esc(_clip(str(project['verdict']), 280))}")
-    if project.get("quick_start"):
-        deep_parts.append(f"<b>Quick start:</b>\n<code>{_esc(str(project['quick_start']).strip()[:400])}</code>")
+        deep_parts.append(("✅", "Verdict", _clip(str(project["verdict"]), 280), False))
+    if quick_raw and not quick_visible_default:
+        deep_parts.append(("🚀", "Quick start", quick_raw, True))
 
     links: list[str] = []
     if url:
-        links.append(f'🔗 <a href="{html.escape(url, quote=True)}">View on GitHub</a>')
-    if homepage and homepage != url:
-        links.append(f'<a href="{html.escape(homepage, quote=True)}">Homepage</a>')
+        links.append(f'🔗 <a href="{html.escape(url, quote=True)}">GitHub repository</a>')
     if telegraph_url:
         links.append(f'📖 <a href="{html.escape(telegraph_url, quote=True)}">Full breakdown</a>')
+    if homepage and homepage != url:
+        links.append(f'🌐 <a href="{html.escape(homepage, quote=True)}">Project homepage</a>')
 
     question = _clip(
         str(project.get("discussion_question") or "Would you use this in production? Tell us in the comments ↓"),
-        160,
+        170,
     )
+    cta = _engagement_cta(project)
 
-    def render(feats: list[str], deep: list[str], summ: str) -> str:
-        lines = [f"{_emoji(project)} <b>{name}</b>" + (f" — {_esc(hook)}" if hook else "")]
-        lines.append(" · ".join(stats_bits))
+    def render(
+        feats: list[str],
+        deep: list[tuple[str, str, str, bool]],
+        summ: str,
+        show_quick: bool,
+    ) -> str:
+        header = f"{_emoji(project)} <b>{name}</b>"
+        if full_name_raw and full_name_raw.lower() != name_raw.lower():
+            header += f" · 📦 <code>{_esc(full_name_raw)}</code>"
+        lines: list[str] = [header]
+        if hook:
+            lines.append(f"<b>{_esc(hook)}</b>")
+        lines.append(_DIVIDER)
+        lines.extend(meta_lines)
         if project.get("is_dual_use"):
-            lines.append("⚠️ <b>Dual-use security tool</b> — for security research & education.")
+            lines += [
+                "",
+                "⚠️ <b>Dual-use security tool</b>",
+                "For research &amp; education. Use only on software you own or are authorized to analyze.",
+            ]
         if summ:
-            lines += ["", _esc(summ)]
+            lines += ["", "🧭 <b>What it does</b>"]
+            for index, paragraph in enumerate(_paragraphs(summ)):
+                if index:
+                    lines.append("")
+                lines.append(_esc(paragraph))
         if feats:
-            lines += ["", "✨ <b>Key features:</b>"] + [f"• {_esc(f)}" for f in feats]
+            lines += ["", "✨ <b>Key features</b>"] + [f"▸ {_feature_html(f)}" for f in feats]
+        if show_quick and quick_raw:
+            lines += ["", "⚡ <b>Quick start</b>", f"<code>{_esc(quick_raw)}</code>"]
         if deep:
+            rendered_deep: list[str] = []
+            for icon, title, body, is_code in deep:
+                body_html = f"<code>{_esc(body)}</code>" if is_code else _esc(body)
+                rendered_deep.append(f"{icon} <b>{title}</b>\n{body_html}")
             tag = "<blockquote expandable>" if expandable_deep_dive else "<blockquote>"
-            lines += ["", tag + "\n\n".join(deep) + "</blockquote>"]
-        lines += ["", f"💬 <i>{_esc(question)}</i>"]
+            lines += ["", tag + "\n\n".join(rendered_deep) + "</blockquote>"]
+        lines += ["", _DIVIDER, "💬 <b>Your take?</b>", f"<i>{_esc(question)}</i>", cta]
         if links:
-            lines.append(" · ".join(links))
-        lines.append("<i>Useful? Give the repo a ⭐ — it helps the maintainers.</i>")
+            lines += ["", *links]
         ht = _hashtags(project)
         if ht:
-            lines.append(ht)
+            lines += ["", ht]
         return "\n".join(lines)
 
-    out = render(features, deep_parts, summary)
-    # Trim least-valuable material first; keep hook, stats, links intact.
+    show_quick = quick_visible_default
+    out = render(features, deep_parts, summary, show_quick)
+    # Trim least-valuable material first; keep header, proof and CTA intact.
     while utf16_len(visible_text(out)) > max_visible and len(features) > 3:
         features.pop()
-        out = render(features, deep_parts, summary)
+        out = render(features, deep_parts, summary, show_quick)
+    while utf16_len(visible_text(out)) > max_visible and show_quick:
+        show_quick = False
+        out = render(features, deep_parts, summary, show_quick)
     while utf16_len(visible_text(out)) > max_visible and deep_parts:
         deep_parts.pop()
-        out = render(features, deep_parts, summary)
+        out = render(features, deep_parts, summary, show_quick)
     while utf16_len(visible_text(out)) > max_visible and summary:
         summary = _clip(summary, max(120, len(summary) - 150))
-        out = render(features, deep_parts, summary)
+        out = render(features, deep_parts, summary, show_quick)
     if utf16_len(visible_text(out)) > max_visible:  # pathological metadata; hard fallback
-        out = render(features[:3], [], _clip(summary, 200))
+        out = render(features[:3], [], _clip(summary, 200), False)
     return out
