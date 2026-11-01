@@ -16,6 +16,7 @@ from .pipeline import (
     close_poll_command,
     collect_command,
     digest_command,
+    facebook_handoff_command,
     learn_command,
     metrics_command,
     moderation_command,
@@ -54,7 +55,8 @@ def _parser() -> argparse.ArgumentParser:
     metrics.add_argument("--limit", type=int, default=12)
     sub.add_parser("poll-close", help="Stop this week's poll and store the tally")
     sub.add_parser("learn", help="Update ranking multipliers from measured performance")
-    sub.add_parser("links-export", help="Print the redirect map for the click layer")
+    fb = sub.add_parser("facebook-handoff", help="Append Facebook rows to the make.com sheet")
+    fb.add_argument("--limit", type=int, default=1)
     sub.add_parser("moderation", help="Poll discussion updates and delete obvious spam")
 
     scheduled = sub.add_parser("scheduled", help="Dispatch by the GitHub cron string")
@@ -133,13 +135,8 @@ def main(argv: list[str] | None = None) -> int:
             result = close_poll_command(config, store)
         elif args.command == "learn":
             result = learn_command(config, store)
-        elif args.command == "links-export":
-            from .links import code_for
-            result = {
-                code_for(str(record.get("full_name") or "")): str(record.get("url") or "")
-                for record in store.published_records()
-                if record.get("full_name")
-            }
+        elif args.command == "facebook-handoff":
+            result = facebook_handoff_command(config, store, limit=args.limit)
         elif args.command == "moderation":
             result = moderation_command(config, store)
         elif args.command == "scheduled":

@@ -43,7 +43,7 @@ discovery lists are empty, repeat steps 1–3 and run Doctor again.
 | `ghos-v6 metrics --limit 12` | Reads views for recent posts from the public widget | yes |
 | `ghos-v6 poll-close` | Stops the active poll, stores the tally | no-op when no poll is open |
 | `ghos-v6 learn` | Recomputes language/topic multipliers | yes, overwrites the model |
-| `ghos-v6 links-export` | Prints `{code: url}` for the click layer | yes |
+| `ghos-v6 facebook-handoff --limit 1` | Appends one row to the make.com sheet | no-op when already queued |
 
 The scheduled workflow runs them automatically: Sun 16:10 digest + poll,
 daily 19:50 metrics, Thu 18:10 close + learn.
@@ -78,9 +78,11 @@ daily 19:50 metrics, Thu 18:10 close + learn.
 | `MASTODON_ACCESS_TOKEN` | Optional Mastodon crossposts |
 | `FACEBOOK_PAGE_ACCESS_TOKEN` | Optional direct Facebook Page posts (needs a Page token, not a user token) |
 
-Optional repository variable `REDIRECT_BASE_URL` enables the click layer
-(`infra/redirect/`). Unset = direct GitHub links, no click data, no failure.
-Setup walkthrough: `docs/CLOUDFLARE_SETUP.md`.
+Facebook is published by make.com from a Google Sheet. v6 feeds that sheet
+with `ghos-v6 facebook-handoff`; full setup in `docs/FACEBOOK_PIPELINE.md`.
+
+Click tracking was evaluated and **rejected** by the owner: it would route
+every GitHub link through a third-party domain. Links stay `github.com`.
 
 ## Post types on the test channel
 

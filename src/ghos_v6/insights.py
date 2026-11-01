@@ -7,9 +7,9 @@ Two free signals are available without a Telegram user session:
 * **Votes** — ``stopPoll`` on a poll the bot created, before it expires
   (Telegram caps polls at 10 days and cannot create one retroactively).
 
-Clicks are *not* available from Telegram at all; they need an own redirect
-layer (``ghos_v6.links``) and are modelled separately so the value score
-degrades gracefully when that layer is absent.
+Clicks are deliberately *not* measured: Telegram does not expose them, and
+buying them would mean routing every GitHub link through a third-party
+domain. The owner rejected that trade — a reader should see ``github.com``.
 """
 from __future__ import annotations
 
@@ -39,7 +39,6 @@ _AGE_CURVE = [(1.0, 12.0), (2.0, 8.0), (4.0, 6.0), (8.0, 4.0), (16.0, 3.0),
 
 W_VIEWS = 1.0
 W_VOTES = 6.0
-W_CLICKS = 4.0
 W_REACTIONS = 2.0
 
 
@@ -130,7 +129,6 @@ def value_score(sample: dict[str, Any], *, median_views: float | None = None) ->
     view_part = min(100.0, 50.0 * (views / baseline)) if views else 0.0
     score = view_part * W_VIEWS
     score += min(20.0, float(sample.get("votes_share") or 0) * 20.0) * W_VOTES
-    score += min(15.0, float(sample.get("click_rate") or 0) * 100.0) * W_CLICKS
     score += min(10.0, float(sample.get("reactions") or 0)) * W_REACTIONS
     return round(score, 2)
 

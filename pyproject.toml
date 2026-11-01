@@ -19,6 +19,10 @@ dependencies = [
 test = [
   "pytest>=8,<9",
 ]
+sheets = [
+  "google-auth>=2.30",
+  "google-api-python-client>=2.120",
+]
 
 [project.scripts]
 ghos-v6 = "ghos_v6.cli:main"

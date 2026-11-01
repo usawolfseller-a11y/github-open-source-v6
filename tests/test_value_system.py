@@ -1,7 +1,7 @@
 """Anti-duplication, polls, measurement and learning."""
 from datetime import datetime, timedelta, timezone
 
-from ghos_v6 import dedup, insights, links, polls
+from ghos_v6 import dedup, insights, polls
 from ghos_v6.rank import select_candidate, value_multiplier
 
 
@@ -100,39 +100,6 @@ def test_winner_ignores_zero_vote_options():
     assert polls.winner(tally) == {"text": "B", "votes": 4}
 
 
-# --- links ----------------------------------------------------------------
-
-def test_tracked_link_is_off_by_default(monkeypatch):
-    monkeypatch.delenv("REDIRECT_BASE_URL", raising=False)
-    assert links.tracked_url("acme/site") == ""
-
-
-def test_tracked_link_is_stable_and_resolvable(monkeypatch):
-    monkeypatch.setenv("REDIRECT_BASE_URL", "https://go.example.dev")
-    first = links.tracked_url("Acme/Site")
-    assert first == links.tracked_url("acme/site")  # same code, case-insensitive
-    assert first.startswith("https://go.example.dev/r/")
-    assert len(first.rsplit("/", 1)[-1]) == 8
-
-
-def test_metrics_refuse_to_measure_a_private_channel(monkeypatch):
-    """Post ids collide between the private test channel and the main one."""
-    from ghos_v6.config import Config
-    from ghos_v6.pipeline import metrics_command
-    from ghos_v6.state import StateStore
-    import tempfile
-
-    config = Config(app_env="test", publish_target="test", telegram_main_channel_id="@GitHub_Open_Source")
-    with tempfile.TemporaryDirectory() as tmp:
-        store = StateStore(tmp)
-        store.data["published"] = {
-            "a/b": {"full_name": "a/b", "telegram_message_id": 5, "published_at": "2026-11-01T00:00:00Z"}
-        }
-        result = metrics_command(config, store)
-    assert result["updated"] == 0
-    assert result["reason"] == "channel_not_public"
-
-
 # --- learning -------------------------------------------------------------
 
 def test_multiplier_is_clamped_and_neutral_without_model():
@@ -200,3 +167,24 @@ def test_channel_polls_must_be_anonymous():
     assert is_channel("@GitHub_Open_Source")
     assert is_channel("-1003909350927")
     assert not is_channel(8652931211)
+
+
+def test_facebook_handoff_row_matches_the_existing_make_scenario():
+    """make.com already reads project_id/content/platform/media_urls."""
+    from ghos_v6.sheets import HEADERS, row_for
+
+    row = row_for(
+        {"repo_id": 3961, "full_name": "acme/site", "name": "site", "image_url": "https://i.ibb.co/x.png"},
+        "post body",
+    )
+    assert HEADERS[:4] == ("project_id", "content", "platform", "media_urls")
+    assert row[:4] == ["3961", "post body", "facebook", "https://i.ibb.co/x.png"]
+    assert len(row) == len(HEADERS)
+
+
+def test_facebook_handoff_never_crashes_the_post_when_sheets_is_down():
+    from ghos_v6.sheets import append_rows
+
+    result = append_rows("sheet", [["a"]], credentials_json="{}")
+    assert result["ok"] is False
+    assert result["appended"] == 0

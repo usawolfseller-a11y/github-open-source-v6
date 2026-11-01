@@ -15,7 +15,7 @@ roadmap item without both is a wish.
 | Cadence | **3 posts a day** + weekly digest | Cron reduced from 4 slots to 3; collection unchanged |
 | Polls | **Project of the Week only** | One poll per week, opened Sunday, closed Thursday (Telegram caps polls at 10 days) |
 | Novelty | **Re-visit only on a milestone** | ≥ +50 % stars **or** a major release, and never inside a 90-day cooldown |
-| Value signal | Views + reactions now; **clicks later** (redirect layer) | Clicks are optional and off by default |
+| Value signal | Views + reactions + votes. **No click tracking** | Owner rejected a third-party redirect domain: links must stay `github.com` |
 | Publishing gate | Unchanged | Nothing goes to the main channel until the owner accepts a full test post |
 | Card design | v6 editorial, brand icons, no ring | Frozen; changes only on owner request |
 
@@ -30,7 +30,8 @@ roadmap item without both is a wish.
 | Views measurement | **Built this session, verified live** | widget returns 17/41/52… on posts 3545/3544/3543 |
 | Polls | **Built this session** | `polls.py`, `stopPoll`, 10-day cap honoured |
 | Value model | **Built this session** | `learn` writes clamped multipliers (0.85–1.15) |
-| Click layer | **Code ready, not deployed** | `infra/redirect/`, needs a Cloudflare account |
+| Click tracking | **Rejected by owner** | Links stay `github.com`; views + votes only |
+| Facebook hand-off | **Built, off by default** | `sheets.py`, `facebook-handoff`, `docs/FACEBOOK_PIPELINE.md` |
 | Cards | Editorial + 13 icon edge cases tested | 40 → 57 tests green |
 | Social | Disabled by flag | dev.to/Bluesky/Mastodon not smoke-tested yet |
 | Production | **Not live** | test channel only, pipeline disabled |
@@ -85,14 +86,20 @@ Order is fixed by risk, not preference:
 
 **Exit criteria:** each platform published at least one post from the queue, unattended.
 
-### Phase D — Click layer (optional, owner decision) `[after C]`
-- [x] Owner has a Cloudflare account — step-by-step in `docs/CLOUDFLARE_SETUP.md`
-- [ ] Deploy `infra/redirect/`, set `REDIRECT_BASE_URL`
-- [ ] Upload `ghos-v6 links-export` output to KV
-- [ ] Add clicks into the value score (weight already reserved)
+### Phase D — Facebook via make.com `[ready, needs owner secrets]`
+The Page is published today by make.com reading a Google Sheet. That chain
+stays; v6 becomes its row producer (`ghos-v6 facebook-handoff`).
 
-**Why it is optional:** Telegram never reports clicks to anyone; the hop adds ~50 ms and hides the real URL. If the owner dislikes either, delete the variable and the pipeline falls back the same minute.
-**Cost:** $0 on the free tier (100 k requests/day, 1 000 KV writes/day).
+- [x] `sheets.py` row writer (same four columns the old script used) + `title`
+- [x] `facebook_handoff_command` with idempotent `queued` marking
+- [x] Post format audited; rewrite rules agreed in `docs/agents/FACEBOOK_REVIEW.md`
+- [ ] Owner sets `GOOGLE_SERVICE_ACCOUNT_JSON`, `FACEBOOK_SHEETS_ID`,
+      `FEATURE_SHEETS_HANDOFF=true`
+- [ ] First real row → make.com picks it up → Page post appears
+- [ ] Rewrite the text per the audit (faux-bold, duplicate opener, 7 features → 4)
+
+**Exit criteria:** one post on the Page produced end-to-end without touching
+the spreadsheet by hand.
 
 ### Phase E — Go live `[owner gate]`
 - [ ] Private test channel approved post fixes a real defect
@@ -115,6 +122,7 @@ Ranked by expected value per hour of work:
 
 ## 4. Explicitly rejected / not doing
 
+- **Redirect domain for click tracking** (Cloudflare or any shortener): it would replace `github.com/...` with `go.example.dev/r/xxxx` in every post. Owner decision: not worth the loss of transparency.
 - **MTProto user session** for `views`/`forwards` in real time: needs a phone number held by a bot, and risks the account. The public widget gives the same number 24 h later.
 - **Retroactive polls**: the Bot API cannot create them; only a live poll produces a tally.
 - **LLM-driven ranking weights**: the model stays deterministic and reviewable; a model that silently drifts is worse than no model.

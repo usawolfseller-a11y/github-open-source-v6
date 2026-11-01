@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from . import dedup, insights, links, polls
+from . import dedup, insights, polls
 from .cards import render_ai_brief_card, render_digest_card
 from .config import Config, telegram_message_link
 from .content_adapters import build_crosspost_text, Facebook_link_url, image_alt_text
@@ -448,7 +448,6 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
                 "readme_fp": dedup.readme_fingerprint(str(candidate.get("readme") or "")),
                 "revisit_of": candidate.get("revisit_of") or "",
                 "revisit_reason": candidate.get("revisit_reason") or "",
-                "tracked_url": links.tracked_url(str(candidate.get("full_name") or "")),
                 "visual_host": visual_host,
                 "card_style": visual.card_style,
                 "crossposts": {
@@ -943,6 +942,55 @@ def learn_command(config: Config, store: StateStore) -> dict[str, Any]:
     store.event("value_model_updated", samples=model["samples"], median=model["median_score"])
     store.save()
     return {"ok": True, "learned": True, **model}
+
+
+def facebook_handoff_command(config: Config, store: StateStore, *, limit: int = 1) -> dict[str, Any]:
+    """Queue Facebook posts for make.com by appending rows to a spreadsheet.
+
+    This is the bridge to the chain that already works: Google service
+    account → Sheet → make.com → Page. v6 supplies the rows; make.com keeps
+    owning the publish, retries and scheduling.
+
+    Rows are only appended when ``FEATURE_SHEETS_HANDOFF`` is on and both
+    Sheets settings exist. Everything is logged, and a Sheets outage never
+    stops the Telegram pipeline.
+    """
+    from .content_adapters import build_Facebook_text
+    from .sheets import append_rows, row_for
+
+    pending = [
+        record
+        for record in sorted(store.published_records(), key=lambda r: str(r.get("published_at") or ""))
+        if not (record.get("crossposts") or {}).get("facebook_sheet", {}).get("status") == "queued"
+    ]
+    if not pending:
+        return {"ok": True, "queued": 0, "reason": "nothing_pending"}
+    if not config.feature_sheets_handoff:
+        return {"ok": True, "queued": 0, "reason": "feature_disabled"}
+
+    selected = pending[:limit]
+    rows = []
+    for record in selected:
+        generated = record.get("generated") or {}
+        text = build_Facebook_text(record, generated)
+        rows.append(row_for(record, text, media_url=str(record.get("image_url") or "")))
+    result = append_rows(
+        config.sheets_spreadsheet_id,
+        rows,
+        credentials_json=config.sheets_credentials_json,
+        range_name=config.sheets_range,
+    )
+    if not result.get("ok"):
+        store.event("facebook_handoff_failed", error=result.get("error"), rows=len(rows))
+        store.save()
+        return {"ok": False, "queued": 0, "error": result.get("error")}
+
+    for record in selected:
+        crossposts = record.setdefault("crossposts", {})
+        crossposts["facebook_sheet"] = {"status": "queued", "at": iso_now(), "via": "make.com"}
+    store.event("facebook_handoff_queued", rows=len(rows), range=result.get("range", ""))
+    store.save()
+    return {"ok": True, "queued": len(rows), "range": result.get("range", ""), "projects": [r.get("full_name") for r in selected]}
 
 
 def report_command(config: Config, store: StateStore) -> dict[str, Any]:

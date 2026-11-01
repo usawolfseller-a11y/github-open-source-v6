@@ -79,7 +79,10 @@ jobs:
       FEATURE_MASTODON: ${{ vars.FEATURE_MASTODON }}
       FEATURE_Facebook: ${{ vars.FEATURE_Facebook }}
       FEATURE_AI_BRIEF: ${{ vars.FEATURE_AI_BRIEF }}
-      REDIRECT_BASE_URL: ${{ vars.REDIRECT_BASE_URL }}
+      FEATURE_SHEETS_HANDOFF: ${{ vars.FEATURE_SHEETS_HANDOFF }}
+      FACEBOOK_SHEETS_ID: ${{ vars.FACEBOOK_SHEETS_ID }}
+      FACEBOOK_SHEETS_RANGE: ${{ vars.FACEBOOK_SHEETS_RANGE }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
     steps:
       - uses: actions/checkout@v4
         with:

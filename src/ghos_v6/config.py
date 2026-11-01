@@ -60,6 +60,10 @@ class Config:
     mastodon_access_token: str = ""
     Facebook_page_id: str = ""
     Facebook_page_access_token: str = ""
+    # make.com hand-off: v6 writes rows, make.com publishes the Page post.
+    sheets_spreadsheet_id: str = ""
+    sheets_credentials_json: str = ""
+    sheets_range: str = "facebook!A1"
 
     feature_telegraph: bool = True
     feature_devto: bool = False
@@ -67,6 +71,7 @@ class Config:
     feature_mastodon: bool = False
     feature_Facebook: bool = False
     feature_ai_brief: bool = False
+    feature_sheets_handoff: bool = False
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -96,12 +101,16 @@ class Config:
             mastodon_access_token=(os.getenv("MASTODON_ACCESS_TOKEN") or "").strip(),
             Facebook_page_id=(os.getenv("FACEBOOK_PAGE_ID") or "").strip(),
             Facebook_page_access_token=(os.getenv("FACEBOOK_PAGE_ACCESS_TOKEN") or "").strip(),
+            sheets_spreadsheet_id=(os.getenv("FACEBOOK_SHEETS_ID") or "").strip(),
+            sheets_credentials_json=(os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON") or "").strip(),
+            sheets_range=(os.getenv("FACEBOOK_SHEETS_RANGE") or "facebook!A1").strip(),
             feature_telegraph=_bool("FEATURE_TELEGRAPH", True),
             feature_devto=_bool("FEATURE_DEVTO", False),
             feature_bluesky=_bool("FEATURE_BLUESKY", False),
             feature_mastodon=_bool("FEATURE_MASTODON", False),
             feature_Facebook=_bool("FEATURE_Facebook", False),
             feature_ai_brief=_bool("FEATURE_AI_BRIEF", False),
+            feature_sheets_handoff=_bool("FEATURE_SHEETS_HANDOFF", False),
         )
 
     @property

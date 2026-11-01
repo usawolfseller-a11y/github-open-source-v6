@@ -33,9 +33,11 @@ Telegram gives a bot no analytics. There are exactly two free signals:
 expires. Telegram caps polls at 10 days and cannot create them
 retroactively — which is why the weekly poll must be opened on schedule.
 
-**Clicks** are not available from Telegram at all. The optional redirect
-layer (`infra/redirect/`) supplies them; when `REDIRECT_BASE_URL` is unset
-the score simply omits that term.
+**Clicks** are not measured — and not because they are hard to get. Measuring
+them means routing every GitHub link through a domain we own, so the reader
+sees `go.example.dev/r/3ec69c85` instead of `github.com/owner/repo`. The
+owner rejected that trade (2026-11-01). The score drops the term entirely
+rather than pretending to know it.
 
 ### Age normalisation — the part that matters
 
@@ -58,12 +60,11 @@ clamped to 0.3×–6× so a single outlier cannot dominate.
 ```
 value = 50·(views@24h / median_views) · 1.0
       + min(20, votes_share·20) ├ 6.0
-      + min(15, click_rate·100) ├ 4.0
       + min(10, reactions)      ├ 2.0
 ```
 
 Views carry the baseline because they exist for every post; votes and
-clicks are bonuses that only exist when the loop is healthy.
+reactions are bonuses that only exist when the loop is healthy.
 
 ## 3. Learning (`learn` command, Thursdays after the poll closes)
 
