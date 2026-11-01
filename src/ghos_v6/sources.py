@@ -185,8 +185,14 @@ class GitHubApi:
         response = self.session.get(GITHUB_API + path, params=params, headers=headers, timeout=30)
         return response
 
-    def get_json(self, path: str, *, params: dict[str, Any] | None = None) -> tuple[int, Any, Any]:
-        response = self.get(path, params=params)
+    def get_json(
+        self,
+        path: str,
+        *,
+        params: dict[str, Any] | None = None,
+        accept: str = "",
+    ) -> tuple[int, Any, Any]:
+        response = self.get(path, params=params, accept=accept)
         try:
             parsed = response.json() if response.content else {}
         except ValueError:
@@ -228,15 +234,39 @@ class GitHubApi:
         logger.warning("GitHub search failed status=%s query=%r", status, query)
         return []
 
+    def _get_with_retry(self, path: str, *, accept: str = "", params: dict[str, Any] | None = None):
+        """Fetch a REST path, waiting out the secondary rate limit.
+
+        Enrichment hits ``/repos/...`` for every candidate.  Without this
+        retry the first 403 burst silently emptied the whole Telegram
+        lane: 20 repositories arrived with ``stars=0``, the gate rejected
+        them, and the queue looked as if the channels had nothing.
+        """
+        last: tuple[int, Any, Any] = (0, None, None)
+        for attempt in range(3):
+            status, data, response = self.get_json(path, accept=accept, params=params)
+            last = (status, data, response)
+            if status not in (403, 429):
+                return last
+            wait = _rate_limit_wait(response, default=6 * (attempt + 1))
+            logger.info(
+                "GitHub REST rate limited on %s (status=%s); sleeping %.1fs",
+                path,
+                status,
+                wait,
+            )
+            time.sleep(wait)
+        return last
+
     def repo(self, full_name: str) -> dict[str, Any] | None:
-        status, data, _ = self.get_json(f"/repos/{full_name}")
-        if status != 200:
+        status, data, _ = self._get_with_retry(f"/repos/{full_name}")
+        if status != 200 or not isinstance(data, dict):
             logger.info("GitHub repo lookup failed %s status=%s", full_name, status)
             return None
         return data
 
     def contributors_count(self, full_name: str) -> int:
-        status, data, response = self.get_json(
+        status, data, response = self._get_with_retry(
             f"/repos/{full_name}/contributors",
             params={"per_page": 1, "anon": "true"},
         )
@@ -253,6 +283,21 @@ class GitHubApi:
             f"/repos/{full_name}/readme",
             accept="application/vnd.github.raw",
         )
+        attempts = 0
+        while response.status_code in (403, 429) and attempts < 2:
+            attempts += 1
+            wait = _rate_limit_wait(response, default=6 * attempts)
+            logger.info(
+                "GitHub readme rate limited on %s (status=%s); sleeping %.1fs",
+                full_name,
+                response.status_code,
+                wait,
+            )
+            time.sleep(wait)
+            response = self.get(
+                f"/repos/{full_name}/readme",
+                accept="application/vnd.github.raw",
+            )
         if response.status_code != 200:
             return ""
         response.encoding = "utf-8"
@@ -542,6 +587,11 @@ def enrich_candidate(api: GitHubApi, candidate: dict[str, Any]) -> dict[str, Any
             candidate["sources"] = sources or mapped.get("sources") or []
             if hn_points is not None:
                 candidate["hn_points"] = hn_points
+    if not candidate.get("repo_id"):
+        # Enrichment failed: starring data is unknown, not zero. Marking it
+        # keeps the gate from rejecting a live project as "0 stars".
+        candidate["enrich_failed"] = True
+        logger.warning("Enrichment incomplete for %s: repository metadata unavailable", full_name)
     candidate["contributors_count"] = api.contributors_count(full_name)
     readme = api.readme(full_name)
     candidate["has_readme"] = bool(readme.strip())

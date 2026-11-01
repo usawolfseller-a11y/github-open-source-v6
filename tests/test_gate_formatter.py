@@ -317,3 +317,29 @@ def test_default_telegram_sources_exclude_the_dead_channel():
     assert "gitradar_" not in DEFAULT_TELEGRAM_SOURCES
     assert "open_source_friend" in DEFAULT_TELEGRAM_SOURCES  # the owner's channel
     assert len(DEFAULT_TELEGRAM_SOURCES) >= 4
+
+
+def test_enrichment_retries_past_the_secondary_rate_limit(monkeypatch):
+    """A 403 burst used to leave 20 Telegram-sourced repos with stars=0,
+    so the gate dropped them and the channel looked empty."""
+    from ghos_v6 import sources as src_mod
+
+    calls = {"n": 0}
+
+    class FakeApi(src_mod.GitHubApi):
+        def __init__(self):  # no network, no token
+            self.token = ""
+
+        def get_json(self, path, *, params=None, accept=""):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                class R:  # rate-limited response
+                    status_code = 403
+                    headers = {"Retry-After": "0"}
+                return 403, {"message": "secondary rate limit"}, R()
+            return 200, {"id": 7, "stargazers_count": 10}, None
+
+    api = FakeApi()
+    monkeypatch.setattr(src_mod.time, "sleep", lambda *_: None)
+    assert api.repo("owner/repo") == {"id": 7, "stargazers_count": 10}
+    assert calls["n"] == 2
