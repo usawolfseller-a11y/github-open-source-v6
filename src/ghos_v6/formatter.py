@@ -302,7 +302,7 @@ def format_project_post(
     project: dict[str, Any],
     *,
     telegraph_url: str = "",
-    expandable_deep_dive: bool = True,
+    expandable_deep_dive: bool = False,
     max_visible: int = MAX_VISIBLE_UTF16,
 ) -> str:
     """Render one project as Telegram HTML text (<= ``max_visible``).
@@ -310,7 +310,12 @@ def format_project_post(
     Layout v2 is componentized, not a wall of text:
     header (repo + path) -> bold hook -> divider -> icon proof lines ->
     What it does -> Key features -> visible short Quick start ->
-    expandable judgement sections -> divider -> engagement -> links.
+    judgement sections -> divider -> engagement -> links.
+
+    The judgement block (who/why/verdict) is open by default: the owner
+    wants the whole post readable without a tap.  ``expandable_deep_dive``
+    still renders Telegram's collapsible blockquote when a slot must stay
+    short.
     """
     name_raw = str(project.get("name") or "Unknown project")
     name = _esc(name_raw)
@@ -419,8 +424,15 @@ def format_project_post(
             for icon, title, body, is_code in deep:
                 body_html = f"<code>{_esc(body)}</code>" if is_code else _esc(body)
                 rendered_deep.append(f"{icon} <b>{title}</b>\n{body_html}")
-            tag = "<blockquote expandable>" if expandable_deep_dive else "<blockquote>"
-            lines += ["", tag + "\n\n".join(rendered_deep) + "</blockquote>"]
+            body = "\n\n".join(rendered_deep)
+            if expandable_deep_dive:
+                # Collapsed blockquote: a tap hides the verdict from most
+                # readers, so this is opt-in for tight slots only.
+                lines += ["", f"<blockquote expandable>{body}</blockquote>"]
+            else:
+                # Plain paragraphs, no quote frame: the judgement
+                # (who / why / verdict / quick start) stays readable.
+                lines += ["", body]
         lines += ["", _DIVIDER, "💬 <b>Your take?</b>", f"<i>{_esc(question)}</i>", cta]
         if links:
             lines += ["", *links]

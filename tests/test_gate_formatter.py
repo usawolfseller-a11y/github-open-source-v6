@@ -84,7 +84,10 @@ def test_formatter_escapes_and_fits():
     assert "🐍 <b>Python</b>" in rendered
     assert "<code>example/tool</code>" in rendered
     assert "⚡ <b>Quick start</b>" in rendered
-    assert rendered.index("⚡ <b>Quick start</b>") < rendered.index("<blockquote")
+    # The judgement block is open by default: no collapsible blockquote,
+    # because a tap hides the verdict from most readers.
+    assert "<blockquote" not in rendered
+    assert "✅ <b>Verdict</b>" in rendered
     assert any(marker in rendered for marker in ("<b>React</b>", "<b>Forward</b>", "<b>Save</b>"))
     assert "Give the repo" not in rendered
     assert 'href="https://t.me/GitHub_Open_Source"' in rendered
@@ -289,3 +292,17 @@ def test_story_beats_render_and_empty_story_is_absent():
     assert _story_html({"scene": "A", "tension": "B", "turn": "C"}) == "A\n\nB\n\nC"
     assert _story_html({"scene": "", "tension": "", "turn": ""}) == ""
     assert _story_html({"scene": "Only one beat"}) == "Only one beat"
+
+
+def test_media_host_order_prefers_imgbb_and_never_github_release(monkeypatch):
+    """GitHub release assets answer application/octet-stream and Telegram
+    silently drops the preview, so ImgBB must be the first host and the
+    release host must not be able to swallow the failure quietly."""
+    from pathlib import Path
+
+    src = Path(__file__).resolve().parents[1] / "src" / "ghos_v6" / "pipeline.py"
+    text = src.read_text(encoding="utf-8")
+    body = text.split("def _host_local_image(")[1].split("\ndef ")[0]
+    assert "ImgBBMediaHost" in body
+    assert body.index("imgbb.configured") < body.index("TelegraphClient")
+    assert "GitHubReleaseMediaHost(" not in body

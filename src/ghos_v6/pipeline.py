@@ -20,6 +20,7 @@ from .Gemini import GeminiClient, generate_project_content
 from .http import download_bytes, sanitize
 from .media import choose_visual
 from .media_host import GitHubReleaseMediaHost, ImgBBMediaHost
+from .upload import shrink_for_web_preview
 from .news import (
     extract_primary_urls,
     fetch_primary_text,
@@ -76,36 +77,38 @@ def _host_local_image(
 ) -> tuple[str, str]:
     """Host a rendered card and return a public URL ('' on failure).
 
-    Order: ImgBB (public CDN with a real image content-type, what
-    Telegram previews and Telegraph ``<img>`` tags need) -> monthly
-    GitHub Release assets (we control the repository, no extra vendor)
-    -> legacy Telegraph upload (kept only as a last attempt).
+    Order: ImgBB (owner's required host, real ``image/*`` content type,
+    what Telegram previews and Telegraph ``<img>`` tags need) -> legacy
+    Telegraph upload. GitHub release assets are *not* in the chain: they
+    answer ``application/octet-stream`` with ``content-disposition:
+    attachment`` and Telegram drops the preview without an error.
     Callers decide their own final fallback; this helper never
     silently substitutes a different image.
     """
     if not data:
         return "", ""
+    # ImgBB is the owner's required host: it serves a real ``image/png``
+    # content-type, which is what makes Telegram render a large preview.
+    # GitHub release assets answer ``application/octet-stream`` with
+    # ``content-disposition: attachment`` and Telegram silently drops the
+    # preview, so it must never be the quiet default.
     imgbb = ImgBBMediaHost(getattr(config, "imgbb_api_key", ""))
     if imgbb.configured:
         try:
             return imgbb.upload_image(data, filename=filename, content_type=content_type), "imgbb"
         except Exception as exc:  # noqa: BLE001 - next host is the fallback
             logger.warning(
-                "ImgBB upload failed; trying GitHub release host: %s",
+                "ImgBB upload failed; trying Telegraph as the last host: %s",
                 sanitize(str(exc))[:240],
             )
-    host = GitHubReleaseMediaHost(config.GitHub_token, config.GitHub_repository)
-    if host.configured:
-        try:
-            return (
-                host.upload_image(data, filename=filename, content_type=content_type),
-                "github-release",
-            )
-        except Exception as exc:  # noqa: BLE001 - legacy host is the next attempt
-            logger.warning(
-                "GitHub media host failed; trying Telegraph upload: %s",
-                sanitize(str(exc))[:240],
-            )
+    else:
+        logger.error(
+            "IMGBB_API_KEY is empty: cards cannot be hosted on ImgBB, so the "
+            "post will go out without its preview. Set the secret before publishing."
+        )
+    # GitHub release assets serve ``application/octet-stream`` with
+    # ``content-disposition: attachment``; Telegram silently drops the
+    # preview for those, so that host is no longer a preview candidate.
     try:
         return (
             TelegraphClient(config.telegraph_access_token).upload_image(
@@ -370,9 +373,11 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
         if visual.kind == "card" and visual.data:
             hosted, hosted_by = _host_local_image(
                 config,
-                visual.data,
-                filename=(visual.local_path.name if visual.local_path else "cover.png"),
-                content_type=visual.content_type,
+                # Preview crawlers need a small, real image/* file; the
+                # PNG stays the master for Telegraph and dev.to covers.
+                shrink_for_web_preview(visual.data),
+                filename=(visual.local_path.stem if visual.local_path else "cover") + "-preview.jpg",
+                content_type="image/jpeg",
             )
             if hosted:
                 image_url = hosted

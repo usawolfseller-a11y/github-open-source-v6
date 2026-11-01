@@ -27,7 +27,8 @@ The channel format is therefore:
 
 1. **the long post is the message** (`format_project_post`, up to 4000 visible UTF-16 units),
 2. **the card rides above it as a large link preview** — `link_preview_options.prefer_large_media = true`, `show_above_text = true`,
-3. the card image is hosted as a GitHub Release asset on the public repo (`media-YYYY-MM` prerelease), because ImgBB is not configured and `telegra.ph/upload` is unreliable.
+3. the card image is hosted on **ImgBB** (the owner's requirement). Measured on the live channel: GitHub Release assets answer `application/octet-stream` with `content-disposition: attachment`, and Telegram silently drops the preview — that is why earlier posts had no picture. `raw.githubusercontent` does serve `image/jpeg`, but using it as the primary host would mean committing every card.
+4. the preview upload is a **miniature web JPEG** (~70–90 KB, 1200×630): crawlers time out on heavy PNGs even when the content type is right.
 
 If a caption-only variant is ever needed again, `format_project_caption` still
 exists and is the only correct way to publish a photo post.

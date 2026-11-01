@@ -42,3 +42,33 @@ def to_telegram_jpeg(image: Image.Image, *, quality: int = JPEG_QUALITY) -> byte
 
 def prepare_for_telegram(path: Path) -> bytes:
     return to_telegram_jpeg(Image.open(path))
+
+def shrink_for_web_preview(image: bytes | str | Path, *, max_width: int = 1200, quality: int = 82) -> bytes:
+    """Re-encode a card as a web-friendly JPEG under ~300 KB.
+
+    Link-preview crawlers are far less patient than ``sendPhoto``: Telegram
+    fetches the URL with a short timeout and drops the preview when the
+    image is missing a real ``image/*`` content-type or is slow to load.
+    A 1200x630 card at ``quality=82`` subsampling 4:2:0 lands around
+    150-250 KB, which loads fast enough for the preview to survive.
+    """
+    from io import BytesIO
+
+    from PIL import Image
+
+    if isinstance(image, (bytes, bytearray)):
+        source = Image.open(BytesIO(image))
+    else:
+        source = Image.open(str(image))
+    source = source.convert("RGB")
+    if source.width > max_width:
+        height = round(source.height * max_width / source.width)
+        source = source.resize((max_width, height), Image.LANCZOS)
+    out = BytesIO()
+    source.save(out, format="JPEG", quality=quality, optimize=True, progressive=True, subsampling=2)
+    data = out.getvalue()
+    if len(data) > 300_000:  # still too heavy: drop quality once
+        out = BytesIO()
+        source.save(out, format="JPEG", quality=72, optimize=True, progressive=True, subsampling=2)
+        data = out.getvalue()
+    return data
