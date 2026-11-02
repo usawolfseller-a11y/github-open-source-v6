@@ -190,6 +190,7 @@ class BlueskyClient:
         image_data: bytes = b"",
         content_type: str = "image/png",
         image_alt: str = "",
+        idempotency_key: str = "",
     ) -> dict[str, Any]:
         if not self.configured:
             raise PlatformError("Bluesky credentials are not set")
@@ -291,6 +292,7 @@ class MastodonClient:
         image_data: bytes = b"",
         content_type: str = "image/png",
         image_alt: str = "",
+        idempotency_key: str = "",
     ) -> dict[str, Any]:
         if not self.configured:
             raise PlatformError("Mastodon token is not set")
@@ -307,7 +309,13 @@ class MastodonClient:
             media_id = self._upload_media(image_data, content_type, image_alt)
             if media_id:
                 payload["media_ids"] = [media_id]
-        response = self.session.post(f"{self.base}/api/v1/statuses", json=payload, timeout=45)
+        headers = {"Idempotency-Key": idempotency_key} if idempotency_key else None
+        response = self.session.post(
+            f"{self.base}/api/v1/statuses",
+            json=payload,
+            timeout=45,
+            headers=headers,
+        )
         if response.status_code not in {200, 201}:
             raise _error("Mastodon post", response)
         return dict(response.json() or {})
@@ -335,7 +343,7 @@ class FacebookClient:
             raise _error("Facebook", response)
         return dict(response.json() or {})
 
-    def post(self, text: str, *, url: str = "") -> dict[str, Any]:
+    def post(self, text: str, *, url: str = "", idempotency_key: str = "") -> dict[str, Any]:
         if not self.configured:
             raise PlatformError("Facebook Page token is not set")
         payload: dict[str, Any] = {"message": str(text)[:5000], "access_token": self.token}

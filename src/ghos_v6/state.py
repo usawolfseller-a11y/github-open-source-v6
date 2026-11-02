@@ -137,11 +137,18 @@ class StateStore:
 
     def is_published(self, candidate: dict[str, Any]) -> bool:
         key = self.repo_key(candidate)
-        if key in self.data.get("published", {}):
+        published = self.data.get("published", {})
+        if key in published:
             return True
         repo_id = candidate.get("repo_id") or candidate.get("id")
-        if repo_id is not None and f"id:{repo_id}" in self.data.get("published", {}):
-            return True
+        if repo_id is None:
+            return False
+        # Published records are keyed by owner/name. A repo that was renamed
+        # or transferred keeps its numeric id, so compare against the record.
+        for record in published.values():
+            other_id = record.get("repo_id") or record.get("id")
+            if other_id is not None and str(other_id) == str(repo_id):
+                return True
         return False
 
     def mark_seen(self, candidate: dict[str, Any], decision: str) -> None:

@@ -4,6 +4,8 @@ from __future__ import annotations
 import html
 import logging
 import re
+
+import requests
 import tempfile
 from collections import Counter
 from datetime import datetime, timedelta, timezone
@@ -711,6 +713,7 @@ def process_crossposts(config: Config, store: StateStore) -> dict[str, Any]:
                         image_data=image_data,
                         content_type=content_type,
                         image_alt=image_alt_text(record, generated),
+                        idempotency_key=f"{key}:{platform}",
                     )
                     result_url = str(result.get("url") or "")
                 status_info.update(
@@ -718,6 +721,26 @@ def process_crossposts(config: Config, store: StateStore) -> dict[str, Any]:
                 )
                 store.event("crosspost_published", repo=key, platform=platform, url=result_url)
                 summary["published"] += 1
+            except (requests.Timeout, requests.ConnectionError) as exc:
+                # The request may have reached the platform. Retrying can
+                # create a duplicate, so park it for a human instead.
+                error = sanitize(f"{type(exc).__name__}: {exc}")[:400]
+                status_info["status"] = "uncertain"
+                status_info["error"] = error
+                status_info["attempts"] = int(status_info.get("attempts") or 0) + 1
+                store.add_dead_letter(
+                    {
+                        "repo": key,
+                        "platform": platform,
+                        "attempts": status_info["attempts"],
+                        "error": error,
+                        "created_at": iso_now(),
+                        "note": "timeout: may have been published; verify before retrying",
+                    }
+                )
+                store.event("crosspost_uncertain", repo=key, platform=platform, error=error)
+                summary["failed"] += 1
+                continue
             except Exception as exc:  # noqa: BLE001
                 attempts = int(status_info.get("attempts") or 0) + 1
                 error = sanitize(str(exc))[:400]
@@ -950,7 +973,9 @@ def digest_command(config: Config, store: StateStore) -> dict[str, Any]:
             hours=polls.DEFAULT_WEEK_POLL_HOURS,
         )
         store.data["active_poll"] = {
-            "chat_id": chat_id,
+            # state.json is public: never store the private test-channel id.
+            # close_poll_command resolves the real chat from the config.
+            "chat_id": chat_id if config.is_main_target else "test",
             "message_id": (poll or {}).get("message_id"),
             "question": "Which project should win Project of the Week?",
             "repos": poll_labels,
@@ -1041,7 +1066,10 @@ def close_poll_command(config: Config, store: StateStore) -> dict[str, Any]:
         return {"ok": True, "closed": False, "reason": "no_active_poll"}
     telegram = TelegramClient(config.telegram_bot_token)
     try:
-        tally = polls.close_poll(telegram, poll["chat_id"], int(poll["message_id"]))
+        poll_chat_id = poll.get("chat_id")
+        if not poll_chat_id or poll_chat_id == "test":
+            poll_chat_id = config.telegram_chat_id
+        tally = polls.close_poll(telegram, poll_chat_id, int(poll["message_id"]))
     except Exception as exc:  # noqa: BLE001
         logger.warning("stopPoll failed: %s", sanitize(str(exc))[:200])
         return {"ok": False, "closed": False, "reason": "stop_poll_failed"}

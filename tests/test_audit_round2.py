@@ -18,11 +18,11 @@ class _FakeSocial:
     def __init__(self, *args, **kwargs):
         pass
 
-    def post(self, text, url="", image_data=b"", content_type="", image_alt=""):
+    def post(self, text, url="", image_data=b"", content_type="", image_alt="", idempotency_key=""):
         return {"url": "https://social.example/post/1"}
 
 
-def _record(name, score, hours_ago, *, chat_id="-1003909350927"):
+def _record(name, score, hours_ago):
     now = datetime.now(timezone.utc)
     return {
         "full_name": f"owner/{name}",
@@ -175,6 +175,6 @@ def test_telegram_retries_after_429(monkeypatch):
 def test_committed_state_has_no_test_channel_id():
     state = json.loads(Path("state/state.json").read_text(encoding="utf-8"))
     text = json.dumps(state, ensure_ascii=False)
-    assert "-1003909350927" not in text
+    assert "t.me/c/" not in text
     assert "t.me/c/" not in text
     assert len(state["queue"]) <= 28

@@ -94,14 +94,39 @@ The fine-grained token used for this remediation could read Actions variables
 but not write them (`PUT /actions/variables/...` returned 404). Set these in
 **Settings → Secrets and variables → Actions**:
 
-- Variable `TELEGRAM_TEST_CHANNEL_ID` = `-1003909350927` (the test channel).
+- Variable `PUBLISH_TARGET` = `test` (optional: `config.py` defaults to
+  `test`, but set it explicitly so the rollout state is visible).
+- Variable `TELEGRAM_TEST_CHANNEL_ID` = the private test channel id
+  (known to the owner; do not paste it into public docs or tests).
 - Variable `TELEGRAM_OWNER_CHAT_ID` = the owner's private chat id. Without it
   owner reports and alerts are silently not delivered.
 - Secret `GOOGLE_SERVICE_ACCOUNT_JSON` = the service-account JSON. Without it
   the Facebook Sheets handoff cannot write rows.
+- Secret `FACEBOOK_PAGE_ACCESS_TOKEN` is not set. Facebook publishing is
+  disabled (`FEATURE_FACEBOOK=false`), so this is not blocking; set it before
+  enabling the direct Page adapter.
+
+The private test-channel id is intentionally not stored in `state.json` or in
+the docs. `digest_command` stores `"test"` and `close_poll_command` resolves
+the real chat from the config.
 
 `main` is protected by the ruleset `main-protection`, which blocks force-push
 and branch deletion. Required status checks were **not** added: the state bot
 commits directly to `main` with `[skip ci]`, so a required `CI` check would
 block every state commit. To require checks, move the state to a separate
 branch or add a bypass actor for `github-actions[bot]` in the ruleset.
+
+## Known residual risks
+
+- **DNS rebinding:** `validate_public_url()` resolves the host and checks every
+  returned IP, but `requests` resolves the name again when it connects. A
+  malicious DNS server could return a public IP first and a private IP second.
+  Full mitigation requires pinning the resolved IP (custom adapter); the
+  current code blocks the common cases (localhost, private literals, redirects
+  to private hosts).
+- **State commit failure:** if `commit-state` fails after a successful Telegram
+  send, the published record lives only in the 1-day artifact. The job retries
+  the push three times; a manual recovery from the artifact is possible.
+- **Social timeout:** a Mastodon/Bluesky request that times out may have been
+  published. The crosspost is marked `uncertain` and not retried automatically;
+   Mastodon also sends an `Idempotency-Key` so a manual retry is deduplicated.

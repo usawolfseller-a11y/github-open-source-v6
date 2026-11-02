@@ -62,7 +62,7 @@ Measured on the live channel, 2026-11-01:
 - [x] Weekly poll: open Sunday, `stopPoll` Thursday, tally stored
 - [x] `learn`: deterministic multipliers, clamped, written to state
 - [x] 3-post schedule; two-command cron for close+learn
-- [x] 166 tests green
+- [x] 175 tests green
 
 **Exit criteria:** all tests pass, no change to publishing target. ✅
 
@@ -205,3 +205,23 @@ split, but not while the publishing path is unproven.
   -round 3 прошли незамеченными; нужны интеграционные тесты с фейковыми клиентами.
 - **Ручные настройки**: `TELEGRAM_TEST_CHANNEL_ID`, `TELEGRAM_OWNER_CHAT_ID`,
    `GOOGLE_SERVICE_ACCOUNT_JSON`. Токен не имеет права записи Variables.
+
+---
+
+## 9. Аудит №4 (дедуп и эксплуатация)
+
+- **DNS rebinding pinning**: `validate_public_url()` проверяет все IP, но
+  `requests` резолвит имя повторно. Полное решение — кастомный adapter,
+  который коннектится к уже проверенному IP. Остаточный риск задокументирован.
+- **Обязательные проверки для `main`**: ruleset блокирует force-push/удаление,
+  но не требует CI. Нужен bypass actor для `github-actions[bot]` или отдельная
+  ветка state.
+- **Ручные настройки**: `PUBLISH_TARGET`, `TELEGRAM_TEST_CHANNEL_ID`,
+  `TELEGRAM_OWNER_CHAT_ID`, `GOOGLE_SERVICE_ACCOUNT_JSON`,
+  `FACEBOOK_PAGE_ACCESS_TOKEN`. Токен не имеет права записи Variables/Secrets.
+- **Покрытие `doctor.py` (0%) и `pipeline.py` (27%)**: нужны интеграционные
+  тесты с фейковыми клиентами.
+- **Шрифты**: положить TTF в `assets/fonts` или явно принять fallback Pillow
+  (длинное тире заменяется на `-`).
+- **Dependabot**: 6 PR открыты; токен не позволяет их мержить/закрывать.
+  Текущие workflow уже используют более новые версии actions.
