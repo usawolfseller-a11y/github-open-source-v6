@@ -600,3 +600,70 @@ def test_every_cron_in_the_workflow_has_a_route_in_the_code():
     assert not missing, f"cron without a route in cli.py: {sorted(missing)}"
     # the daily brief specifically
     assert "10 19 * * *" in crons and "10 19 * * *" in routes
+
+
+def test_brief_filters_take_reviews_and_launches_but_reject_gossip():
+    """Owner rule: announcements yes, 'left-field' videos no. Measured on the
+    live feed: a rumour round-up ('LEAK'), a listicle ('I Tested 8'), and
+    reaction content were all reaching the pipeline."""
+    from datetime import datetime, timedelta, timezone
+
+    from ghos_v6.news import prefilter_entry
+
+    now = datetime.now(timezone.utc)
+
+    def check(title: str, description: str = "open-source model launch for developers"):
+        return prefilter_entry(
+            {
+                "video_id": title[:10],
+                "url": "https://www.youtube.com/watch?v=x",
+                "published": now - timedelta(hours=3),
+                "title": title,
+                "description": description,
+            },
+            now=now,
+        )
+
+    # wanted: a launch, a review with a product behind it
+    assert check("OpenAI launches GPT-6 with a 1M context window")[0] is True
+    assert check("Claude 4.5 Sonnet review: what changed for coding")[0] is True
+
+    # unwanted: gossip, listicles, reaction content
+    assert check("HUGE Claude LEAK! Everything we know")[1] == "leak_or_rumor_title"
+    assert check("Anthropic BOMBSHELL: staff drama explained")[1] == "rumour_not_news"
+    assert check("I Tested 8 of the BEST AI Video Models")[1] == "not_a_review_or_launch"
+    assert check("Top 10 AI tools of the week")[1] == "not_a_review_or_launch"
+    assert check("GPT-6 Is INSANE")[1] == "reaction_content"
+
+
+def test_brief_headline_keeps_the_vendor_and_version():
+    """The owner reads the model name first. Hype removal and brand repair
+    must not touch technical names or versions."""
+    from ghos_v6.news import clean_brief_headline as clean
+
+    assert clean("HUGE! Claude 4.5 Ships for Coding") == "Claude 4.5 Ships for Coding"
+    kept = clean("OpenAI ships GPT-6 with a 1M context window")
+    assert "GPT-6" in kept and "OpenAI" in kept
+    v = clean("DeepSeek V4.1 Flash now available")
+    assert "V4.1" in v
+
+
+def test_briefs_never_enter_the_ranking_or_poll_system():
+    """Owner question: should video briefs feed the voting and learning
+    machinery?  No. A brief has no repository to rank, so its views say
+    nothing about which projects to pick. It is stored in news_topics,
+    never in published, which is what metrics, learn and the weekly poll
+    read."""
+    from ghos_v6.state import StateStore
+
+    store = StateStore("/tmp/never_used_state")
+    store.data = {"published": {}, "news_topics": [], "queue": []}
+    store.data["news_topics"].append({"video_id": "v1", "topic_key": "gpt-6", "headline": "GPT-6 ships"})
+    assert store.published_records() == []
+    # the ranking learns only from records that carry a repository score
+    assert all("full_name" not in r for r in store.published_records())
+
+    source = open("src/ghos_v6/pipeline.py", encoding="utf-8").read()
+    metrics_body = source.split("def metrics_command")[1].split("def close_poll_command")[0]
+    assert "published_records()" in metrics_body
+    assert "news_topics" not in metrics_body.split("return")[0] or "AI Briefs live in news_topics" in metrics_body

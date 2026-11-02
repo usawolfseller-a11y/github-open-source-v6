@@ -34,6 +34,29 @@ NS = {
 
 SPONSORED_TERMS = ("sponsored", "paid promotion", "thanks to our sponsor", "affiliate link")
 LEAK_TERMS = ("leak", "leaked", "rumor", "rumour", "rumored", "rumoured")
+
+# Owner decision: announcements may go out without a primary source, because
+# a model launch covered by the video is news even before the blog post is
+# readable. What must NOT go out is speculation dressed as news. These are
+# the markers of a rumour round-up rather than a review or a launch.
+RUMOUR_MARKERS = (
+    "leak", "leaked", "rumor", "rumour", "rumored", "'s bаnned", "banned",
+    "unbanned", "conspiracy", "drama", "shocked", "you won't believe",
+    "what nobody tells you", "the truth about", "gone wrong", "exposed",
+)
+# A review/announcement has a subject, not a reaction. If the title is mostly
+# reaction words, the video is commentary about the news cycle.
+REACTION_MARKERS = (
+    "insane", "insanely", "huge", "bombshell", "crazy", "mind-blowing",
+    "best ever", "ultimate", "shocking", "unbelievable", "wtf", "omg",
+)
+# Videos we do not want even if they are about a model: tutorials with no
+# news value, "top 10" listicles, and reaction content.
+OFF_TOPIC_MARKERS = (
+    "top 10", "top ten", "tier list", "reaction", "reacts", "podcast",
+    "livestream", "live stream", "giveaway", "q&a", "mailbag", "vlog",
+    "i tried", "i tested", "my setup", "day in the life",
+)
 RELEVANCE_TERMS = (
     "open source",
     "open-source",
@@ -208,6 +231,15 @@ def prefilter_entry(
         return False, "sponsored"
     if _contains_any(title, LEAK_TERMS):
         return False, "leak_or_rumor_title"
+    # Owner rule: reviews and launches yes, gossip and reaction content no.
+    if _contains_any(title, RUMOUR_MARKERS):
+        return False, "rumour_not_news"
+    if _contains_any(title, OFF_TOPIC_MARKERS):
+        return False, "not_a_review_or_launch"
+    if _contains_any(title, REACTION_MARKERS) and not _contains_any(
+        title, ("launch", "release", "introducing", "announc", "ships", "now available", "available")
+    ):
+        return False, "reaction_content"
     if not _contains_any(f"{title} {description[:1200]}", RELEVANCE_TERMS):
         return False, "not_developer_relevant"
     rough_topic = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:80]
@@ -321,14 +353,31 @@ You are preparing a verified English AI Brief from a WorldofAI video plus a
 primary source. The video is a discovery signal, not an authority.
 
 Eligibility rules:
-- eligible=false unless one clear event is confirmed by the primary source.
-- eligible=false for leaks, rumors, sponsored product promotion, or a topic
-  that is not relevant to builders/open source/developer platforms.
-- Never repeat hype or superlatives unless quantified by the primary source.
-- Put claims found only in the video under video_only_claims, not in
-  what_happened.
+- A primary source is preferred but NOT required: for a model or product
+  launch, the video itself is the evidence that the launch happened. When
+  there is no primary source, put every product claim under
+  video_only_claims and set what_happened only to what the title and the
+  video state as fact of the launch (name, vendor, what shipped).
+- eligible=false for leaks, rumours, speculation, "unconfirmed" claims,
+  drama, or a round-up of gossip.
+- eligible=false for reaction content, tier lists, top-10 lists, tutorials
+  with no new product, and anything that is about the news cycle rather
+  than about a shipped thing.
+- eligible=false for a video that is only an advertisement with no product
+  announcement behind it.
+- Never repeat hype or superlatives.
 - headline must be factual and specific.
-- topic_key: lowercase slug of the event.
+
+Headline rules (the owner reads this first):
+- Keep the PRODUCT'S TECHNICAL NAME exactly as the vendor writes it:
+  "Claude 4.5", "GPT-6", "Gemini 4 Carbon", "DeepSeek V4.1". A renamed or
+  translated model name makes the brief useless.
+- Keep the vendor: OpenAI, Anthropic, Google DeepMind, xAI, Meta, Mistral.
+- Shape: "<Vendor> ships <Product> for <what it does>" or
+  "<Product>: <the one capability that changed>". No leading hype word,
+  no ALL CAPS, no exclamation marks, no question marks.
+- 60-110 characters.
+- topic_key: lowercase slug of the product name plus version.
 
 <video_metadata>
 Title: {entry.get('title') or ''}
@@ -351,6 +400,7 @@ Description (untrusted):
     result["official_url"] = primary.get("url") or ""
     if not result.get("official_name"):
         result["official_name"] = primary.get("title") or urlparse(primary.get("url") or "").hostname or "Primary source"
+    result["sourced"] = bool(primary.get("url"))
     result["video_id"] = entry.get("video_id")
     result["video_url"] = entry.get("url")
     result["video_title"] = entry.get("title")
@@ -407,12 +457,16 @@ def clean_brief_headline(headline: str) -> str:
         lambda m: m.group(0).capitalize() if m.group(0).lower() not in {"API", "SDK", "CLI", "GPU", "CPU", "MP4", "HTML", "CSS", "JSON"} else m.group(0),
         text,
     )
-    # Drop a leading hype word that carries no information.
+    # Drop a leading hype word that carries no information. The word may be
+    # followed by punctuation ("HUGE! Claude 4.5 ships"), so match the word
+    # plus any trailing punctuation, not "word + space".
     lowered = text.lower()
-    for word in HYPE_WORDS:
-        if lowered.startswith(word + " "):
-            text = text[len(word) + 1 :].lstrip()
-            text = text[:1].upper() + text[1:]
+    for word in sorted(HYPE_WORDS, key=len, reverse=True):
+        if lowered.startswith(word):
+            rest = text[len(word) :].lstrip(" !.,:-—")
+            if rest:
+                text = rest[:1].upper() + rest[1:]
+                lowered = text.lower()
             break
     text = text.replace("?!", "?").replace("!!", "!")
     text = re.sub(r"\s+([,.!?])", r"\1", text)

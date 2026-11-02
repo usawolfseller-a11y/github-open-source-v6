@@ -656,6 +656,7 @@ def news_command(config: Config, store: StateStore, *, force: bool = False) -> d
             recent_topics.add(str(item["topic_key"]))
 
     rejected: Counter[str] = Counter()
+    unresolved: Counter[str] = Counter()
     for entry in entries:
         allowed, reason = prefilter_entry(
             entry,
@@ -670,15 +671,17 @@ def news_command(config: Config, store: StateStore, *, force: bool = False) -> d
             primary = fetch_primary_text(url)
             if primary:
                 break
+        # Owner decision: a model launch covered by the video is news even
+        # when no readable primary source exists yet. The brief then rests on
+        # the video alone and every product claim is marked video-only.
         if not primary:
-            rejected["no_fetchable_primary_source"] += 1
-            continue
+            unresolved["no_fetchable_primary_source"] += 1
         try:
-            brief = synthesize_brief(entry, primary, client, use_video=True)
+            brief = synthesize_brief(entry, primary or {}, client, use_video=True)
             video_input = True
         except Exception as exc:  # noqa: BLE001
             logger.warning("Gemini YouTube input failed; retrying text-only: %s", type(exc).__name__)
-            brief = synthesize_brief(entry, primary, client, use_video=False)
+            brief = synthesize_brief(entry, primary or {}, client, use_video=False)
             video_input = False
         if not brief.get("eligible"):
             rejected[str(brief.get("rejection_reason") or "llm_ineligible")[:80]] += 1
@@ -745,7 +748,9 @@ def news_command(config: Config, store: StateStore, *, force: bool = False) -> d
             "headline": record["headline"],
             "telegram_message_id": sent.get("message_id"),
             "Gemini_video_input": video_input,
+            "sourced": bool(brief.get("sourced")),
             "rejections": dict(rejected),
+            "source_unresolved": dict(unresolved),
         }
 
     store.event("ai_brief_skipped", rejections=dict(rejected))
@@ -855,6 +860,11 @@ def metrics_command(config: Config, store: StateStore, *, limit: int = 12) -> di
             "reason": "channel_not_public",
             "note": "Views are only readable for public channels; the test channel stays unmeasured.",
         }
+    # Project picks only. AI Briefs live in news_topics and are deliberately
+    # excluded: a brief is a news item with no project to rank, so a high or
+    # low view count there says nothing about which repositories to pick.
+    # Mixing them in would drag the value model towards whatever news
+    # happened to be loud that week.
     records = sorted(
         (r for r in store.published_records() if r.get("telegram_message_id")),
         key=lambda r: str(r.get("published_at") or ""),
