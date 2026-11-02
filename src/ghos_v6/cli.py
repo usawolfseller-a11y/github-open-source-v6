@@ -75,7 +75,9 @@ def _run_scheduled(config: Config, store: StateStore, schedule: str) -> dict[str
         "15 17 * * *": lambda: publish_slot(config, store, "us_peak"),
         "*/30 * * * *": lambda: process_crossposts(config, store),
         "30 13 * * *": lambda: article_of_day(config, store),
-        "40 15 * * 1,3,5": lambda: news_command(config, store),
+        # Daily since 2026-11-02: the video brief is a format with its own
+        # slot, after the last project post, when the day's videos are out.
+        "10 19 * * *": lambda: news_command(config, store),
         # Weekly cycle: digest + poll on Sunday, poll closed on Thursday,
         # metrics every evening, learning after closing.
         "10 16 * * 0": lambda: digest_command(config, store),

@@ -580,3 +580,23 @@ def test_production_target_fails_loudly_when_the_channel_is_missing():
     test = Config(telegram_bot_token="x", app_env="test", publish_target="test",
                   telegram_test_channel_id=-1003909350927, telegram_main_channel_id=-1002416441486)
     assert test.telegram_chat_id == -1003909350927
+
+
+def test_every_cron_in_the_workflow_has_a_route_in_the_code():
+    """A cron with no route raises 'Unknown schedule' at runtime, and the
+    only place that shows up is a failed run in Actions. Both lists used to
+    drift silently: the workflow said 19:10 and the router still said 15:40
+    on Mon/Wed/Fri, which would have killed the daily brief in production."""
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / ".github" / "workflows" / "pipeline.yml").read_text(encoding="utf-8")
+    cli = (root / "src" / "ghos_v6" / "cli.py").read_text(encoding="utf-8")
+
+    crons = set(re.findall(r'cron:\s*"([^"]+)"', workflow))
+    routes = set(re.findall(r'^\s*"([^"]+)":\s*lambda', cli, flags=re.M))
+    missing = crons - routes
+    assert not missing, f"cron without a route in cli.py: {sorted(missing)}"
+    # the daily brief specifically
+    assert "10 19 * * *" in crons and "10 19 * * *" in routes
