@@ -789,3 +789,27 @@ def test_surface_fields_have_per_field_limits():
     assert '"bluesky_headline": 90' in limits
     # and the cleaning call uses the per-field limit, not a constant
     assert "limits.get(key, 400)" in source
+
+
+def test_readme_image_is_hosted_on_imgbb_not_left_as_a_vendor_link():
+    """Owner asked whether cards land on ImgBB and whether a README picture
+    wins over our card. The order was right (README -> card -> OpenGraph),
+    but a README picture was passed through as the vendor's own URL, so
+    nothing reached ImgBB while the article and every cross-post reused that
+    URL. Now the picture is shrunk and hosted, with the original kept as a
+    fallback when hosting fails."""
+    import re
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parents[1] / "src" / "ghos_v6" / "pipeline.py").read_text(encoding="utf-8")
+    block = source.split('if visual.kind == "readme" and visual.data:')[1][:900]
+    assert "_host_local_image(" in block
+    assert "shrink_for_web_preview(visual.data)" in block
+    assert "if hosted:" in block  # fallback keeps the vendor URL
+
+    from ghos_v6.media import choose_visual
+    import inspect
+
+    order = inspect.getsource(choose_visual)
+    # README picture first, then our card, then OpenGraph
+    assert order.index("media_urls") < order.index("render_project_card") < order.index("opengraph.githubassets")

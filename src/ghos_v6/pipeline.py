@@ -68,6 +68,12 @@ def _recent_records(store: StateStore, days: int = 7) -> list[dict[str, Any]]:
     return sorted(records, key=lambda item: str(item.get("published_at") or ""), reverse=True)
 
 
+def _safe_image_stem(candidate: dict[str, Any]) -> str:
+    """Filesystem-safe stem for an uploaded preview filename."""
+    raw = str(candidate.get("full_name") or candidate.get("name") or "project")
+    return re.sub(r"[^A-Za-z0-9._-]+", "-", raw).strip("-").lower() or "project"
+
+
 def _host_local_image(
     config: Config,
     data: bytes,
@@ -383,6 +389,22 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
         image_url = visual.url
         effective_visual_kind = visual.kind
         visual_host = "readme" if visual.kind == "readme" else ""
+        if visual.kind == "readme" and visual.data:
+            # A README image used to be passed through as the vendor's own
+            # URL. That makes the post depend on a third-party host staying
+            # up and on its hotlink policy, and it leaves nothing on ImgBB —
+            # while cross-posts and the article both reuse image_url. Host a
+            # shrunk copy on ImgBB; keep the original URL if the upload
+            # fails so a good picture is never lost to a hosting error.
+            hosted, hosted_by = _host_local_image(
+                config,
+                shrink_for_web_preview(visual.data),
+                filename=_safe_image_stem(candidate) + "-readme-preview.jpg",
+                content_type="image/jpeg",
+            )
+            if hosted:
+                image_url = hosted
+                visual_host = hosted_by
         if visual.kind == "card" and visual.data:
             hosted, hosted_by = _host_local_image(
                 config,
