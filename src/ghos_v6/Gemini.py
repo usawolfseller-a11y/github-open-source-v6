@@ -87,8 +87,12 @@ SURFACES_SCHEMA: dict[str, Any] = {
                 "mastodon_lead": {"type": "STRING"},
                 "Facebook_headline": {"type": "STRING"},
                 "Facebook_lead": {"type": "STRING"},
+                "Facebook_body": {"type": "STRING"},
+                "devto_body": {"type": "STRING"},
+                "telegraph_angle": {"type": "STRING"},
                 "seo_title": {"type": "STRING"},
                 "seo_description": {"type": "STRING"},
+                "seo_query": {"type": "STRING"},
             },
             "required": [
                 "bluesky_headline",
@@ -97,8 +101,12 @@ SURFACES_SCHEMA: dict[str, Any] = {
                 "mastodon_lead",
                 "Facebook_headline",
                 "Facebook_lead",
+                "Facebook_body",
+                "devto_body",
+                "telegraph_angle",
                 "seo_title",
                 "seo_description",
+                "seo_query",
             ],
         }
     },
@@ -112,8 +120,15 @@ SURFACE_KEYS = (
     "mastodon_lead",
     "Facebook_headline",
     "Facebook_lead",
+    # Bodies written for one surface instead of reassembling shared fields.
+    "Facebook_body",
+    # dev.to gets its own technical article; Telegraph keeps the shared one,
+    # so the two indexed pages do not compete for the same query.
+    "devto_body",
+    "telegraph_angle",
     "seo_title",
     "seo_description",
+    "seo_query",
 )
 
 # Words a reader outside the field does not have.  Used to audit the copy we
@@ -484,6 +499,25 @@ Per field:
   project name only if it still fits inside 60 characters.
 - seo_description: 140-160 characters. The snippet under the title in
   Google: one sentence on what it does, one on who it is for, no hype.
+- seo_query: the one search phrase this article should win, as a person
+  would type it, <=70 characters. Plain words, no brand name unless people
+  actually search for the brand. This is the phrase dev.to and Telegraph
+  are steered away from duplicating.
+- Facebook_body: 120-200 words, ordinary language. Write about the outcome
+  first, then the mechanism, then who it is for. A reader who has never
+  installed developer software must finish it. No tool names in the first
+  sentence, no file formats, no acronyms. Separate paragraphs with a blank
+  line; do not repeat the headline as the first line.
+- devto_body: a complete technical article, 450-650 words, Markdown with H2
+  sections: What it is; How it works; Key features; Getting started; When
+  not to use it. Aimed at the query in seo_query. Assume the reader is a
+  developer who will clone it today: name the language, the licence, the
+  install command if documented, the limits that matter. This article must
+  NOT be a restatement of the Telegraph breakdown — different angle: here
+  it is practical and hands-on, there it is an editorial explainer.
+- telegraph_angle: one sentence telling the Telegraph editor which angle
+  this page takes, so the two pages do not cover the same ground. Example:
+  "Explain the problem it solves and who it is for, with the trade-offs".
 
 Banned: elided sentences ending in "...", emoji in seo_*, uppercase words,
 and any claim about adoption, funding, security or performance that the
@@ -497,9 +531,26 @@ facts below do not state.
         surfaces = result.get("surfaces") if isinstance(result, dict) else None
         if not isinstance(surfaces, dict):
             return {}
+        # Per-field limits. A single 400-char cap silently cut every article
+        # and Facebook body mid-word the first time the bodies were added —
+        # a 450-650 word article needs its own ceiling.
+        limits = {
+            "bluesky_headline": 90,
+            "bluesky_lead": 200,
+            "mastodon_headline": 120,
+            "mastodon_lead": 260,
+            "Facebook_headline": 120,
+            "Facebook_lead": 260,
+            "Facebook_body": 2_600,
+            "devto_body": 9_000,
+            "telegraph_angle": 400,
+            "seo_title": 90,
+            "seo_description": 220,
+            "seo_query": 100,
+        }
         cleaned: dict[str, str] = {}
         for key in SURFACE_KEYS:
-            value = _clean_text(str(surfaces.get(key) or ""), 400)
+            value = _clean_text(str(surfaces.get(key) or ""), limits.get(key, 400))
             if value:
                 cleaned[key] = value
         return cleaned

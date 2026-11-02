@@ -736,3 +736,56 @@ def test_surface_lead_replaces_the_first_bullet_instead_of_stacking():
     assert sum("Runs locally with no account" in b for b in bullets) == 1
     # and the post still carries concrete features after the lead
     assert any("multi-step" in b for b in bullets)
+
+
+def test_facebook_and_devto_get_their_own_bodies():
+    """Owner question turned into a decision: every surface writes its own
+    body, but on top of one shared brief. Facebook was reassembling generic
+    fields into a WHAT IT DOES / WHAT STANDS OUT wall; dev.to published the
+    same article text as Telegraph, which makes the two indexed pages
+    compete for one query."""
+    from ghos_v6.content_adapters import build_devto_body, build_Facebook_text
+
+    record = {"full_name": "AprilNEA/OpenLogi", "name": "OpenLogi",
+              "url": "https://github.com/AprilNEA/OpenLogi", "language": "Rust", "stars": 24808,
+              "license": {"spdx_id": "Apache-2.0"}}
+    shared_article = "## What it is\n\nThe shared editorial breakdown."
+    generated = {
+        "hook": "Remap your Logitech buttons.",
+        "summary": "Generic shared summary about HID++.",
+        "key_features": ["Multi-step workflows", "Per-app profiles", "DPI presets"],
+        "article_markdown": shared_article,
+        "surfaces": {
+            "Facebook_body": "Your mouse says one thing and the vendor app says another.\n\nThis tool fixes the settings locally, with no account.",
+            "devto_body": "## What it is\n\nA technical article written for developers who will clone it today.",
+            "telegraph_angle": "Explain the problem and the trade-offs.",
+        },
+    }
+    fb = build_Facebook_text(record, generated)
+    assert "Your mouse says one thing" in fb
+    # with its own body, the generic feature wall is gone
+    assert "WHAT STANDS OUT" not in fb
+
+    devto = build_devto_body(record, generated)
+    assert "written for developers who will clone it" in devto
+    assert "shared editorial breakdown" not in devto
+
+    # fallback: no per-surface copy -> old behaviour, never an empty page
+    legacy = {k: v for k, v in generated.items() if k != "surfaces"}
+    assert "shared editorial breakdown" in build_devto_body(record, legacy)
+
+
+def test_surface_fields_have_per_field_limits():
+    """First live run of the new bodies cut a 450-650 word article at 400
+    characters, mid-word. A single cap for every field cannot work when one
+    field is a headline and another is an article."""
+    import re
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parents[1] / "src" / "ghos_v6" / "Gemini.py").read_text(encoding="utf-8")
+    limits = source.split("limits = {")[1].split("}")[0]
+    assert '"devto_body": 9_000' in limits
+    assert '"Facebook_body": 2_600' in limits
+    assert '"bluesky_headline": 90' in limits
+    # and the cleaning call uses the per-field limit, not a constant
+    assert "limits.get(key, 400)" in source

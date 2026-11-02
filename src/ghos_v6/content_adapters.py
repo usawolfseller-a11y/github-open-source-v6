@@ -531,7 +531,12 @@ def build_Facebook_text(record: dict[str, Any], generated: dict[str, Any] | None
         f"📜 {license_name(record)}" if license_name(record) else "",
     ]
     proof = " · ".join(bit for bit in proof_bits if bit)
-    summary = _sentences(fb_lead or _summary(record, generated), 460)
+    # A body written for this surface beats reassembling shared fields:
+    # Facebook readers are the least technical audience we have, and a
+    # "WHAT IT DOES / WHAT STANDS OUT" wall of feature bullets is the exact
+    # shape they scroll past.
+    fb_body = surface_field(generated, "Facebook_body")
+    summary = _sentences(fb_body or fb_lead or _summary(record, generated), 900)
     why = clip_text(generated.get("why_now") or generated.get("verdict"), 280)
     who = clip_text(generated.get("who_for"), 240)
     quick = str(generated.get("quick_start") or record.get("quick_start") or "").strip()
@@ -549,7 +554,7 @@ def build_Facebook_text(record: dict[str, Any], generated: dict[str, Any] | None
         parts.append("⚠️ Dual-use security tool — shared for security research and education.")
     if summary:
         parts.append(f"🧭 WHAT IT DOES\n{summary}")
-    if features:
+    if features and not fb_body:
         parts.append("✨ WHAT STANDS OUT\n" + "\n".join(f"• {feature}" for feature in features))
     if why:
         parts.append(f"📌 WHY IT MATTERS\n{why}")
@@ -645,7 +650,15 @@ def _strip_leading_h1(markdown: str) -> str:
 
 def build_devto_body(record: dict[str, Any], generated: dict[str, Any] | None = None) -> str:
     generated = _generated(record, generated)
-    markdown = _strip_leading_h1(str(generated.get("article_markdown") or ""))
+    # dev.to publishes its own technical article. Telegraph keeps the shared
+    # editorial breakdown, so the two indexed pages do not target the same
+    # query — the SEO agent's cannibalization rule. When the per-surface
+    # call is unavailable we fall back to the shared article rather than
+    # publishing nothing.
+    devto_body = surface_field(generated, "devto_body")
+    markdown = _strip_leading_h1(
+        str(devto_body or generated.get("article_markdown") or "")
+    )
     summary = _sentences(_summary(record, generated), 330)
     who = clip_text(generated.get("who_for"), 220)
     proof_bits = [
