@@ -238,3 +238,17 @@ def test_publish_removes_candidate_after_two_model_failures(monkeypatch, tmp_pat
     second = pipeline.publish_slot(config, store, "manual")
     assert second["reason"] == "gemini_failed_twice"
     assert len(store.data["queue"]) == 0
+
+
+def test_cleanup_dry_run_does_not_delete(tmp_path):
+    from ghos_v6.pipeline import cleanup_test_posts
+
+    store = StateStore(tmp_path)
+    store.data = {
+        "published": {"owner/demo": {"telegram_message_id": 35}},
+        "last_runs": {},
+    }
+    config = Config(telegram_bot_token="x", telegram_test_channel_id=-1003909350927)
+    result = cleanup_test_posts(config, store, dry_run=True)
+    assert result["would_delete"] == 1
+    assert result["message_ids"] == [35]

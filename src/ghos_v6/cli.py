@@ -13,6 +13,7 @@ from .http import sanitize
 from .pipeline import (
     alert_owner,
     article_of_day,
+    cleanup_test_posts,
     close_poll_command,
     collect_command,
     digest_command,
@@ -59,6 +60,9 @@ def _parser() -> argparse.ArgumentParser:
     fb.add_argument("--limit", type=int, default=1)
     sub.add_parser("moderation", help="Poll discussion updates and delete obvious spam")
     sub.add_parser("sources", help="Show verified daily source channels and the rejected ones")
+    cleanup = sub.add_parser("cleanup", help="Delete Telegram test posts from the test channel")
+    cleanup.add_argument("--confirm", action="store_true", help="actually delete")
+    cleanup.add_argument("--dry-run", action="store_true", help="list what would be deleted")
 
     scheduled = sub.add_parser("scheduled", help="Dispatch by the GitHub cron string")
     scheduled.add_argument("--schedule", required=True)
@@ -143,6 +147,13 @@ def main(argv: list[str] | None = None) -> int:
             result = facebook_handoff_command(config, store, limit=args.limit)
         elif args.command == "moderation":
             result = moderation_command(config, store)
+        elif args.command == "cleanup":
+            result = cleanup_test_posts(
+                config,
+                store,
+                confirm=args.confirm,
+                dry_run=args.dry_run,
+            )
         elif args.command == "sources":
             from .sources import REJECTED_SOURCES, VERIFIED_DAILY_SOURCES
 

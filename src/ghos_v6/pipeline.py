@@ -1397,3 +1397,44 @@ def moderation_command(config: Config, store: StateStore) -> dict[str, Any]:
     store.event("moderation_completed", updates=seen, deleted=deleted)
     store.save()
     return {"ok": True, "updates": seen, "deleted": deleted}
+
+
+def cleanup_test_posts(
+    config: Config,
+    store: StateStore,
+    *,
+    confirm: bool = False,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Delete the Telegram test posts created during the publication test.
+
+    Only the private test channel is touched. The state projection is kept as
+    the audit trail; this command removes the messages, not the history.
+    """
+    config.require("TELEGRAM_BOT_TOKEN")
+    if config.telegram_test_channel_id is None:
+        return {"ok": False, "reason": "TELEGRAM_TEST_CHANNEL_ID is not set"}
+    records = [
+        record
+        for record in store.published_records()
+        if record.get("telegram_message_id")
+    ]
+    if dry_run or not confirm:
+        return {
+            "ok": True,
+            "dry_run": True,
+            "would_delete": len(records),
+            "message_ids": [r.get("telegram_message_id") for r in records],
+        }
+    telegram = TelegramClient(config.telegram_bot_token)
+    deleted: list[int] = []
+    for record in records:
+        message_id = int(record.get("telegram_message_id") or 0)
+        try:
+            telegram.delete_message(config.telegram_test_channel_id, message_id)
+            deleted.append(message_id)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("cleanup delete failed: %s", sanitize(str(exc))[:200])
+    store.event("test_posts_cleaned", deleted=len(deleted), requested=len(records))
+    store.save()
+    return {"ok": True, "deleted": len(deleted), "message_ids": deleted}
