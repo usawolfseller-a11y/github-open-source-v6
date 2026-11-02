@@ -7,11 +7,14 @@ database is the only source of truth.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 def utcnow() -> datetime:
@@ -38,6 +41,7 @@ class StateStore:
         self.state_dir = Path(state_dir)
         self.state_path = self.state_dir / "state.json"
         self.events_path = self.state_dir / "events.jsonl"
+        self._rotate_events()
         self.data: dict[str, Any] = json.loads(json.dumps(DEFAULT_STATE))
         self.load()
 
@@ -71,6 +75,28 @@ class StateStore:
         finally:
             if os.path.exists(tmp_name):
                 os.unlink(tmp_name)
+
+
+    #: events.jsonl is committed to git by the workflow, so it must not grow
+    #: without bound: a year of six crons at ~20 events each is millions of
+    #: lines pulled down on every run. Keep the tail, roll the head once.
+    EVENTS_MAX_LINES = 5000
+    EVENTS_KEEP_LINES = 2000
+
+    def _rotate_events(self) -> None:
+        try:
+            if not self.events_path.exists():
+                return
+            with self.events_path.open("r", encoding="utf-8", errors="replace") as handle:
+                lines = handle.readlines()
+            if len(lines) <= self.EVENTS_MAX_LINES:
+                return
+            tail = lines[-self.EVENTS_KEEP_LINES:]
+            tmp = self.events_path.with_suffix(".jsonl.tmp")
+            tmp.write_text("".join(tail), encoding="utf-8")
+            tmp.replace(self.events_path)
+        except OSError:
+            logger.warning("events.jsonl rotation failed; keeping the file as is")
 
     def event(self, event_type: str, **payload: Any) -> None:
         record = {"ts": iso_now(), "type": event_type, **payload}

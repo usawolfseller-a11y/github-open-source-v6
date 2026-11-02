@@ -633,7 +633,14 @@ def test_brief_filters_take_reviews_and_launches_but_reject_gossip():
     assert check("Anthropic BOMBSHELL: staff drama explained")[1] == "rumour_not_news"
     assert check("I Tested 8 of the BEST AI Video Models")[1] == "not_a_review_or_launch"
     assert check("Top 10 AI tools of the week")[1] == "not_a_review_or_launch"
-    assert check("GPT-6 Is INSANE")[1] == "reaction_content"
+    # A clickbait adjective over a *named* model is not reaction by itself:
+    # this channel writes every launch that way ("Grok Bot Is INSANE" was a
+    # real product launch). Substance is the LLM's call - it rejected
+    # "GPT-6 Is INSANE" for having no benchmarks or details at all. The
+    # cheap prefilter only rejects a title that names nobody.
+    assert check("GPT-6 Is INSANE")[0] is True
+    # Rejected either way; the rumour filter names the reason first.
+    assert check("This Is INSANE and You Won't Believe It")[0] is False
 
 
 def test_brief_headline_keeps_the_vendor_and_version():

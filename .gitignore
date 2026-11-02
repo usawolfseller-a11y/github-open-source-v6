@@ -16,3 +16,4 @@ tmp/
 state/*.tmp
 .DS_Store
 .env.local
+out_platforms/

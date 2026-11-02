@@ -1,1 +1,0 @@
-https://telegra.ph/OpenLogi-Native-Local-First-Logitech-Configuration-Utility-in-Rust-11-02

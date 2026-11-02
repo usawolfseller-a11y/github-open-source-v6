@@ -52,6 +52,11 @@ REACTION_MARKERS = (
 )
 # Videos we do not want even if they are about a model: tutorials with no
 # news value, "top 10" listicles, and reaction content.
+LAUNCH_MARKERS = (
+    "launch", "launches", "launched", "release", "released", "introducing",
+    "announc", "ships", "shipped", "now available", "available", "is out",
+    "open sourced", "goes live", "debut",
+)
 OFF_TOPIC_MARKERS = (
     "top 10", "top ten", "tier list", "reaction", "reacts", "podcast",
     "livestream", "live stream", "giveaway", "q&a", "mailbag", "vlog",
@@ -199,6 +204,54 @@ def _contains_any(text: str, terms: tuple[str, ...]) -> bool:
     return any(term in lower for term in terms)
 
 
+# Vendors and product families this channel covers. A title that names one
+# of them with a version or a product word is reporting something real; a
+# title full of adjectives and nobody's name is commentary.
+_NAMED_SUBJECT_RE = re.compile(
+    r"\b(claude|gpt-?\d|gemini|grok|llama|mistral|qwen|deepseek|kimi|glm|opus|sonnet|"
+    r"haiku|fable|mythos|carbon|hydrogen|aurora|muse|react|rea|sora|veo|kling|"
+    r"midtool|midjourney|gpt|chatgpt|openai|anthropic|google|meta|nvidia|"
+    r"stability|perplexity|copilot|grok bot|unsloth|ollama)\b",
+    re.I,
+)
+
+
+def _named_subject(title: str) -> bool:
+    """True when the title names a concrete product, model or vendor."""
+    return bool(_NAMED_SUBJECT_RE.search(title or ""))
+
+
+def _sponsor_is_the_subject(title: str, sponsor_block: str) -> bool:
+    """True when the sponsored product is what the video is about.
+
+    A launch video is often paid promotion of the very thing it launches:
+    the description says "Try X by @X" and the title is "X Is INSANE".
+    What the owner wants out is a sponsor read bolted onto unrelated
+    content, so the test is whether the product named in the sponsor line
+    also appears in the title.
+    """
+    title_l = title.lower()
+    for line in (sponsor_block or "").splitlines()[:6]:
+        low = line.lower()
+        if not any(term in low for term in SPONSORED_TERMS) and "://" not in low:
+            continue
+        # Pull the product name out of "Try Grok Bot by @Grok: https://x.ai/bot"
+        cleaned = re.sub(r"https?://\S+", " ", line)
+        cleaned = re.sub(r"[@#][\w.-]+|try|read the|launch post|sponsored by|this video is sponsored|by|\bpaid promotion\b|\baffiliate link\b", " ", cleaned.lower())
+        words = [w for w in re.findall(r"[a-z0-9][a-z0-9.+-]{2,}", cleaned) if w not in {"the", "and", "for", "with", "your"}]
+        if not words:
+            continue
+        joined = " ".join(words)
+        if joined and joined in title_l:
+            return True
+        # The first two content words are usually the product: "Grok Bot".
+        if len(words) >= 2 and f"{words[0]} {words[1]}" in title_l:
+            return True
+        if words[0] in title_l and len(words[0]) >= 5:
+            return True
+    return False
+
+
 def prefilter_entry(
     entry: dict[str, Any],
     *,
@@ -228,7 +281,12 @@ def prefilter_entry(
     # deep in the body is not the topic of the video.
     sponsor_block = description[:600]
     if _contains_any(f"{title}\n{sponsor_block}", SPONSORED_TERMS):
-        return False, "sponsored"
+        # A sponsor that *is* the subject is not a sponsor read: "Try Grok
+        # Bot" above a video called "Grok Bot Is INSANE" is a product
+        # launch. Rejecting it silently cost the AI Brief every single one
+        # of 15 videos on 2026-11-02 - the format would simply never post.
+        if not _sponsor_is_the_subject(title, sponsor_block):
+            return False, "sponsored"
     if _contains_any(title, LEAK_TERMS):
         return False, "leak_or_rumor_title"
     # Owner rule: reviews and launches yes, gossip and reaction content no.
@@ -236,8 +294,13 @@ def prefilter_entry(
         return False, "rumour_not_news"
     if _contains_any(title, OFF_TOPIC_MARKERS):
         return False, "not_a_review_or_launch"
-    if _contains_any(title, REACTION_MARKERS) and not _contains_any(
-        title, ("launch", "release", "introducing", "announc", "ships", "now available", "available")
+    # Clickbait adjectives ("HUGE", "INSANE") are how this channel writes
+    # *every* title, launches included: on 2026-11-02 they appeared in 11 of
+    # 15 titles and rejected the real product launch along with the noise.
+    # Reaction content is identified by the absence of a subject instead: a
+    # title that names no product is commentary on the news, not the news.
+    if _contains_any(title, REACTION_MARKERS) and not (
+        _named_subject(title) or _contains_any(title, LAUNCH_MARKERS)
     ):
         return False, "reaction_content"
     if not _contains_any(f"{title} {description[:1200]}", RELEVANCE_TERMS):

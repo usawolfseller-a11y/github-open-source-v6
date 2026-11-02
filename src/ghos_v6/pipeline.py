@@ -305,9 +305,32 @@ def _article_markdown(record_candidate: dict[str, Any], generated: dict[str, Any
         "No hands-on test is claimed; evaluate it in a sandbox before production use.*\n"
     )
 
+MAX_PROJECT_POSTS_PER_DAY = 3
+
+
 def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dict[str, Any]:
     config.require("TELEGRAM_BOT_TOKEN")
     chat_id = config.telegram_chat_id
+    # The three-a-day limit lived only in the cron. A manual run, a retried
+    # job or a fourth slot added later would have posted a fourth project and
+    # nobody would have noticed until the channel looked wrong. The limit is
+    # the owner's rule, so it belongs in code.
+    already_today = len(_today_records(store))
+    if already_today >= MAX_PROJECT_POSTS_PER_DAY:
+        store.event(
+            "publish_skipped",
+            slot=slot,
+            reason="daily_limit_reached",
+            published_today=already_today,
+        )
+        store.save()
+        return {
+            "ok": True,
+            "published": False,
+            "reason": "daily_limit_reached",
+            "slot": slot,
+            "published_today": already_today,
+        }
     if not store.data.get("queue"):
         collect_command(config, store)
 
