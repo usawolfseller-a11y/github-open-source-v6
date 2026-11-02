@@ -170,3 +170,17 @@ split, but not while the publishing path is unproven.
 3. Weekly poll closed every week with a stored tally.
 4. Value model refreshed weekly and reviewed at least twice.
 5. Owner can answer "why was this project posted?" from `state.json` alone.
+
+---
+
+## 7. После аудита 2026-11-02
+
+- **Ручное одобрение постов в Telegram на старте** (рекомендация H3). Кнопка
+  «Одобрить» владельцу, публикация только после неё. Требует нового состояния
+  и UI, поэтому вынесено отдельной задачей.
+- **Изоляция декодирования картинок** (H1): отдельный процесс с таймаутом и
+  лимитом памяти. Allowlist форматов и pixel cap уже закрывают основной риск.
+- **State в отдельной ветке** или внешнем хранилище (M7/H2): сейчас state
+  коммитится в `main` и проверяется перед коммитом. Отдельная ветка уберёт
+  write-доступ к `main` из CI полностью.
+- **Перевыпуск ключей** (M5) при переезде в боевой репозиторий.

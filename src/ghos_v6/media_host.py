@@ -20,7 +20,7 @@ import hashlib
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 from urllib.parse import quote
 
 import requests
@@ -252,9 +252,11 @@ class ImgBBMediaHost:
 
         data_obj = body.get("data") if isinstance(body, dict) else None
         data_obj = data_obj if isinstance(data_obj, dict) else {}
-        image_obj = data_obj.get("image") if isinstance(data_obj.get("image"), dict) else {}
+        assert isinstance(data_obj, dict)
+        data_obj = cast(dict[str, Any], data_obj)
+        image_obj = data_obj.get("image") if isinstance(data_obj.get("image"), dict) else {}  # type: ignore[union-attr]
         url = str(
-            image_obj.get("url")
+            image_obj.get("url")  # type: ignore[union-attr]
             or data_obj.get("display_url")
             or data_obj.get("url")
             or ""

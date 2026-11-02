@@ -36,6 +36,15 @@ DEFAULT_STATE: dict[str, Any] = {
 }
 
 
+class StateCorruptError(RuntimeError):
+    """The committed projection is unreadable or has the wrong shape.
+
+    Failing loudly is deliberate: silently resetting the state would make
+    the bot republish projects it already published and would let the
+    workflow commit the empty result.
+    """
+
+
 class StateStore:
     def __init__(self, state_dir: Path | str = Path("state")):
         self.state_dir = Path(state_dir)
@@ -45,26 +54,40 @@ class StateStore:
         self.data: dict[str, Any] = json.loads(json.dumps(DEFAULT_STATE))
         self.load()
 
+    def validate(self, data: dict[str, Any] | None = None) -> None:
+        """Raise StateCorruptError when the projection is not usable."""
+        data = self.data if data is None else data
+        if not isinstance(data, dict):
+            raise StateCorruptError("state.json must contain a JSON object")
+        for key in ("published", "seen_repos", "last_runs"):
+            if key in data and not isinstance(data.get(key), dict):
+                raise StateCorruptError(f"state.{key} must be an object")
+        for key in ("queue", "dead_letters", "news_topics"):
+            if key in data and not isinstance(data.get(key), list):
+                raise StateCorruptError(f"state.{key} must be a list")
+
     def load(self) -> None:
         self.state_dir.mkdir(parents=True, exist_ok=True)
         if self.state_path.exists():
             try:
-                raw = json.loads(self.state_path.read_text(encoding="utf-8"))
-                if isinstance(raw, dict):
-                    merged = json.loads(json.dumps(DEFAULT_STATE))
-                    merged.update(raw)
-                    self.data = merged
-            except (json.JSONDecodeError, OSError):
-                # A corrupt projection must not be silently overwritten in a
-                # way that loses the audit trail. Events remain on disk and
-                # the workflow will fail loudly through the raised marker in
-                # a subsequent save diff; for collection-only runs an empty
-                # projection is safer than crashing before diagnostics.
-                self.data = json.loads(json.dumps(DEFAULT_STATE))
+                raw_text = self.state_path.read_text(encoding="utf-8")
+            except OSError as exc:
+                raise StateCorruptError(f"cannot read {self.state_path}: {exc}") from exc
+            try:
+                raw = json.loads(raw_text)
+            except json.JSONDecodeError as exc:
+                raise StateCorruptError(f"{self.state_path} is not valid JSON: {exc}") from exc
+            if not isinstance(raw, dict):
+                raise StateCorruptError(f"{self.state_path} must contain a JSON object")
+            merged = json.loads(json.dumps(DEFAULT_STATE))
+            merged.update(raw)
+            self.validate(merged)
+            self.data = merged
         if not self.events_path.exists():
             self.events_path.touch()
 
     def save(self) -> None:
+        self.validate()
         self.state_dir.mkdir(parents=True, exist_ok=True)
         payload = json.dumps(self.data, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
         fd, tmp_name = tempfile.mkstemp(dir=self.state_dir, prefix="state.", suffix=".tmp")
@@ -156,7 +179,7 @@ class StateStore:
         # fresh first (better data), then the survivors of previous runs
         merged = fresh + kept
         # keep the pipeline bounded: about a week and a half of slots
-        self.data["queue"] = merged[:40]
+        self.data["queue"] = merged[:28]
 
     def pop_queue_candidate(self, key: str) -> None:
         self.data["queue"] = [c for c in self.data.get("queue", []) if self.repo_key(c) != key]

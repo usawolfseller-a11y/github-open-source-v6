@@ -340,7 +340,7 @@ def test_queue_stays_a_week_of_fuel_and_readme_does_not_ride_along():
     assert 'candidate["readme"] = ""' in pipeline
     assert 'candidate["readme_excerpt"] = readme[:1_200]' in pipeline
     assert "queue = passing[:28]" in pipeline
-    assert "merged[:40]" in state
+    assert "merged[:28]" in state
 
 
 def test_quick_start_only_takes_post_space_when_it_earns_it():
@@ -786,7 +786,6 @@ def test_surface_fields_have_per_field_limits():
     """First live run of the new bodies cut a 450-650 word article at 400
     characters, mid-word. A single cap for every field cannot work when one
     field is a headline and another is an article."""
-    import re
     from pathlib import Path
 
     source = (Path(__file__).resolve().parents[1] / "src" / "ghos_v6" / "Gemini.py").read_text(encoding="utf-8")
@@ -805,7 +804,6 @@ def test_readme_image_is_hosted_on_imgbb_not_left_as_a_vendor_link():
     nothing reached ImgBB while the article and every cross-post reused that
     URL. Now the picture is shrunk and hosted, with the original kept as a
     fallback when hosting fails."""
-    import re
     from pathlib import Path
 
     source = (Path(__file__).resolve().parents[1] / "src" / "ghos_v6" / "pipeline.py").read_text(encoding="utf-8")

@@ -32,7 +32,6 @@ from .cards import (
     _short_copy,
     _wrap,
     load_brand_icon,
-    load_colour_icon,
     load_ui_icon,
     stack_entries,
 )
@@ -170,15 +169,15 @@ def render_portrait_card(
         row_y = hero_y + mark_size + 44
         gap = 26
         cells = []
-        for label, _slug, ink_icon, colour in entries:
+        for label, _slug, ink_icon, colour in entries:  # type: ignore
             glyph = colour or ink_icon
             label_font = canvas.font("sans", 26, True)
             cells.append((glyph, label, int(canvas.draw.textlength(label, font=label_font)), label_font))
-        total = sum(g.width + 14 + w + gap for g, _l, w, _f in cells) - gap
+        total = sum(g.width + 14 + w + gap for g, _l, w, _f in cells) - gap  # type: ignore[union-attr, misc]
         x = (width - total) / 2 / scale
         for glyph, label, w, label_font in cells:
-            canvas.paste(glyph, (x, row_y))
-            x += (glyph.width / scale) + 14
+            canvas.paste(glyph, (x, row_y))  # type: ignore[arg-type]
+            x += (glyph.width / scale) + 14  # type: ignore[union-attr]
             canvas.text((x, row_y + 11), label, font=label_font, fill=SOFT)
             x += w / scale + gap
 

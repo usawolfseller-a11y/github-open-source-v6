@@ -168,9 +168,10 @@ class TelegramClient:
         # Encode once, ourselves: Telegram recompresses whatever it stores,
         # and hairlines are the first casualty when it chooses the quality.
         if photo.startswith(b"\x89PNG"):
-            from PIL import Image
             import io as _io
-            photo = to_telegram_jpeg(Image.open(_io.BytesIO(photo)))
+
+            from .images import open_safe_image
+            photo = to_telegram_jpeg(open_safe_image(_io.BytesIO(photo)))
 
         data = {"chat_id": str(chat_id), "caption": caption_html, "parse_mode": "HTML"}
         if buttons:

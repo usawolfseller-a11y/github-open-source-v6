@@ -69,7 +69,7 @@ PYTHONPATH=src python3 -m ghos_v6.cli news --force
 не изменился ли формат спонсорской строки у канала.
 
 **Кросс-посты не уходят.**
-Проверить `FEATURE_BLUESKY` / `FEATURE_MASTODON` / `FEATURE_Facebook`.
+Проверить `FEATURE_BLUESKY` / `FEATURE_MASTODON` / `FEATURE_FACEBOOK`.
 Потом `crossposts.*.status` в записи поста: `pending` → `sent` или
 `dead_letter`.
 
@@ -168,3 +168,18 @@ git checkout <commit> -- state/state.json
 - Менять `APP_ENV`/`PUBLISH_TARGET` без прохождения приёмки из `RUNBOOK.md`.
 - Править `state/state.json` руками при работающих кронах — перезапишут.
 - Отключать `concurrency` в workflow — кроны начнут перезаписывать состояние.
+
+---
+
+## Безопасность (после аудита 2026-11-02)
+
+- `pipeline.yml` разделён на два job: `run` (read-only, секреты, без
+  `persist-credentials`) и `commit-state` (write, без секретов и без запуска
+  кода проекта). Не сливайте их обратно в один job.
+- `requirements.lock` обязателен: `pip install --require-hashes -r
+  requirements.lock`. Не заменяйте его на `pip install -e .` в CI.
+- `main` защищён ruleset: force-push и удаление запрещены. State-коммиты
+  делает `github-actions[bot]`; не меняйте это без обхода ruleset.
+- Dependabot, CodeQL и gitleaks включены. Не отключайте их.
+- При инциденте: `git revert` + новый релиз. Не правьте `state/state.json`
+  руками при работающих кронах.

@@ -17,3 +17,8 @@ state/*.tmp
 .DS_Store
 .env.local
 out_platforms/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/

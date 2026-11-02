@@ -17,6 +17,8 @@ from pathlib import Path
 
 from PIL import Image
 
+from .images import open_safe_image
+
 # Telegram's own limits for sendPhoto: 10 MB, and it will downscale the long
 # side to 2560 px. We stay well under both so it never touches our pixels.
 MAX_UPLOAD_BYTES = 4_500_000
@@ -41,7 +43,7 @@ def to_telegram_jpeg(image: Image.Image, *, quality: int = JPEG_QUALITY) -> byte
 
 
 def prepare_for_telegram(path: Path) -> bytes:
-    return to_telegram_jpeg(Image.open(path))
+    return to_telegram_jpeg(open_safe_image(str(path)))
 
 def shrink_for_web_preview(image: bytes | str | Path, *, max_width: int = 1200, quality: int = 82) -> bytes:
     """Re-encode a card as a web-friendly JPEG under ~300 KB.
@@ -57,13 +59,13 @@ def shrink_for_web_preview(image: bytes | str | Path, *, max_width: int = 1200, 
     from PIL import Image
 
     if isinstance(image, (bytes, bytearray)):
-        source = Image.open(BytesIO(image))
+        source = open_safe_image(BytesIO(image))
     else:
-        source = Image.open(str(image))
+        source = open_safe_image(str(image))
     source = source.convert("RGB")
     if source.width > max_width:
         height = round(source.height * max_width / source.width)
-        source = source.resize((max_width, height), Image.LANCZOS)
+        source = source.resize((max_width, height), Image.Resampling.LANCZOS)
     out = BytesIO()
     source.save(out, format="JPEG", quality=quality, optimize=True, progressive=True, subsampling=2)
     data = out.getvalue()

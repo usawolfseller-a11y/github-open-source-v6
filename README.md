@@ -3,6 +3,11 @@
 Autonomous, zero-cost discovery and publishing system for the
 [GitHub Open Source](https://t.me/GitHub_Open_Source) Telegram channel.
 
+> **Unofficial project.** This is an independent project. It is not
+> affiliated with, endorsed by, or sponsored by GitHub, Inc. The channel
+> name and account handles belong to their owner; no GitHub brand rights
+> are claimed. Add the same disclaimer to every public account profile.
+
 > **Rollout state:** the code is production-shaped, but the repository
 > Variables lock it to a private test channel (`APP_ENV=test`,
 > `PUBLISH_TARGET=test`). It must not be pointed at the main channel until
@@ -11,6 +16,10 @@ Autonomous, zero-cost discovery and publishing system for the
 > **Publishing workflows in this repository are disabled on purpose.** This
 > GitHub account is a test account; the owner's instruction was to stop
 > publishing from it. Do not re-enable `pipeline.yml` or `doctor.yml`.
+>
+> **Security posture:** project code runs in a read-only job with no
+> persisted checkout credentials; a separate job with no publishing
+> secrets validates and commits the state. See [`SECURITY.md`](SECURITY.md).
 
 ## New here? Read these in order
 
@@ -22,6 +31,7 @@ Autonomous, zero-cost discovery and publishing system for the
 | 4 | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) | Daily running, incidents, rollback |
 | 5 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Phases from here to production |
 | 6 | [`docs/AUDIT_2026-11-02.md`](docs/AUDIT_2026-11-02.md) | What was verified by running it, and the four defects found |
+| 7 | [`SECURITY.md`](SECURITY.md) | How to report a vulnerability, security properties, known operational risks |
 
 The single most important open item: **cross-posting has never been sent
 live**. All three published posts carry `crossposts: disabled`. Prove one
@@ -104,11 +114,18 @@ state/
 ## Local development
 
 ```bash
-python -m pip install -e '.[test]'
-pytest -q
+python -m pip install --require-hashes -r requirements.lock
+python -m pip install --no-deps -e .
+ruff check .
+mypy src
+pytest
 python tools/secret_scan.py
 ghos-v6 doctor
 ```
+
+Dependencies are locked with hashes in `requirements.lock` (regenerate with
+`pip-compile --generate-hashes requirements.in`). CI runs the same install,
+plus gitleaks and CodeQL.
 
 Real credentials belong only in GitHub Secrets/Variables. See
 `.env.example` for names, `docs/RUNBOOK.md` for rollout operations
@@ -123,6 +140,25 @@ and `docs/CONTENT_FORMATS.md` for per-platform structure, size and tone
 - A failed crosspost cannot roll back the Telegram post.
 - Sponsored and rumor-only news is rejected.
 - Secrets are redacted from errors and are never committed.
+
+## Security
+
+The 2026-11-02 external audit found three high-severity issues. All are fixed
+in this branch:
+
+- **Pillow** is pinned to `>=13,<14`, and every `Image.open` of untrusted data
+  passes an explicit `formats=` allowlist (PNG/JPEG/GIF/WEBP) with a 40 MP cap.
+- **CI/CD** is split into a read-only `run` job and a `commit-state` job that
+  receives no publishing secrets. Checkout credentials are not persisted,
+  actions are pinned to SHAs, and the state commit is validated against the
+  published count.
+- **Untrusted content** cannot close the model's data block, links in
+  generated articles are allowlisted, `curl … | sh` never reaches a post, and
+  `safety` is fail-closed (`reject` when missing or invalid).
+
+`state.json` corruption now raises `StateCorruptError` instead of silently
+resetting, and the queue keeps only a 1,200-character README excerpt. See
+[`SECURITY.md`](SECURITY.md) for the full policy and known operational risks.
 
 ## License
 

@@ -148,7 +148,7 @@ GitHub release assets **исключены**: отдают `application/octet-st
 ```
 
 Ретраи и dead-letter на каждую площадку. Фича-флаги: `FEATURE_BLUESKY`,
-`FEATURE_MASTODON`, `FEATURE_Facebook`, `FEATURE_DEVTO`.
+`FEATURE_MASTODON`, `FEATURE_FACEBOOK`, `FEATURE_DEVTO`.
 
 ---
 

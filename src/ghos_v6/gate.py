@@ -55,7 +55,30 @@ BLOCK_PATTERNS = [
     r"\bno (?:api )?key (?:needed|required)\b",
     r"\bwithout (?:an )?(?:account|subscription|api key)\b",
     r"\bfree (?:premium|paid) (?:access|api)\b",
+    # obvious malware-distribution channels
+    r"\bmega\.nz\b",
+    r"\bmediafire\b",
+    r"\bgofile\.io\b",
+    r"\banonfiles\b",
+    r"\bcracked (?:software|app|game|tool)\b",
+    r"\bkeygen\b",
+    r"\bactivation crack\b",
 ]
+
+#: Hosts that distribute binaries rather than source. A link to one of these
+#: in a README is a strong signal that the "project" is a download funnel.
+_EXTERNAL_DOWNLOAD_RE = re.compile(
+    r"(?:mega\.nz|mediafire\.com|dropbox\.com|gofile\.io|anonfiles\.com|"
+    r"mega\.co\.nz|rapidgator\.net|nitroflare\.com)",
+    re.I,
+)
+
+#: "password for archive" / "passphrase: ..." is a classic malware pattern.
+_ARCHIVE_PASSWORD_RE = re.compile(
+    r"(?:archive|zip|rar|7z)[^\n]{0,40}(?:password|passphrase)|"
+    r"(?:password|passphrase)[^\n]{0,40}(?:archive|zip|rar|7z)",
+    re.I,
+)
 _BLOCK_RE = re.compile("|".join(f"(?:{p})" for p in BLOCK_PATTERNS), re.I)
 
 _DUAL_USE_TERMS = {
@@ -150,13 +173,25 @@ def is_dual_use(project: dict[str, Any]) -> bool:
     return any(term.replace("-", " ") in haystack for term in ("penetration testing", "vulnerability scanner", "red team"))
 
 
-def evaluate(project: dict[str, Any], cfg: GateConfig = GateConfig()) -> GateDecision:
+def evaluate(
+    project: dict[str, Any],
+    cfg: GateConfig = GateConfig(),
+    *,
+    require_safety: bool = False,
+) -> GateDecision:
     reasons: list[str] = []
     now = datetime.now(timezone.utc)
 
-    safety = str(project.get("safety") or "ok").lower()
-    if safety not in {"ok", "dual_use"}:
-        reasons.append(f"safety:{safety}")
+    # The pre-LLM gate runs before the model has assigned safety, so a missing
+    # field is only fatal when the caller says safety must already be there
+    # (the post-LLM gate). A present-but-invalid value is always fatal, and
+    # "reject" is always fatal.
+    if "safety" in project:
+        safety = str(project.get("safety") or "").lower()
+        if safety not in {"ok", "dual_use"}:
+            reasons.append(f"safety:{safety or 'missing'}")
+    elif require_safety:
+        reasons.append("safety:missing")
 
     haystack = " ".join(
         [
@@ -202,6 +237,11 @@ def evaluate(project: dict[str, Any], cfg: GateConfig = GateConfig()) -> GateDec
     readme = str(project.get("readme") or project.get("readme_excerpt") or "")
     if not project.get("has_readme") and len(readme.strip()) < cfg.min_readme_chars:
         reasons.append("no_readme")
+    if readme:
+        if _EXTERNAL_DOWNLOAD_RE.search(readme):
+            reasons.append("external_download_host")
+        if _ARCHIVE_PASSWORD_RE.search(readme):
+            reasons.append("archive_password")
 
     # The channel publishes in English.  A README written almost only in
     # CJK (or any non-Latin script) cannot be summarised faithfully and

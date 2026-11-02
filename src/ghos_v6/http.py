@@ -1,36 +1,76 @@
 """Small HTTP helper with bounded retries and secret-safe errors."""
 from __future__ import annotations
 
+import ipaddress
 import os
 import re
+import socket
 import time
 from typing import Any
+from urllib.parse import urljoin, urlparse
 
 import requests
 
 USER_AGENT = "GitHubOpenSourceBot/6.0 (+https://t.me/GitHub_Open_Source)"
 
+_SENSITIVE_ENV = (
+    "TELEGRAM_BOT_TOKEN",
+    "GEMINI_API_KEY",
+    "GH_API_TOKEN",
+    "GITHUB_TOKEN",
+    "DEV_API_KEY",
+    "BLUESKY_APP_PASSWORD",
+    "MASTODON_ACCESS_TOKEN",
+    "FACEBOOK_PAGE_ACCESS_TOKEN",
+    "TELEGRAPH_ACCESS_TOKEN",
+    "IMGBB_API_KEY",
+    "GOOGLE_SERVICE_ACCOUNT_JSON",
+)
+
 
 def sanitize(text: str) -> str:
     """Remove credential-shaped substrings before text can reach a log."""
     out = str(text)
-    for name in (
-        "TELEGRAM_BOT_TOKEN",
-        "GEMINI_API_KEY",
-        "GH_API_TOKEN",
-        "GITHUB_TOKEN",
-        "DEV_API_KEY",
-        "BLUESKY_APP_PASSWORD",
-        "MASTODON_ACCESS_TOKEN",
-        "FACEBOOK_PAGE_ACCESS_TOKEN",
-        "TELEGRAPH_ACCESS_TOKEN",
-    ):
+    for name in _SENSITIVE_ENV:
         value = os.getenv(name)
         if value and len(value) >= 8:
             out = out.replace(value, "[REDACTED]")
     out = re.sub(r"\b\d{6,}:[A-Za-z0-9_-]{20,}\b", "[REDACTED]", out)
     out = re.sub(r"github_pat_[A-Za-z0-9_]{10,}", "[REDACTED]", out)
+    # Service-account JSON and PEM keys can appear inside an error message.
+    out = re.sub(r'"private_key"\s*:\s*"[^"]*"', '"private_key": "[REDACTED]"', out)
+    out = re.sub(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----",
+                 "[REDACTED]", out, flags=re.S)
     return out
+
+
+class UnsafeUrl(RuntimeError):
+    """A URL points at a non-public address or uses a forbidden scheme."""
+
+
+def validate_public_url(url: str) -> None:
+    """Reject non-HTTPS URLs and hosts that resolve to a private address.
+
+    Called before every request *and* on every redirect hop, so a public
+    host cannot redirect the bot to 127.0.0.1 or the cloud metadata IP.
+    """
+    parsed = urlparse(url)
+    if parsed.scheme != "https" or not parsed.hostname:
+        raise UnsafeUrl("only https URLs are allowed")
+    host = parsed.hostname.lower()
+    if host in {"localhost", "metadata.google.internal"} or host.endswith(".local"):
+        raise UnsafeUrl(f"host not allowed: {host}")
+    try:
+        infos = socket.getaddrinfo(host, 443, proto=socket.IPPROTO_TCP)
+    except socket.gaierror as exc:
+        raise UnsafeUrl(f"cannot resolve {host}") from exc
+    for info in infos:
+        try:
+            ip = ipaddress.ip_address(info[4][0])
+        except ValueError:
+            continue
+        if not ip.is_global:
+            raise UnsafeUrl(f"{host} resolves to a non-public address")
 
 
 class HttpError(RuntimeError):
@@ -74,7 +114,13 @@ def request_json(
                 params=params,
                 timeout=timeout,
             )
-            if response.status_code in (429, 500, 502, 503, 504) and attempt < attempts - 1:
+            if response.status_code == 429 and attempt < attempts - 1:
+                if method.upper() in {"GET", "HEAD"} or retry_post:
+                    retry_after = response.headers.get("Retry-After", "")
+                    delay = min(int(retry_after), 30) if retry_after.isdigit() else min(2**attempt, 4)
+                    time.sleep(delay)
+                    continue
+            if response.status_code in (500, 502, 503, 504) and attempt < attempts - 1:
                 if method.upper() in {"GET", "HEAD"} or retry_post:
                     time.sleep(min(2**attempt, 4))
                     continue
@@ -92,22 +138,43 @@ def request_json(
     raise HttpError(0, f"network error: {last_error}")
 
 
-def download_bytes(url: str, *, max_bytes: int = 8_000_000, timeout: int = 30) -> bytes:
-    """Download a bounded response body. Caller validates scheme/host first."""
-    with requests.get(
-        url,
-        headers={"User-Agent": USER_AGENT},
-        timeout=timeout,
-        stream=True,
-    ) as response:
-        response.raise_for_status()
-        chunks: list[bytes] = []
-        total = 0
-        for chunk in response.iter_content(chunk_size=64 * 1024):
-            if not chunk:
-                continue
-            total += len(chunk)
-            if total > max_bytes:
-                raise HttpError(413, f"download exceeds {max_bytes} bytes")
-            chunks.append(chunk)
-    return b"".join(chunks)
+def download_bytes(
+    url: str,
+    *,
+    max_bytes: int = 8_000_000,
+    timeout: int = 30,
+    max_redirects: int = 3,
+) -> bytes:
+    """Download a bounded response body, validating every redirect hop.
+
+    Redirects are followed manually so a public URL cannot bounce the bot
+    to a private address. The caller no longer has to remember to validate.
+    """
+    current = url
+    for _ in range(max_redirects + 1):
+        validate_public_url(current)
+        with requests.get(
+            current,
+            headers={"User-Agent": USER_AGENT},
+            timeout=timeout,
+            stream=True,
+            allow_redirects=False,
+        ) as response:
+            if response.status_code in {301, 302, 303, 307, 308}:
+                location = response.headers.get("Location", "")
+                if not location:
+                    raise HttpError(response.status_code, "redirect without Location")
+                current = urljoin(current, location)
+                break
+            response.raise_for_status()
+            chunks: list[bytes] = []
+            total = 0
+            for chunk in response.iter_content(chunk_size=64 * 1024):
+                if not chunk:
+                    continue
+                total += len(chunk)
+                if total > max_bytes:
+                    raise HttpError(413, f"download exceeds {max_bytes} bytes")
+                chunks.append(chunk)
+            return b"".join(chunks)
+    raise HttpError(310, "too many redirects")
