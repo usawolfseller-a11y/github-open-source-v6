@@ -81,7 +81,7 @@ def _run_scheduled(config: Config, store: StateStore, schedule: str) -> dict[str
         # Weekly cycle: digest + poll on Sunday, poll closed on Thursday,
         # metrics every evening, learning after closing.
         "10 16 * * 0": lambda: digest_command(config, store),
-        "10 18 * * 4": lambda: close_poll_command(config, store),
+        "50 18 * * 4": lambda: close_poll_command(config, store),
         "20 20 * * *": lambda: metrics_command(config, store),
         "40 16 * * 0": lambda: report_command(config, store),
         "45 */3 * * *": lambda: moderation_command(config, store),

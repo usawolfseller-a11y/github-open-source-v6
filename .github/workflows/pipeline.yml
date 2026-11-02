@@ -36,7 +36,7 @@ on:
     - cron: "15 17 * * *"    # publish · US peak
     # Weekly cycle: digest + poll on Sunday, close + learn on Thursday.
     - cron: "10 16 * * 0"    # Sunday digest + week poll
-    - cron: "10 18 * * 4"    # close poll, update value model
+    - cron: "50 18 * * 4"    # close poll, update value model (after crossposts/handoff)
     - cron: "20 20 * * *"    # daily views snapshot
     - cron: "40 16 * * 0"    # weekly owner report
     # Continuous housekeeping.

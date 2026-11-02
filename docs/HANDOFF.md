@@ -27,7 +27,7 @@ AI Brief по новостям и недельный дайджест с опр�
 
 | | Состояние |
 |---|---|
-| Код | готов, 175 тестов зелёные |
+| Код | готов, 188 тестов зелёные |
 | Публикация | **выключена**: `APP_ENV=test`, `PUBLISH_TARGET=test` |
 | Канал | тестовый `github_oss_test` (ID известен владельцу), не основной |
 | GitHub Actions в этом репо | `pipeline.yml` и `doctor.yml` **отключены вручную** |
@@ -69,7 +69,7 @@ AI Brief по новостям и недельный дайджест с опр�
 
 ```
                     ┌──────────────────────────────────────────┐
-GitHub Search ─┐    │  GitHub Actions (12 кронов)              │
+GitHub Search ─┐    │  GitHub Actions (13 кронов)              │
 Hacker News ───┼──> │  collect → enrich → gate → rank → queue  │
 Telegram web ──┘    │              ↓                           │
                     │  publish_slot (3 раза в день)            │
@@ -173,7 +173,7 @@ PYTHONPATH=src python3 -m ghos_v6.cli doctor
 | `5,35 * * * *` | кросс-посты |
 | `10 16 * * 0` | дайджест + опрос (вс) |
 | `40 16 * * 0` | отчёт владельцу (вс) |
-| `10 18 * * 4` | закрыть опрос + learn (чт) |
+| `50 18 * * 4` | закрыть опрос + learn (чт) |
 | `20 20 * * *` | метрики |
 | `45 */3 * * *` | модерация |
 | `20 18 * * *` | Facebook handoff (make.com) |
@@ -186,7 +186,7 @@ PYTHONPATH=src python3 -m ghos_v6.cli doctor
 ## 7. Секреты и переменные
 
 **Секреты** (GitHub → Settings → Secrets): `TELEGRAM_BOT_TOKEN`,
-`GEMINI_API_KEY`, `GH_API_TOKEN`, `IMGBB_API_KEY`, `TELEGRAPH_ACCESS_TOKEN`,
+`GEMINI_API_KEY`, `IMGBB_API_KEY`, `TELEGRAPH_ACCESS_TOKEN`,
 `DEV_API_KEY`, `BLUESKY_APP_PASSWORD`, `MASTODON_ACCESS_TOKEN`,
 `FACEBOOK_PAGE_ACCESS_TOKEN`, `GOOGLE_SERVICE_ACCOUNT_JSON`.
 
@@ -224,7 +224,7 @@ PYTHONPATH=src python3 -m ghos_v6.cli doctor
 
 **Сделано и проверено живьём:** сбор (453 кандидата / 7 источников), gate,
 ранжирование, генерация, карточки, Telegraph, ImgBB, AI Brief (починен),
-дайджест, опрос, метрики, обучение, адаптеры всех 4 площадок, 12 кронов,
+дайджест, опрос, метрики, обучение, адаптеры всех 4 площадок, 13 кронов,
 13 интеграций.
 
 **Не проверено боем:** кросс-посты. У всех трёх опубликованных постов

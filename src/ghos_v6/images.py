@@ -16,9 +16,10 @@ from PIL import Image
 #: The only formats we accept from untrusted sources.
 SAFE_FORMATS: tuple[str, ...] = ("PNG", "JPEG", "GIF", "WEBP")
 
+#: Pillow raises at 2x this value, so 20M gives the intended 40 MP cap.
 #: 40 MP is far above any card or README screenshot we publish, and it
 #: bounds the worst-case decompression memory to a few hundred MB.
-MAX_IMAGE_PIXELS = 40_000_000
+MAX_IMAGE_PIXELS = 20_000_000
 
 Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 

@@ -517,7 +517,10 @@ def format_project_post(
         deep_parts.pop()
         out = render(features, deep_parts, summary, show_quick)
     while utf16_len(visible_text(out)) > max_visible and summary:
-        summary = _clip(summary, max(120, len(summary) - 150))
+        shorter = max(80, len(summary) - 150)
+        if shorter >= len(summary):
+            break  # cannot shrink further; the hard fallback below applies
+        summary = _clip(summary, shorter)
         out = render(features, deep_parts, summary, show_quick)
     if utf16_len(visible_text(out)) > max_visible:  # pathological metadata; hard fallback
         out = render(features[:3], [], _clip(summary, 200), False)

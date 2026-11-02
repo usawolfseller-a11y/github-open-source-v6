@@ -42,7 +42,7 @@ _DEVTO_TAG_ALIASES = {
     "open-source": "opensource",
 }
 
-_GENERIC_TOPICS = {"GitHub", "awesome", "awesome-list", "open-source", "opensource"}
+_GENERIC_TOPICS = {"github", "awesome", "awesome-list", "open-source", "opensource"}
 _BLOCKED_TAG_TERMS = ("antidetect", "undetected", "stealth", "bypass")
 
 

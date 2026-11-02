@@ -35,7 +35,7 @@ from .platforms import BlueskyClient, DevToClient, FacebookClient, MastodonClien
 from .rank import rank_candidates, select_candidate
 from .sources import GitHubApi, collect_candidates, enrich_candidate, enrich_candidates
 from .state import StateStore, iso_now
-from .telegram import TelegramClient
+from .telegram import TelegramClient, is_fatal_error
 from .telegraph import TelegraphClient
 
 logger = logging.getLogger(__name__)
@@ -148,7 +148,16 @@ def collect_command(
 ) -> dict[str, Any]:
     started = iso_now()
     candidates = collect_candidates(config, extra_pages=extra_pages or [])
-    candidates = [candidate for candidate in candidates if not store.is_published(candidate)]
+    suppressed = store.data.get("suppressed") or {}
+    candidates = [
+        candidate
+        for candidate in candidates
+        if store.repo_key(candidate) not in suppressed
+        and (
+            not store.is_published(candidate)
+            or dedup.check(candidate, store.data)["verdict"] == "revisit"
+        )
+    ]
     candidates = rank_candidates(candidates)
     api = GitHubApi(config.GitHub_token)
     enriched = enrich_candidates(api, candidates, max_enrich=90)
@@ -310,6 +319,20 @@ def _article_markdown(record_candidate: dict[str, Any], generated: dict[str, Any
 MAX_PROJECT_POSTS_PER_DAY = 3
 
 
+def _crosspost_due(now: datetime | None = None) -> datetime:
+    """Crossposts wait until the day's last project slot.
+
+    A crosspost sent 30 minutes after the morning post would crown the
+    morning post before the midday/evening projects exist. 18:00 UTC is after
+    the 17:15 slot, so the winner is chosen from the whole day.
+    """
+    now = now or datetime.now(timezone.utc)
+    due = now + timedelta(minutes=30)
+    if due.hour < 18:
+        due = due.replace(hour=18, minute=0, second=0, microsecond=0)
+    return due
+
+
 def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dict[str, Any]:
     config.require("TELEGRAM_BOT_TOKEN")
     chat_id = config.telegram_chat_id
@@ -362,7 +385,7 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
 
         key = store.repo_key(candidate)
         try:
-            candidate = enrich_candidate(api, dict(candidate))
+            candidate = enrich_candidate(api, dict(candidate), force=True)
             candidate["readme"] = str(candidate.get("readme") or "")[:20_000]
         except Exception as exc:  # noqa: BLE001
             logger.warning("Selected candidate refresh failed for %s: %s", key, type(exc).__name__)
@@ -390,9 +413,33 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
 
         generated = generate_project_content(Gemini, candidate)
         if not generated.get("llm_used"):
-            # No model, no verdict. Do not spend the candidate: leave it at
-            # the head of the queue and let the next slot retry.
-            store.event("publish_skipped", slot=slot, reason="gemini_unavailable", repo=key)
+            # No model, no verdict. Retry once, but a project the model keeps
+    # failing on must not block the queue forever.
+            failures = store.data.setdefault("publish_failures", {})
+            count = int(failures.get(key, 0)) + 1
+            failures[key] = count
+            if count >= 2:
+                store.pop_queue_candidate(key)
+                store.mark_seen(candidate, "gemini_failed_twice")
+                store.add_dead_letter(
+                    {
+                        "repo": key,
+                        "platform": "gemini",
+                        "error": "gemini_unavailable twice",
+                        "created_at": iso_now(),
+                        "note": "removed from queue after 2 model failures",
+                    }
+                )
+                store.event("publish_candidate_dead", repo=key, reason="gemini_failed_twice", failures=count)
+                store.save()
+                return {
+                    "ok": False,
+                    "published": False,
+                    "reason": "gemini_failed_twice",
+                    "repo": key,
+                    "candidate_removed": True,
+                }
+            store.event("publish_skipped", slot=slot, reason="gemini_unavailable", repo=key, failures=count)
             store.save()
             return {
                 "ok": False,
@@ -400,6 +447,7 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
                 "reason": "gemini_unavailable",
                 "repo": key,
                 "queue_unchanged": True,
+                "failures": count,
             }
         candidate["safety"] = generated.get("safety")
         post_decision = evaluate(candidate, gate_cfg, require_safety=True)
@@ -491,6 +539,11 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
                 "discussion_question": generated.get("discussion_question"),
                 "category": generated.get("category") or candidate.get("category"),
                 "is_dual_use": candidate.get("is_dual_use"),
+                # The editorial history is what makes the post a story, not
+        # a spec sheet. It was generated and paid for; pass it through.
+                "scene": generated.get("scene"),
+                "tension": generated.get("tension"),
+                "turn": generated.get("turn"),
             }
         )
         text_html = format_project_post(format_input, telegraph_url=telegraph_url)
@@ -509,11 +562,30 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
                 homepage_url=str(candidate.get("homepage") or ""),
             )
         except Exception as exc:  # noqa: BLE001 - one bad candidate must not block the queue
-            # A Telegram error (or a timeout after the message was sent)
-            # leaves the candidate at the head of the queue. Every later
-            # slot would pick it again, burn a Gemini call and create
-            # another Telegraph page. Remove it and record it for a human.
             error = sanitize(str(exc))[:400]
+            if is_fatal_error(exc):
+                # 401/403, chat not found, network failure/timeout: abort the
+                # slot and keep the candidate. The owner must fix the config;
+                # dropping the project would lose it silently.
+                if "timeout" in error.lower() or "connection" in error.lower() or "network" in error.lower():
+                    store.data.setdefault("suppressed", {})[key] = {
+                        "reason": "telegram_uncertain",
+                        "at": iso_now(),
+                        "error": error,
+                    }
+                store.event("publish_failed", repo=key, error=error, candidate_kept=True, fatal=True)
+                store.save()
+                logger.warning("Publish aborted for %s; candidate kept: %s", key, error)
+                return {
+                    "ok": False,
+                    "published": False,
+                    "reason": "telegram_failed",
+                    "repo": key,
+                    "candidate_kept": True,
+                    "error": error,
+                }
+            # A message-level error (bad URL, caption too long): remove this
+            # candidate and record it for a human.
             store.pop_queue_candidate(key)
             store.mark_seen(candidate, "publish_error")
             store.add_dead_letter(
@@ -532,7 +604,7 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
             continue
         store.event("published_as_text", repo=key, preview_host=visual_host or "none")
         message_id = int(sent.get("message_id") or 0)
-        due = datetime.now(timezone.utc) + timedelta(minutes=30)
+        due = _crosspost_due()
         record = _public_record_candidate(candidate)
         record.update(
             {
@@ -1292,6 +1364,8 @@ def moderation_command(config: Config, store: StateStore) -> dict[str, Any]:
             update_id = int(update.get("update_id") or 0)
             max_update_id = max(max_update_id, update_id)
             message = update.get("message") or update.get("edited_message") or {}
+            if message.get("is_automatic_forward"):
+                continue
             chat = message.get("chat") or {}
             if chat.get("type") not in {"group", "supergroup"}:
                 continue

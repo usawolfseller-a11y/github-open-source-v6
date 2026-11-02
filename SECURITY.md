@@ -66,8 +66,19 @@ Out of scope:
 - The deterministic fallback (no Gemini) is `safety="reject"` for every
   project, including dual-use: the bot fails closed rather than publishing
   without a safety verdict. A Gemini outage keeps the candidate in the queue.
-- Moderation ignores Telegram service senders (`is_automatic_forward`, user
-  777000), so the channel's own forwarded posts are not deleted.
+- Moderation ignores Telegram service senders (`is_automatic_forward` on the
+  message, user 777000), so the channel's own forwarded posts are not deleted.
+- A project the model fails on twice is removed from the queue and recorded
+  in `dead_letters`; one bad project cannot block the publishing slots.
+- Fatal Telegram errors (401/403, chat not found, network/timeout) abort the
+  slot and keep the candidate. A timeout also adds the repo to `suppressed`
+  so the next collect does not republish it.
+- Crossposts wait until 18:00 UTC, so the day's winner is chosen from all of
+  the day's posts, not the first one.
+- `collect_command` keeps published repos only when `dedup.check` returns
+  `revisit`; `record_published` preserves the previous record in `history`.
+- `requirements.lock` is runtime-only; `requirements-dev.lock` adds the linters
+  and tests. The publishing job installs only the runtime lock.
 
 ## Known operational risks
 
@@ -127,6 +138,10 @@ branch or add a bypass actor for `github-actions[bot]` in the ruleset.
 - **State commit failure:** if `commit-state` fails after a successful Telegram
   send, the published record lives only in the 1-day artifact. The job retries
   the push three times; a manual recovery from the artifact is possible.
+- **Test-channel id in git history:** the private test-channel id was removed
+  from the current files, but it remains in the public commit history. It is
+  an identifier, not a credential; rewriting history would require a
+  force-push and is a deliberate owner decision.
 - **Social timeout:** a Mastodon/Bluesky request that times out may have been
   published. The crosspost is marked `uncertain` and not retried automatically;
    Mastodon also sends an `Idempotency-Key` so a manual retry is deduplicated.

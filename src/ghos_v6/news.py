@@ -65,7 +65,7 @@ RELEVANCE_TERMS = (
     "open source",
     "open-source",
     "open weights",
-    "GitHub",
+    "github",
     "developer",
     "coding",
     "code",
@@ -557,8 +557,9 @@ def format_ai_brief(brief: dict[str, Any]) -> str:
         lines += ["", "──────────────"]
         if source_line:
             lines.append(source_line)
+        source_note = " written from the primary source." if source_line else ""
         lines += [
-            "Spotted via <b>WorldofAI</b>; written from the primary source.",
+            f"Spotted via <b>WorldofAI</b>.{source_note}",
             "",
             "💬 <b>Your take?</b>",
             f"<i>{_esc(question)}</i>",
