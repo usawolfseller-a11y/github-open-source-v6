@@ -110,9 +110,16 @@
 
 `usawolfseller-a11y/github-open-source-v6` — тестовый. Workflow `pipeline.yml`
 и `doctor.yml` отключены вручную (`disabled_manually`), тестовый канал пуст,
-`TELEGRAM_MAIN_CHANNEL_ID` удалён.
+`TELEGRAM_MAIN_CHANNEL_ID` не задан. Это fail-closed: пока переменная пуста,
+публикация в `main` невозможна, и тестовый канал никогда не подставляется
+вместо основного.
 
 **Не включайте публикующие workflow в этом репозитории.**
+
+> **Неофициальный проект.** «GitHub Open Source» — название канала и
+> аккаунтов, проект не связан с GitHub, Inc. и не имеет прав на бренд
+> GitHub. При переезде на боевые аккаунты добавьте пометку
+> «Unofficial · not affiliated with GitHub, Inc.» во все описания.
 
 ---
 

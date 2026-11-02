@@ -38,20 +38,25 @@ on:
     # Continuous housekeeping.
     - cron: "*/30 * * * *"   # crossposts
     - cron: "30 13 * * *"    # article of the day
-    - cron: "10 19 * * *"     # AI Brief · daily, after the last project slot
-    - cron: "15 */6 * * *"   # moderation
+    - cron: "10 19 * * *"    # AI Brief · daily, after the last project slot
+    - cron: "15 * * * *"     # moderation · hourly (was every 6h)
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: state-writer
   cancel-in-progress: false
 
 jobs:
-  pipeline:
+  # Runs the project code with the secrets it needs. It cannot write to the
+  # repository: the token is read-only and checkout credentials are not
+  # persisted. The resulting state is handed to the next job as an artifact.
+  run:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
     env:
       APP_ENV: ${{ vars.APP_ENV }}
       PUBLISH_TARGET: ${{ vars.PUBLISH_TARGET }}
@@ -77,50 +82,116 @@ jobs:
       FEATURE_DEVTO: ${{ vars.FEATURE_DEVTO }}
       FEATURE_BLUESKY: ${{ vars.FEATURE_BLUESKY }}
       FEATURE_MASTODON: ${{ vars.FEATURE_MASTODON }}
-      FEATURE_Facebook: ${{ vars.FEATURE_Facebook }}
+      FEATURE_FACEBOOK: ${{ vars.FEATURE_FACEBOOK }}
       FEATURE_AI_BRIEF: ${{ vars.FEATURE_AI_BRIEF }}
       FEATURE_SHEETS_HANDOFF: ${{ vars.FEATURE_SHEETS_HANDOFF }}
       FACEBOOK_SHEETS_ID: ${{ vars.FACEBOOK_SHEETS_ID }}
       FACEBOOK_SHEETS_RANGE: ${{ vars.FACEBOOK_SHEETS_RANGE }}
       GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
           cache: pip
       - name: Install
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e .
+          python -m pip install --require-hashes -r requirements.lock
+          python -m pip install --no-deps -e .
       - name: Run pipeline command
         shell: bash
+        env:
+          COMMAND: ${{ inputs.command }}
+          SLOT: ${{ inputs.slot }}
+          FORCE_NEWS: ${{ inputs.force_news }}
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            case "${{ inputs.command }}" in
-              publish)
-                ghos-v6 publish --slot "${{ inputs.slot }}"
-                ;;
-              news)
-                if [ "${{ inputs.force_news }}" = "true" ]; then
-                  ghos-v6 news --force
-                else
-                  ghos-v6 news
-                fi
-                ;;
-              *)
-                ghos-v6 "${{ inputs.command }}"
-                ;;
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            case "$COMMAND" in
+              collect|publish|crossposts|article|news|digest|report|moderation) ;;
+              *) echo "::error::invalid command: $COMMAND"; exit 1 ;;
             esac
+            if [[ "$COMMAND" == "publish" ]]; then
+              if [[ ! "$SLOT" =~ ^[A-Za-z0-9_-]{1,40}$ ]]; then
+                echo "::error::invalid slot: $SLOT"
+                exit 1
+              fi
+              ghos-v6 publish --slot "$SLOT"
+            elif [[ "$COMMAND" == "news" ]]; then
+              if [[ "$FORCE_NEWS" == "true" ]]; then
+                ghos-v6 news --force
+              else
+                ghos-v6 news
+              fi
+            else
+              ghos-v6 "$COMMAND"
+            fi
           else
-            ghos-v6 scheduled --schedule "${{ github.event.schedule }}"
+            ghos-v6 scheduled --schedule "$SCHEDULE"
           fi
-      - name: Commit state
+      - name: Upload state
         if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: state
+          path: state/
+          retention-days: 1
+          if-no-files-found: warn
+
+  # Commits the state. This job has write access, but it does not run project
+  # code and it does not receive any publishing secret. It validates the
+  # projection and refuses to commit a state that lost published records.
+  commit-state:
+    needs: run
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Download state artifact
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: state
+          path: state-new
+      - name: Validate and commit state
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          if [[ ! -f state-new/state.json ]]; then
+            echo "No new state was produced; nothing to commit."
+            exit 0
+          fi
+          python - <<'PY'
+          import json
+          import sys
+
+          new = json.load(open("state-new/state.json", encoding="utf-8"))
+          old = json.load(open("state/state.json", encoding="utf-8"))
+          if not isinstance(new.get("published"), dict):
+              sys.exit("invalid state: published is not an object")
+          if not isinstance(new.get("queue"), list):
+              sys.exit("invalid state: queue is not a list")
+          if len(new["published"]) < len(old.get("published", {})):
+              sys.exit(
+                  f"refusing to commit: published count decreased "
+                  f"{len(old.get('published', {}))} -> {len(new['published'])}"
+              )
+          print(f"state ok: published={len(new['published'])} queue={len(new['queue'])}")
+          PY
+          cp state-new/state.json state/state.json
+          if [[ -f state-new/events.jsonl ]]; then
+            cp state-new/events.jsonl state/events.jsonl
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add state/state.json state/events.jsonl
@@ -129,5 +200,6 @@ jobs:
             exit 0
           fi
           git commit -m "chore(state): update publishing state [skip ci]"
-          git pull --rebase origin "${{ github.ref_name }}"
-          git push origin HEAD:"${{ github.ref_name }}"
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          git -c http.extraheader="Authorization: Basic $AUTH" pull --rebase origin "$GITHUB_REF_NAME"
+          git -c http.extraheader="Authorization: Basic $AUTH" push origin "HEAD:$GITHUB_REF_NAME"

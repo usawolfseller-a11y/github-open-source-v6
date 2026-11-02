@@ -247,6 +247,30 @@ def _is_placeholder_clone(command: str) -> bool:
     return value.startswith("git clone") and "&&" not in value and ";" not in value
 
 
+_ALLOWED_INSTALL_PREFIXES = (
+    "pip install",
+    "pip3 install",
+    "pipx install",
+    "uv tool install",
+    "npm install",
+    "npm i ",
+    "pnpm add",
+    "yarn add",
+    "cargo install",
+    "go install",
+    "brew install",
+    "docker run",
+    "docker pull",
+    "git clone https://github.com/",
+    "gh repo clone",
+)
+
+_DANGEROUS_INSTALL_RE = re.compile(
+    r"\b(?:curl|wget)\b|\|\s*(?:ba|z|k)?sh\b|\beval\b|\bbase64\s+-d\b|\biex\b|\binvoke-expression\b",
+    re.I,
+)
+
+
 def _quick_start_belongs_in_post(command: str) -> bool:
     """Should the install line sit in the post itself?
 
@@ -258,16 +282,21 @@ def _quick_start_belongs_in_post(command: str) -> bool:
     Also: ``git clone`` is what we print when the README documents nothing.
     It tells the reader nothing they do not already know, so it never takes
     a line of the post.
+
+    Security: only known package-manager commands are allowed. A shell
+    download (``curl … | sh``) or an arbitrary URL never reaches the post.
     """
     value = str(command or "").strip()
     if not value:
         return False
     if len(value) > 90 or value.count("\n") > 1:
         return False
+    if _DANGEROUS_INSTALL_RE.search(value):
+        return False
     lowered = value.lower()
     if lowered.startswith("git clone") and "&&" not in lowered and ";" not in lowered:
         return False  # placeholder, not an instruction
-    return True
+    return any(lowered.startswith(prefix) for prefix in _ALLOWED_INSTALL_PREFIXES)
 
 
 def _story_html(project: dict[str, Any]) -> str:
@@ -541,7 +570,7 @@ def format_project_caption(project: dict[str, Any], *, limit: int = CAPTION_LIMI
         parts.append("")
         parts.append(f"💬 <i>{_esc(question)}</i>")
     parts.append("")
-    parts.append(f'📣 <a href="https://t.me/GitHub_Open_Source"><b>@GitHub_Open_Source</b></a> — daily open-source picks')
+    parts.append('📣 <a href="https://t.me/GitHub_Open_Source"><b>@GitHub_Open_Source</b></a> — daily open-source picks')
     caption = "\n".join(parts)
     if utf16_len(visible_text(caption)) <= limit:
         return caption

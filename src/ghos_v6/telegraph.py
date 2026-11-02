@@ -5,6 +5,7 @@ import json
 import re
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import requests
 
@@ -20,6 +21,29 @@ _INLINE_PATTERNS = [
     ("italic", re.compile(r"(?<!\*)\*([^*]+)\*(?!\*)")),
     ("link", re.compile(r"\[([^\]]+)\]\((https://[^)\s]+)\)")),
 ]
+
+#: Link allowlist for model-written articles. The channel may link to the
+#: project on GitHub, its own Telegram channel, and Telegraph. Everything
+#: else is rendered as plain text so a prompt-injected article cannot send
+#: readers to an arbitrary domain.
+_ALLOWED_LINK_HOSTS = {"github.com", "www.github.com", "telegra.ph", "opengraph.githubassets.com"}
+_ALLOWED_TELEGRAM_PATH = "/GitHub_Open_Source"
+
+
+def _allowed_link(url: str) -> bool:
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return False
+    if parsed.scheme != "https" or not parsed.hostname:
+        return False
+    host = parsed.hostname.lower()
+    if host in _ALLOWED_LINK_HOSTS:
+        return True
+    if host == "t.me":
+        path = parsed.path.rstrip("/")
+        return path == _ALLOWED_TELEGRAM_PATH or path.startswith(_ALLOWED_TELEGRAM_PATH + "/")
+    return False
 _HEADING_RE = re.compile(r"^(#{1,4})\s+(.+)$")
 _BULLET_RE = re.compile(r"^[*-]\s+(.+)$")
 _NUMBER_RE = re.compile(r"^\d+[.)]\s+(.+)$")
@@ -48,13 +72,17 @@ def _inline(text: str) -> list[Any]:
     elif best_kind == "italic":
         nodes.append({"tag": "em", "children": _inline(best_match.group(1))})
     elif best_kind == "link":
-        nodes.append(
-            {
-                "tag": "a",
-                "attrs": {"href": best_match.group(2)},
-                "children": _inline(best_match.group(1)),
-            }
-        )
+        if _allowed_link(best_match.group(2)):
+            nodes.append(
+                {
+                    "tag": "a",
+                    "attrs": {"href": best_match.group(2)},
+                    "children": _inline(best_match.group(1)),
+                }
+            )
+        else:
+            # Drop the URL but keep the anchor text: the article still reads.
+            nodes.extend(_inline(best_match.group(1)))
     nodes.extend(_inline(after))
     return [node for node in nodes if not (isinstance(node, str) and node == "")]
 
@@ -125,7 +153,9 @@ def markdown_to_dom(markdown: str) -> list[Any]:
             if list_tag and list_tag != tag:
                 flush_list()
             list_tag = tag
-            list_items.append((bullet or number).group(1).strip())
+            match = bullet or number
+            assert match is not None
+            list_items.append(match.group(1).strip())
             continue
         if stripped in {"---", "***", "___"}:
             flush_paragraph()

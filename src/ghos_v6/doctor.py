@@ -44,7 +44,7 @@ def run_doctor(
         # Not required: Facebook is published by make.com from a Sheet row.
         # Kept only for the optional direct Graph API client.
         "FACEBOOK_PAGE_ACCESS_TOKEN": bool(config.Facebook_page_access_token)
-        or not config.feature_Facebook,
+        or not config.feature_facebook,
     }
     checks["env_presence"] = presence
 

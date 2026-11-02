@@ -151,7 +151,6 @@ def test_imgbb_expiration_is_passed_when_configured():
 
 
 def test_editorial_card_never_ends_with_ellipsis_and_keeps_all_words():
-    from pathlib import Path
 
     from PIL import Image
 

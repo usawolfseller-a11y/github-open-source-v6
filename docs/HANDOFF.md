@@ -195,7 +195,7 @@ PYTHONPATH=src python3 -m ghos_v6.cli doctor
 `TELEGRAM_SOURCE_CHANNELS`, `BLUESKY_HANDLE`, `MASTODON_INSTANCE_URL`,
 `FACEBOOK_PAGE_ID`, `FACEBOOK_SHEETS_ID`, `FACEBOOK_SHEETS_RANGE`,
 `FEATURE_TELEGRAPH`, `FEATURE_DEVTO`, `FEATURE_BLUESKY`, `FEATURE_MASTODON`,
-`FEATURE_Facebook`, `FEATURE_AI_BRIEF`, `FEATURE_SHEETS_HANDOFF`.
+`FEATURE_FACEBOOK`, `FEATURE_AI_BRIEF`, `FEATURE_SHEETS_HANDOFF`.
 
 **Никогда не печатайте значения секретов** ни в чат, ни в логи. Ошибки уже
 очищаются в `http.py::sanitize`.
@@ -259,6 +259,24 @@ make.com), продакшн-переключение.
 | [`ROADMAP.md`](ROADMAP.md) | Фазы до продакшна |
 | [`RUNBOOK.md`](RUNBOOK.md) | Настройка окружения с нуля |
 | [`AUDIT_2026-11-02.md`](AUDIT_2026-11-02.md) | Что проверено и какие 4 дефекта найдены |
+| [`SECURITY.md`](../SECURITY.md) | Политика безопасности и известные риски |
 | [`CONTENT_FORMATS.md`](CONTENT_FORMATS.md) | Форматы постов |
 | [`VALUE_SYSTEM.md`](VALUE_SYSTEM.md) | Как считается ценность поста |
 | [`FACEBOOK_PIPELINE.md`](FACEBOOK_PIPELINE.md) | Facebook через make.com |
+
+---
+
+## 12. Безопасность и цепочка поставок
+
+Ветка `security/audit-remediation-2026-11-02` закрывает внешний аудит
+2026-11-02 (3 высоких, 8 средних, 8 низких находок). Ключевое:
+
+- `Pillow>=13,<14` + allowlist форматов и pixel cap;
+- два job в `pipeline.yml` с разделением привилегий;
+- fail-closed `safety`, allowlist ссылок, запрет `curl … | sh`;
+- `StateCorruptError` вместо тихого сброса state;
+- `requirements.lock` с хэшами, Dependabot, CodeQL, gitleaks.
+
+Политика и известные операционные риски — в [`SECURITY.md`](../SECURITY.md).
+Полный список исправлений — в `docs/AUDIT_2026-11-02.md`, раздел
+«Ремедиация 2026-11-02».

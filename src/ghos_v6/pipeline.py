@@ -14,12 +14,12 @@ from . import dedup, insights, polls
 from .cards import render_ai_brief_card, render_digest_card
 from .config import Config, telegram_message_link
 from .content_adapters import build_crosspost_text, Facebook_link_url, image_alt_text
-from .formatter import format_project_post, visible_text
+from .formatter import format_project_post
 from .gate import GateConfig, evaluate
 from .Gemini import GeminiClient, generate_project_content
 from .http import download_bytes, sanitize
 from .media import choose_visual
-from .media_host import GitHubReleaseMediaHost, ImgBBMediaHost
+from .media_host import ImgBBMediaHost
 from .upload import shrink_for_web_preview
 from .news import (
     extract_primary_urls,
@@ -33,7 +33,6 @@ from .platforms import BlueskyClient, DevToClient, FacebookClient, MastodonClien
 from .rank import rank_candidates, select_candidate
 from .sources import GitHubApi, collect_candidates, enrich_candidate, enrich_candidates
 from .state import StateStore, iso_now
-from .telegram_payload import build_buttons
 from .telegram import TelegramClient
 from .telegraph import TelegraphClient
 
@@ -388,7 +387,7 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
 
         generated = generate_project_content(Gemini, candidate)
         candidate["safety"] = generated.get("safety")
-        post_decision = evaluate(candidate, gate_cfg)
+        post_decision = evaluate(candidate, gate_cfg, require_safety=True)
         candidate["is_dual_use"] = bool(
             post_decision.is_dual_use or generated.get("safety") == "dual_use"
         )
@@ -522,7 +521,7 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
                 "crossposts": {
                     "bluesky": {"status": "pending" if config.feature_bluesky else "disabled", "due_at": due.isoformat(), "attempts": 0},
                     "mastodon": {"status": "pending" if config.feature_mastodon else "disabled", "due_at": due.isoformat(), "attempts": 0},
-                    "Facebook": {"status": "pending" if config.feature_Facebook else "disabled", "due_at": due.isoformat(), "attempts": 0},
+                    "Facebook": {"status": "pending" if config.feature_facebook else "disabled", "due_at": due.isoformat(), "attempts": 0},
                 },
                 "articles": {},
             }
@@ -588,7 +587,7 @@ def process_crossposts(config: Config, store: StateStore) -> dict[str, Any]:
     enabled = {
         "bluesky": config.feature_bluesky,
         "mastodon": config.feature_mastodon,
-        "Facebook": config.feature_Facebook,
+        "Facebook": config.feature_facebook,
     }
 
     def best_of_day(platform: str) -> str:
@@ -1173,7 +1172,7 @@ def moderation_command(config: Config, store: StateStore) -> dict[str, Any]:
     for update in updates:
         update_id = int(update.get("update_id") or 0)
         max_update_id = max(max_update_id, update_id)
-        message = update.get("message") or {}
+        message = update.get("message") or update.get("edited_message") or {}
         chat = message.get("chat") or {}
         if chat.get("type") not in {"group", "supergroup"}:
             continue

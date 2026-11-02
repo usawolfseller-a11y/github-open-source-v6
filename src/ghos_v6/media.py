@@ -2,19 +2,16 @@
 from __future__ import annotations
 
 import io
-import ipaddress
 import logging
 import re
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
-
-from PIL import Image
 
 from .cards import render_project_card
-from .http import download_bytes
+from .http import UnsafeUrl, download_bytes, validate_public_url
+from .images import content_type_for_format, open_safe_image
 
 logger = logging.getLogger(__name__)
 
@@ -30,22 +27,18 @@ class Visual:
 
 
 def _is_safe_public_url(url: str) -> bool:
-    parsed = urlparse(url)
-    if parsed.scheme != "https" or not parsed.hostname:
-        return False
-    host = parsed.hostname.lower()
-    if host in {"localhost", "metadata.google.internal"} or host.endswith(".local"):
-        return False
     try:
-        ip = ipaddress.ip_address(host)
-        return ip.is_global
-    except ValueError:
-        return True
+        validate_public_url(url)
+    except UnsafeUrl:
+        return False
+    return True
 
 
 def _validate_image(data: bytes) -> tuple[bool, str]:
     try:
-        with Image.open(io.BytesIO(data)) as image:
+        # formats= is the security boundary: Pillow must not even try the
+        # PSD/TIFF/FITS decoders on a file a third party controls.
+        with open_safe_image(io.BytesIO(data)) as image:
             image.seek(0)
             width, height = image.size
             fmt = (image.format or "").upper()
@@ -53,12 +46,7 @@ def _validate_image(data: bytes) -> tuple[bool, str]:
         return False, ""
     if width < 800 or height < 250:
         return False, ""
-    content_type = {
-        "JPEG": "image/jpeg",
-        "PNG": "image/png",
-        "GIF": "image/gif",
-        "WEBP": "image/webp",
-    }.get(fmt, "")
+    content_type = content_type_for_format(fmt)
     return bool(content_type), content_type
 
 

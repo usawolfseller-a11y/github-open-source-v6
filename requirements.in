@@ -1,0 +1,9 @@
+# Runtime dependencies. Compiled to requirements.lock with hashes.
+requests>=2.32,<3
+Pillow>=13,<14
+defusedxml>=0.7,<1
+# Test and CI dependencies (installed from the same lock).
+pytest>=9,<10
+pytest-cov>=6,<8
+ruff>=0.17,<1
+mypy>=1.18,<3

@@ -195,6 +195,9 @@ def _clean_text(text: str, limit: int) -> str:
 def _readme_for_prompt(readme: str, limit: int = 10_000) -> str:
     text = re.sub(r"<!--.*?-->", "", readme or "", flags=re.S)
     text = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", text)
+    # A README must not be able to close the data block and address the model.
+    # Strip the wrapper tags before the untrusted text is interpolated.
+    text = re.sub(r"</?\s*untrusted_readme_data\s*>", "", text, flags=re.I)
     return text[:limit]
 
 
@@ -284,8 +287,10 @@ class GeminiClient:
         if status == 400 and schema:
             # Some preview models reject a schema or thinking dialect.
             # JSON mode alone plus strict local validation is the safe fallback.
-            body["generationConfig"].pop("responseSchema", None)
-            body["generationConfig"].pop("thinkingConfig", None)
+            config_value = body["generationConfig"]
+            if isinstance(config_value, dict):
+                config_value.pop("responseSchema", None)
+                config_value.pop("thinkingConfig", None)
             status, data, _ = request_json(
                 "POST",
                 url,
@@ -618,12 +623,34 @@ def _extract_features(readme: str) -> list[str]:
     return features
 
 
+_DANGEROUS_INSTALL_RE = re.compile(
+    r"\b(?:curl|wget)\b|\|\s*(?:ba|z|k)?sh\b|\beval\b|\bbase64\s+-d\b|\biex\b|\binvoke-expression\b",
+    re.I,
+)
+_ALLOWED_INSTALL_URL_RE = re.compile(r"https://(?:raw\.)?github\.com/", re.I)
+
+
+def _is_safe_install_block(text: str) -> bool:
+    """Reject shell-download installers and links to arbitrary hosts.
+
+    ``curl … | sh`` is never shown to readers, and a package-manager command
+    may only reference github.com (the project's own source), not a random
+    download host.
+    """
+    if _DANGEROUS_INSTALL_RE.search(text):
+        return False
+    for url in re.findall(r"https?://\S+", text):
+        if not _ALLOWED_INSTALL_URL_RE.match(url):
+            return False
+    return True
+
+
 def _extract_quick_start(readme: str, candidate: dict[str, Any]) -> str:
     blocks = re.findall(r"```(?:bash|sh|shell|zsh)?\s*\n(.*?)```", readme or "", flags=re.I | re.S)
-    keywords = ("install", "docker", "pip ", "npm ", "pnpm", "cargo ", "go install", "brew ", "curl ", "git clone")
+    keywords = ("install", "docker", "pip ", "npm ", "pnpm", "cargo ", "go install", "brew ", "git clone")
     for block in blocks:
         text = block.strip()
-        if any(keyword in text.lower() for keyword in keywords):
+        if any(keyword in text.lower() for keyword in keywords) and _is_safe_install_block(text):
             return "\n".join(text.splitlines()[:8])[:400]
     return f"git clone https://github.com/{candidate.get('full_name') or ''}.git"
 
@@ -708,7 +735,9 @@ def normalize_project_content(
         value = _clip_sentence(item, 140)
         if value and value not in features:
             features.append(value)
-    safety = str(raw.get("safety") or "ok").lower()
+    # Fail closed: if the model did not return a valid safety verdict, the
+    # project does not get published. "ok" is never assumed.
+    safety = str(raw.get("safety") or "reject").lower()
     if safety not in {"ok", "dual_use", "reject"}:
         safety = "reject"
     result = {

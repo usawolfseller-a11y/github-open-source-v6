@@ -101,13 +101,13 @@ every GitHub link through a third-party domain. Links stay `github.com`.
    posts `setup` there; run **Doctor** to discover `TELEGRAM_TEST_CHANNEL_ID`.
 6. Run `ghos-v6 doctor` until 13/13 answer.
 7. Enable one surface at a time: `FEATURE_DEVTO` → `FEATURE_BLUESKY` →
-   `FEATURE_MASTODON` → `FEATURE_Facebook` → `FEATURE_AI_BRIEF`.
+   `FEATURE_MASTODON` → `FEATURE_FACEBOOK` → `FEATURE_AI_BRIEF`.
 8. Only after the acceptance checklist passes: `APP_ENV=production`,
    `PUBLISH_TARGET=main`, `TELEGRAM_MAIN_CHANNEL_ID=<main channel>`.
 
-Note the exact spelling `FEATURE_Facebook` — capital F. It is odd, but it is
-consistent between `config.py` and `pipeline.yml`; renaming one without the
-other silently disables Facebook crossposts.
+Note the exact spelling `FEATURE_FACEBOOK`. The legacy `FEATURE_Facebook`
+spelling is still read for backward compatibility, but new setups must use
+the canonical name; the two spellings are no longer mixed in the workflows.
 
 ## Post types on the test channel
 
@@ -148,7 +148,7 @@ mapped to `GH_API_TOKEN`.
 | `FEATURE_DEVTO` | `false` until article smoke test |
 | `FEATURE_BLUESKY` | `false` until social smoke test |
 | `FEATURE_MASTODON` | `false` until social smoke test |
-| `FEATURE_Facebook` | `false`; no Page token in initial rollout |
+| `FEATURE_FACEBOOK` | `false`; no Page token in initial rollout |
 | `FEATURE_AI_BRIEF` | `false` until three sample briefs pass review |
 
 `TELEGRAM_SOURCE_CHANNELS` may contain public usernames separated by
@@ -210,7 +210,7 @@ preferred over publishing a candidate that does not pass the gate.
 
 The legacy path wrote Facebook posts into Google Sheets for an external
 consumer. v6 instead contains a direct Meta Pages API adapter, kept
-behind `FEATURE_Facebook=false`. It needs a long-lived Page access
+behind `FEATURE_FACEBOOK=false`. It needs a long-lived Page access
 token created through the owner's Meta OAuth flow. Do not copy a
 personal Facebook password, App Secret or short-lived user token into
 this repository.
@@ -252,3 +252,26 @@ before running another publish slot.
 **Credential leak:** rotate the affected credential first. Only then
 inspect Actions logs and git history. A Telegram bot token is revocable;
 never replace a leaked personal session with another shared session.
+
+---
+
+## Security checks (2026-11-02)
+
+Before opening a PR:
+
+```bash
+python -m pip install --require-hashes -r requirements.lock
+python -m pip install --no-deps -e .
+ruff check .
+mypy src
+pytest
+python tools/secret_scan.py
+```
+
+`gitleaks` and CodeQL run in CI. Do not disable them. The publishing
+workflow is split into a read-only `run` job and a `commit-state` job; keep
+the split. `requirements.lock` is mandatory for reproducible installs.
+
+`TELEGRAM_MAIN_CHANNEL_ID` is intentionally unset in the test repository.
+Setting it is a production decision: the value must be the main channel
+(`@GitHub_Open_Source`), never the test channel id.

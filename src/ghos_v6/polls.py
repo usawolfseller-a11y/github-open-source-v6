@@ -48,16 +48,17 @@ def send_week_poll(
 def close_poll(telegram: TelegramClient, chat_id: int | str, message_id: int) -> dict[str, Any]:
     """Stop a poll and read the final tally (``stopPoll``)."""
     result = telegram.api("stopPoll", {"chat_id": chat_id, "message_id": message_id}) or {}
+    raw_options: list[dict[str, Any]] = result.get("options") or []
     options = [
         {
             "text": str(option.get("text") or ""),
             "votes": int(option.get("voter_count") or 0),
         }
-        for option in (result.get("options") or [])
+        for option in raw_options
     ]
-    total = sum(option["votes"] for option in options)
+    total = sum(option["votes"] for option in options)  # type: ignore[misc]
     for option in options:
-        option["share"] = round(option["votes"] / total, 3) if total else 0.0
+        option["share"] = round(option["votes"] / total, 3) if total else 0.0  # type: ignore[operator]
     return {
         "ok": True,
         "question": str(result.get("question") or ""),

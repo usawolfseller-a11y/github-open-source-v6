@@ -25,11 +25,11 @@ _ICON_CACHE: dict[tuple[str, int], Image.Image | None] = {}
 _LANGUAGE_ICONS = {
     "rust": "rust", "python": "python", "typescript": "typescript",
     "javascript": "javascript", "go": "go", "c++": "cplusplus", "c": "c",
-    "java": "openjdk", "kotlin": "kotlin", "swift": "swift", "php": "php",
+    "java": "openjdk", "swift": "swift", "php": "php",
     "ruby": "ruby", "shell": "gnubash", "bash": "gnubash", "html": "html5",
     "css": "css", "c#": "sharp",
     "objective-c": "apple",
-    "elixir": "elixir", "kotlin": "kotlin", "zig": "zig", "lua": "lua", "dart": "dart",
+    "kotlin": "kotlin", "zig": "zig", "lua": "lua", "dart": "dart",
     "scala": "scala", "elixir": "elixir", "haskell": "haskell", "r": "r",
     "julia": "julia", "perl": "perl", "vue": "vuedotjs", "svelte": "svelte",
 }
@@ -89,7 +89,7 @@ def load_brand_icon(name: str, size: int) -> Image.Image | None:
     icon: Image.Image | None = None
     if path.exists():
         try:
-            icon = Image.open(path).convert("RGBA").resize((size, size), Image.LANCZOS)
+            icon = Image.open(path).convert("RGBA").resize((size, size), Image.Resampling.LANCZOS)
         except OSError:
             icon = None
     _ICON_CACHE[key] = icon
@@ -105,7 +105,7 @@ def load_colour_icon(name: str, size: int) -> Image.Image | None:
     icon: Image.Image | None = None
     if path.exists():
         try:
-            icon = Image.open(path).convert("RGBA").resize((size, size), Image.LANCZOS)
+            icon = Image.open(path).convert("RGBA").resize((size, size), Image.Resampling.LANCZOS)
         except OSError:
             icon = None
     _ICON_CACHE[key] = icon
@@ -121,7 +121,7 @@ def load_ui_icon(name: str, size: int) -> Image.Image | None:
     icon: Image.Image | None = None
     if path.exists():
         try:
-            icon = Image.open(path).convert("RGBA").resize((size, size), Image.LANCZOS)
+            icon = Image.open(path).convert("RGBA").resize((size, size), Image.Resampling.LANCZOS)
         except OSError:
             icon = None
     _ICON_CACHE[key] = icon
@@ -419,7 +419,7 @@ HERO_BOX = (824, 176, 1176, 396)  # ink-safe area of the brand mark
 
 
 def _condensed_text(
-    image: Image.Image,
+    image: Any,
     xy: tuple[int, int],
     text: str,
     font,
@@ -442,7 +442,7 @@ def _condensed_text(
     ImageDraw.Draw(mask).text((0, 0), text, font=font, fill=255)
     mask = mask.crop(mask.getbbox())
     target_w = int(mask.width * scale)
-    scaled = mask.resize((target_w, mask.height), Image.LANCZOS)
+    scaled = mask.resize((target_w, mask.height), Image.Resampling.LANCZOS)
     if scaled.width > max_width:
         scaled = scaled.crop((0, 0, max_width, scaled.height))
     ink = Image.new("RGBA", scaled.size, fill)
@@ -572,8 +572,8 @@ def render_editorial_card(
         hook_font, hook_lines = _fit_block(draw, hook, "serif", 26, 720, 2, minimum=20)
         sub_font, sub_lines = _fit_block(draw, subline, "sans", 18, 705, 2, bold=False, minimum=15)
 
-    hook_height = len(hook_lines) * int(hook_font.size * 1.22)
-    sub_height = len(sub_lines) * int(sub_font.size * 1.32)
+    hook_height = len(hook_lines) * int(hook_font.size * 1.22)  # type: ignore[union-attr]
+    sub_height = len(sub_lines) * int(sub_font.size * 1.32)  # type: ignore[union-attr]
     # Spread any leftover room between the two blocks instead of leaving
     # a dead strip above the stats rule on short names.
     # Copy sits directly under the name: reading order matters more than
@@ -589,12 +589,12 @@ def render_editorial_card(
     y = band_top + y_offset
     for index, line in enumerate(hook_lines):
         color = "#b3342a" if index == len(hook_lines) - 1 and len(hook_lines) > 1 else "#393126"
-        draw.text((62, y), line, font=hook_font, fill=color)
-        y += int(hook_font.size * 1.22)
+        draw.text((62, y), line, font=hook_font, fill=color)  # type: ignore[arg-type]
+        y += int(hook_font.size * 1.22)  # type: ignore[union-attr]
     y += 12
     for line in sub_lines:
         draw.text((62, y), line, font=sub_font, fill="#4a4a4a")
-        y += int(sub_font.size * 1.32)
+        y += int(sub_font.size * 1.32)  # type: ignore[union-attr]
 
     language = str(candidate.get("language") or "Open Source")
     # Real brand mark, no decorative ring. Falls back to the typographic

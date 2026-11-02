@@ -84,7 +84,7 @@ def _run_scheduled(config: Config, store: StateStore, schedule: str) -> dict[str
         "10 18 * * 4": lambda: close_poll_command(config, store),
         "50 19 * * *": lambda: metrics_command(config, store),
         "40 16 * * 0": lambda: report_command(config, store),
-        "15 */6 * * *": lambda: moderation_command(config, store),
+        "15 * * * *": lambda: moderation_command(config, store),
     }
     # Some crons must run two commands in order (close the poll, then learn
     # from the fresh tallies). Keeping them on one cron avoids a race where

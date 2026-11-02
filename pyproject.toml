@@ -5,19 +5,21 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "GitHub-open-source-v6"
 version = "0.1.0"
-description = "Autonomous open-source discovery and publishing system for GitHub Open Source"
+description = "Unofficial, autonomous open-source discovery and publishing system for the GitHub Open Source channel"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "GitHub Open Source" }]
+authors = [{ name = "GitHub Open Source (unofficial)" }]
 dependencies = [
   "requests>=2.32,<3",
-  "Pillow>=10,<12",
+  "Pillow>=13,<14",
+  "defusedxml>=0.7,<1",
 ]
 
 [project.optional-dependencies]
 test = [
-  "pytest>=8,<9",
+  "pytest>=9,<10",
+  "pytest-cov>=6,<8",
 ]
 sheets = [
   "google-auth>=2.30",
@@ -33,7 +35,17 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+addopts = "-q --cov=src/ghos_v6 --cov-report=term-missing --cov-fail-under=60"
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint]
+# Focused ruleset: real bugs and syntax/undefined-name problems, not style.
+select = ["E4", "E7", "E9", "F"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+check_untyped_defs = true

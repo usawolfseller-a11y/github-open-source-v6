@@ -10,16 +10,16 @@ import html
 import ipaddress
 import logging
 import re
-import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 import requests
+from defusedxml import ElementTree as ET
 
 from .formatter import utf16_len, visible_text
 from .Gemini import GeminiClient
-from .http import USER_AGENT, sanitize
+from .http import USER_AGENT
 
 logger = logging.getLogger(__name__)
 
@@ -537,7 +537,7 @@ def clean_brief_headline(headline: str) -> str:
 
 
 def format_ai_brief(brief: dict[str, Any]) -> str:
-    headline = _clip(clean_brief_headline(brief.get("headline")) or "Verified AI update", 150)
+    headline = _clip(clean_brief_headline(brief.get("headline") or "") or "Verified AI update", 150)
     happened = [_clip(item, 280) for item in brief.get("what_happened") or [] if str(item).strip()][:4]
     confirmed = [_clip(item, 220) for item in brief.get("confirmed") or [] if str(item).strip()][:3]
     video_only = [_clip(item, 220) for item in brief.get("video_only_claims") or [] if str(item).strip()][:2]

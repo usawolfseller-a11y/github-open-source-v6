@@ -14,6 +14,8 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 
+from .http import sanitize
+
 DEFAULT_RANGE = "facebook!A1"
 HEADERS = ("project_id", "content", "platform", "media_urls", "title")
 
@@ -85,4 +87,10 @@ def append_rows(
         updates = result.get("updates") or {}
         return {"ok": True, "appended": int(updates.get("updatedRows") or len(rows)), "range": updates.get("updatedRange", "")}
     except Exception as exc:  # noqa: BLE001 - a sheet outage must not kill the post
-        return {"ok": False, "appended": 0, "error": f"{type(exc).__name__}: {str(exc)[:200]}"}
+        # The exception can contain the service-account JSON or a token;
+        # events.jsonl is committed to git, so it must be sanitized.
+        return {
+            "ok": False,
+            "appended": 0,
+            "error": sanitize(f"{type(exc).__name__}: {str(exc)[:200]}"),
+        }
