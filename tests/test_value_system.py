@@ -381,3 +381,66 @@ def test_facebook_crosspost_never_falls_back_to_the_short_generic_text():
     for spelling in ("Facebook", "facebook", "FACEBOOK"):
         assert build_crosspost_text(spelling, record, generated) == expected
     assert len(expected) > 500  # the real structured post, not the fallback
+
+
+def test_each_surface_gets_its_own_headline_not_the_shared_hook():
+    """Owner's question: 'shouldn't headlines be for ordinary people, and
+    different on each platform?'  Measured before: Bluesky, Mastodon and
+    Facebook all opened with the same shared hook (29 of 29 words shared).
+    Now each adapter prefers its own field and falls back to the old
+    behaviour when the second call is missing."""
+    from ghos_v6.content_adapters import (
+        build_bluesky_text,
+        build_Facebook_text,
+        build_mastodon_text,
+        surface_field,
+    )
+    from ghos_v6.Gemini import jargon_hits
+
+    record = {"full_name": "heygen-com/hyperframes", "name": "HyperFrames",
+              "url": "https://github.com/heygen-com/hyperframes", "language": "TypeScript",
+              "stars": 76759, "forks": 1200, "license": {"spdx_id": "MIT"}}
+    generated = {
+        "hook": "Turn HTML, CSS, and animations into deterministic MP4 videos straight from your terminal or AI coding agent.",
+        "key_features": ["Render on the server", "Deterministic output", "No cloud"],
+        "surfaces": {
+            "bluesky_headline": "Turn web code into video files",
+            "bluesky_lead": "A framework that converts HTML layouts into clean video files.",
+            "mastodon_headline": "Convert HTML and CSS into MP4 videos using TypeScript",
+            "mastodon_lead": "Renders frames locally instead of recording a browser.",
+            "Facebook_headline": "Turn website designs into video files",
+            "Facebook_lead": "Point it at a page layout and get a video that looks the same every time.",
+        },
+    }
+    bs = build_bluesky_text(record, generated)
+    ms = build_mastodon_text(record, generated)
+    fb = build_Facebook_text(record, generated)
+    assert bs.startswith("Turn web code into video files")
+    assert "Convert HTML and CSS into MP4" in ms
+    assert "Turn website designs into video files" in fb
+    # the plainest surfaces carry no jargon
+    assert jargon_hits(generated["surfaces"]["bluesky_headline"]) == []
+    assert jargon_hits(generated["surfaces"]["Facebook_headline"]) == []
+    # Mastodon is allowed the technical term on purpose
+    assert jargon_hits(generated["surfaces"]["mastodon_headline"]) != []
+    # and the old record without surfaces still renders
+    legacy = {"hook": generated["hook"], "key_features": generated["key_features"]}
+    assert build_bluesky_text(record, legacy)
+    assert surface_field(legacy, "bluesky_headline") == ""
+
+
+def test_jargon_audit_and_seo_fallbacks():
+    from ghos_v6.Gemini import jargon_hits
+    from ghos_v6.content_adapters import build_devto_title, build_seo_description
+
+    assert jargon_hits("Query your codebase like a graph") == ["codebase"]
+    assert jargon_hits("Turn your files into a map") == []
+    record = {"name": "Graphify", "full_name": "Graphify-Labs/graphify",
+              "url": "https://github.com/Graphify-Labs/graphify", "stars": 100}
+    # SEO title from the surface copy wins when it fits the 50-60 window
+    titled = {"hook": "x", "article_title": "Graphify: Turn Any Codebase into a Knowledge Graph",
+              "surfaces": {"seo_title": "Turn codebases into knowledge graphs - Graphify"}}
+    assert build_devto_title(record, titled) == "Turn codebases into knowledge graphs - Graphify"
+    # description never ends in an ellipsis
+    described = {"surfaces": {"seo_description": "A very long description " * 12}}
+    assert not build_seo_description(record, described).endswith("…")

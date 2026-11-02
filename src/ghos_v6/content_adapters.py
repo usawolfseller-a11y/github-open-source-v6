@@ -178,6 +178,25 @@ def Facebook_link_url(record: dict[str, Any]) -> str:
     return breakdown_url(record) or repo_url(record)
 
 
+def surface_field(generated: dict[str, Any] | None, key: str) -> str:
+    """Read a per-platform rewrite produced by GeminiClient.generate_surfaces.
+
+    Falls back to an empty string so every caller keeps its old behaviour
+    when the second call is unavailable (no key, quota, older record).
+    """
+    surfaces = (generated or {}).get("surfaces") or {}
+    if not isinstance(surfaces, dict):
+        return ""
+    return clean_text(surfaces.get(key) or "")
+
+
+def _surface_or(fallback: str, value: str, limit: int) -> str:
+    value = clean_text(value)
+    if not value:
+        return fallback
+    return clip_text(value, limit)
+
+
 def _generated(record: dict[str, Any], generated: dict[str, Any] | None) -> dict[str, Any]:
     if generated is not None:
         return generated
@@ -398,9 +417,13 @@ def build_bluesky_text(record: dict[str, Any], generated: dict[str, Any] | None 
         suffix_candidates[-1] if suffix_candidates else "",
     )
 
-    lead = _lead(record, generated)
+    # Headline written for this surface when we have one; the shared hook
+    # is a Telegram sentence and reads like a manual in a feed.
+    lead = surface_field(generated, "bluesky_headline")
+    if not lead:
+        lead = _lead(record, generated)
     icon = language_icon(record)
-    if lead and icon:
+    if lead and icon and not surface_field(generated, "bluesky_headline"):
         lead = f"{icon} {lead}"
     body_budget = max(60, BLUESKY_LIMIT - len(suffix) - 2)
     lead = clip_text(lead, max(70, min(132, body_budget - 55)))
@@ -409,6 +432,7 @@ def build_bluesky_text(record: dict[str, Any], generated: dict[str, Any] | None 
     if remaining >= 45:
         # Prefer a complete concrete detail over an ellipsized summary.
         candidates = [
+            surface_field(generated, "bluesky_lead"),
             *(_features(generated)[:2]),
             clip_text(generated.get("verdict"), 180),
             clip_text(generated.get("social_text"), 180),
@@ -436,11 +460,15 @@ def build_mastodon_text(record: dict[str, Any], generated: dict[str, Any] | None
     the Telegram CTA; the channel loop is a growth requirement.
     """
     generated = _generated(record, generated)
-    lead = clip_text(_lead(record, generated), 190)
+    masto_headline = surface_field(generated, "mastodon_headline")
+    lead = clip_text(masto_headline or _lead(record, generated), 190)
     icon = language_icon(record)
-    if lead and icon:
+    if lead and icon and not masto_headline:
         lead = f"{icon} {lead}"
+    masto_lead = surface_field(generated, "mastodon_lead")
     bullets = [f"• {feature}" for feature in _features(generated)[:2]]
+    if masto_lead:
+        bullets.insert(0, f"• {masto_lead}")
     if not bullets:
         detail = clip_text(_detail(record, generated), 180)
         bullets = [detail] if detail else []
@@ -481,7 +509,9 @@ def build_Facebook_text(record: dict[str, Any], generated: dict[str, Any] | None
     """Structured plain-text Facebook post with a Telegram return loop."""
     generated = _generated(record, generated)
     name = record_name(record)
-    hook = _hook(record, generated)
+    fb_headline = surface_field(generated, "Facebook_headline")
+    fb_lead = surface_field(generated, "Facebook_lead")
+    hook = fb_headline or _hook(record, generated)
     icon = language_icon(record)
     title = (
         f"{icon} {name} — {hook}"
@@ -495,7 +525,7 @@ def build_Facebook_text(record: dict[str, Any], generated: dict[str, Any] | None
         f"📜 {license_name(record)}" if license_name(record) else "",
     ]
     proof = " · ".join(bit for bit in proof_bits if bit)
-    summary = _sentences(_summary(record, generated), 460)
+    summary = _sentences(fb_lead or _summary(record, generated), 460)
     why = clip_text(generated.get("why_now") or generated.get("verdict"), 280)
     who = clip_text(generated.get("who_for"), 240)
     quick = str(generated.get("quick_start") or record.get("quick_start") or "").strip()
@@ -570,6 +600,9 @@ def build_devto_title(record: dict[str, Any], generated: dict[str, Any] | None =
     generated = _generated(record, generated)
     name = record_name(record)
     hook = _hook(record, generated).rstrip(".")
+    seo_title = surface_field(generated, "seo_title")
+    if 35 <= len(seo_title) <= 70:
+        return seo_title
     generated_title = clean_text(generated.get("article_title") or "")
     generic = "what it does and why" in generated_title.lower()
     if generated_title and not generic and len(generated_title) <= 125:
@@ -581,6 +614,18 @@ def build_devto_title(record: dict[str, Any], generated: dict[str, Any] | None =
     if generated_title and not generic:
         return clip_text(generated_title, 125)
     return clip_text(f"{name}: a practical open-source breakdown", 125)
+
+
+def build_seo_description(record: dict[str, Any], generated: dict[str, Any] | None = None) -> str:
+    """Meta description for the article page: 140-160 characters, plain words."""
+    generated = _generated(record, generated)
+    value = surface_field(generated, "seo_description") or _summary(record, generated)
+    # A meta description that ends in "…" reads as a truncated snippet in
+    # the search result, which is exactly the impression we are avoiding.
+    # Cut on a sentence when possible, otherwise drop the ellipsis and end
+    # on a whole word: Google truncates on its own, we do not hand it a stub.
+    text = _sentences(value, 160) or clip_text(value, 160)
+    return text.rstrip("… ").rstrip(",;:").strip()
 
 
 def _strip_leading_h1(markdown: str) -> str:
