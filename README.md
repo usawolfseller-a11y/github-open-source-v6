@@ -7,6 +7,25 @@ Autonomous, zero-cost discovery and publishing system for the
 > Variables lock it to a private test channel (`APP_ENV=test`,
 > `PUBLISH_TARGET=test`). It must not be pointed at the main channel until
 > the test acceptance checklist in [`docs/RUNBOOK.md`](docs/RUNBOOK.md) passes.
+>
+> **Publishing workflows in this repository are disabled on purpose.** This
+> GitHub account is a test account; the owner's instruction was to stop
+> publishing from it. Do not re-enable `pipeline.yml` or `doctor.yml`.
+
+## New here? Read these in order
+
+| # | Document | Why |
+|---|---|---|
+| 1 | [`docs/HANDOFF.md`](docs/HANDOFF.md) | **Start here.** State of the project, what is done, what is not, first steps |
+| 2 | [`docs/OWNER_RULES.md`](docs/OWNER_RULES.md) | Decisions the owner made that are not up for redesign |
+| 3 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | How the modules fit together and why |
+| 4 | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) | Daily running, incidents, rollback |
+| 5 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Phases from here to production |
+| 6 | [`docs/AUDIT_2026-11-02.md`](docs/AUDIT_2026-11-02.md) | What was verified by running it, and the four defects found |
+
+The single most important open item: **cross-posting has never been sent
+live**. All three published posts carry `crossposts: disabled`. Prove one
+real Bluesky or Mastodon post before touching production.
 
 ## What it does
 
@@ -29,7 +48,8 @@ Autonomous, zero-cost discovery and publishing system for the
   retries and dead-letter records.
 - Can publish the best project of the day to dev.to.
 - Includes a verified WorldofAI AI Brief track: the YouTube channel is a
-  discovery radar only; a fetchable primary source is mandatory.
+  discovery radar only; a primary source is preferred but not required
+  (owner decision), and the brief never carries a "no confirmation" label.
 - Publishes a Sunday Top 5 digest + poll and a weekly owner report.
 
 ## Architecture

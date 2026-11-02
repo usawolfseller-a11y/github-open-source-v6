@@ -1,5 +1,10 @@
 # Format audit v2 — findings and fixes
 
+> **Historical record (2026-11-01).** The findings below were fixed and
+> the format shipped. For the current state of the format see
+> [`CONTENT_FORMATS.md`](CONTENT_FORMATS.md); per-surface bodies were added
+> on 2026-11-02 and are described in [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
 This audit was run before enabling public crossposts. The review
 panel covered UI design, UX architecture, brand consistency, growth,
 persona walkthrough/scanning behaviour and community engagement.

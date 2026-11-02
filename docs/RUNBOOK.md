@@ -1,5 +1,11 @@
 # Runbook — GitHub Open Source v6
 
+> **In the current repository the publishing workflows are off.**
+> `usawolfseller-a11y/github-open-source-v6` is a test account and the owner
+> instructed that nothing be published from it. `pipeline.yml` and
+> `doctor.yml` are `disabled_manually`. Use this runbook for a fresh account,
+> not to re-enable this one.
+
 ## Environments and target lock
 
 The test rollout uses:
@@ -83,6 +89,25 @@ with `ghos-v6 facebook-handoff`; full setup in `docs/FACEBOOK_PIPELINE.md`.
 
 Click tracking was evaluated and **rejected** by the owner: it would route
 every GitHub link through a third-party domain. Links stay `github.com`.
+
+## Setup from scratch (a fresh account or repository)
+
+1. `python -m pip install -e '.[test]'` in the repo.
+2. Add the ten **Secrets** listed above under Settings → Secrets → Actions.
+3. Add the **Variables** listed further down under Settings → Variables.
+4. Start with every feature flag false and `APP_ENV=test`,
+   `PUBLISH_TARGET=test`.
+5. Owner presses Start on the bot, adds it as admin to the test channel and
+   posts `setup` there; run **Doctor** to discover `TELEGRAM_TEST_CHANNEL_ID`.
+6. Run `ghos-v6 doctor` until 13/13 answer.
+7. Enable one surface at a time: `FEATURE_DEVTO` → `FEATURE_BLUESKY` →
+   `FEATURE_MASTODON` → `FEATURE_Facebook` → `FEATURE_AI_BRIEF`.
+8. Only after the acceptance checklist passes: `APP_ENV=production`,
+   `PUBLISH_TARGET=main`, `TELEGRAM_MAIN_CHANNEL_ID=<main channel>`.
+
+Note the exact spelling `FEATURE_Facebook` — capital F. It is odd, but it is
+consistent between `config.py` and `pipeline.yml`; renaming one without the
+other silently disables Facebook crossposts.
 
 ## Post types on the test channel
 
@@ -171,7 +196,10 @@ preferred over publishing a candidate that does not pass the gate.
 - [ ] At least one Editorial card and one suitable CLI/Neon Terminal card inspected.
 - [ ] dev.to smoke article inspected before `FEATURE_DEVTO=true`.
 - [ ] One Bluesky and one Mastodon smoke crosspost inspected before enabling flags.
-- [ ] Three forced AI Brief samples checked against primary sources before `FEATURE_AI_BRIEF=true`.
+      **This is the only subsystem never exercised live — start here.**
+- [x] AI Brief proven able to publish (fixed 2026-11-02): built from the
+      x.ai primary source, 1764 characters, `eligible: true`. Two more forced
+      samples still worth checking before `FEATURE_AI_BRIEF=true`.
 - [ ] Sunday digest and poll render correctly.
 - [ ] Weekly owner report arrives in the owner's bot chat.
 - [ ] No secret-shaped strings in git history; CI secret scan is green.

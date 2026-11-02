@@ -25,16 +25,19 @@ roadmap item without both is a wish.
 
 | Subsystem | State | Evidence |
 |---|---|---|
-| Discovery | 616 candidates/run, 4 source families, runway 5 415 days | `state/state.json`, phase-1 report |
-| Anti-duplication | **Built this session** | `src/ghos_v6/dedup.py`, 5 tests |
-| Views measurement | **Built this session, verified live** | widget returns 17/41/52… on posts 3545/3544/3543 |
-| Polls | **Built this session** | `polls.py`, `stopPoll`, 10-day cap honoured |
-| Value model | **Built this session** | `learn` writes clamped multipliers (0.85–1.15) |
+| Discovery | 453 candidates/run, 7 sources live | `AUDIT_2026-11-02.md`, live run |
+| Anti-duplication | Verified | `dedup.py`, tested |
+| Views measurement | Verified live | widget returns real view counts |
+| Polls | Built | `polls.py`, `stopPoll`, 96-hour cap |
+| Value model | Built | `learn` writes clamped multipliers (0.85–1.15) |
 | Click tracking | **Rejected by owner** | Links stay `github.com`; views + votes only |
 | Facebook hand-off | **Built, off by default** | `sheets.py`, `facebook-handoff`, `docs/FACEBOOK_PIPELINE.md` |
-| Cards | Editorial + 13 icon edge cases tested | 40 → 57 tests green |
-| Social | Disabled by flag | dev.to/Bluesky/Mastodon not smoke-tested yet |
-| Production | **Not live** | test channel only, pipeline disabled |
+| Cards | Verified on 3 edge cases | 1200×630, `editorial_daily` |
+| Visual hosting | **Fixed 2026-11-02** | README image now re-hosted on ImgBB, not passed through |
+| Per-surface bodies | **Built 2026-11-02** | 12 fields, Facebook and dev.to write their own |
+| AI Brief | **Was dead, fixed 2026-11-02** | rejected 15/15 videos; now builds from a primary source |
+| Social | Disabled by flag | **never sent live** — the one untested system |
+| Production | **Not live** | test channel only, workflow disabled |
 
 ---
 
@@ -59,7 +62,7 @@ Measured on the live channel, 2026-11-01:
 - [x] Weekly poll: open Sunday, `stopPoll` Thursday, tally stored
 - [x] `learn`: deterministic multipliers, clamped, written to state
 - [x] 3-post schedule; two-command cron for close+learn
-- [x] 57 tests green
+- [x] 98 tests green
 
 **Exit criteria:** all tests pass, no change to publishing target. ✅
 
@@ -117,6 +120,22 @@ Ranked by expected value per hour of work:
 3. **Weekly digest depth** — Top 5 now; test Top 10 with one-line verdicts if engagement justifies it.
 4. **"Tried it" poll** — a second weekly poll asking what readers actually ran. Adds a real usage signal, costs one poll per week.
 5. **Language/category report** — publish what the channel covers, as a Telegraph page. Cheap credibility, also a discovery surface.
+
+---
+
+## 3.5. Next session, in order
+
+1. **Prove one live crosspost.** This is the only subsystem never exercised
+   against a real API. Post one existing record to Bluesky and to Mastodon,
+   confirm the text and the image, then delete it if the account is public.
+   Facebook cannot be proven this way: it goes through make.com.
+2. **Run `doctor`** and confirm 13/13.
+3. **Five days at three posts a day** in the test channel (Phase B), reading
+   every post for a lying hook.
+4. Only then Phase C (social, one platform at a time) and Phase E (go live).
+
+Do not start with refactoring. `publish_slot` is 221 lines and should be
+split, but not while the publishing path is unproven.
 
 ---
 
