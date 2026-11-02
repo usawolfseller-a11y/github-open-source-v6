@@ -44,3 +44,29 @@ jobs:
           else
             ghos-v6 cleanup --dry-run
           fi
+      - name: Delete ImgBB test images
+        if: ${{ inputs.confirm }}
+        env:
+          IMGBB_API_KEY: ${{ secrets.IMGBB_API_KEY }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request
+          key = os.environ.get("IMGBB_API_KEY", "")
+          if not key:
+              raise SystemExit("IMGBB_API_KEY is not set")
+          state = json.load(open("state/state.json", encoding="utf-8"))
+          ids = []
+          for record in state.get("published", {}).values():
+              url = str(record.get("image_url") or "")
+              if "i.ibb.co/" in url:
+                  ids.append(url.rstrip("/").rsplit("/", 1)[-1])
+          for image_id in ids:
+              req = urllib.request.Request(
+                  f"https://api.imgbb.com/1/delete/{image_id}?key={key}"
+              )
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as response:
+                      print(image_id, response.status)
+              except Exception as exc:
+                  print(image_id, "failed", type(exc).__name__)
+          PY
