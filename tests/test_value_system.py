@@ -554,3 +554,29 @@ def test_transient_model_errors_are_retried_and_permanent_ones_are_not():
         pass
     else:
         raise AssertionError("permanent errors must not be swallowed")
+
+
+def test_production_target_fails_loudly_when_the_channel_is_missing():
+    """The switch to production must break at startup, not half an hour later
+    in the middle of a publish slot. config.telegram_chat_id resolves the id
+    and raises when production is selected without one."""
+    import pytest
+
+    from ghos_v6.config import Config
+
+    prod = Config(telegram_bot_token="x", app_env="production", publish_target="main")
+    with pytest.raises(RuntimeError):
+        _ = prod.telegram_chat_id
+
+    ready = Config(
+        telegram_bot_token="x",
+        app_env="production",
+        publish_target="main",
+        telegram_main_channel_id=-1002416441486,
+    )
+    assert ready.is_main_target
+    assert ready.telegram_chat_id == -1002416441486
+    # in test mode the main channel id is ignored on purpose
+    test = Config(telegram_bot_token="x", app_env="test", publish_target="test",
+                  telegram_test_channel_id=-1003909350927, telegram_main_channel_id=-1002416441486)
+    assert test.telegram_chat_id == -1003909350927

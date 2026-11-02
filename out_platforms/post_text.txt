@@ -1,0 +1,44 @@
+🤖 <b>hyperframes</b> · 📦 <code>heygen-com/hyperframes</code>
+<b>Turn HTML, CSS, and animations into deterministic MP4 videos directly from AI coding agents.</b>
+──────────────
+⭐ <b>76 759</b> stars · 🍴 <b>7 029</b> forks
+🔷 <b>TypeScript</b> · 📜 <b>Apache-2.0</b> · 🟢 <b>commit today</b>
+👥 <b>125</b> contributors
+
+You ask an AI coding agent to generate a product intro video, but it has no native way to output playable media files without stitching together fragile scripts.
+
+Custom video generation scripts break constantly, producing misaligned frames, choppy animations, and non-reproducible renders that waste hours of debugging time.
+
+HyperFrames gives coding agents the precise contracts and components needed to write valid video HTML and render it deterministically to MP4.
+
+✨ <b>Key features</b>
+▸ Render deterministic MP4 videos straight from HTML, CSS, and seekable animations
+▸ Integrate with Claude Code, Cursor, and other agents via 7 specialized skills
+▸ Access roughly 450 ready-made components including transitions, overlays, and charts
+▸ Preview projects directly in the browser with live reload capabilities
+▸ Deploy via local CLI tools or utilize hosted authoring workflows
+
+⚡ <b>Quick start</b>
+<code>npx hyperframes init my-video</code>
+
+🎯 <b>Who should try it</b>
+Developers and AI agent users building programmatic video content.
+
+📌 <b>Why it matters now</b>
+AI coding assistants now need native ways to generate and render media assets reliably within standard development workflows.
+
+✅ <b>Verdict</b>
+An essential tool if you generate video assets programmatically with AI agents, though overkill for simple manual video editing.
+
+──────────────
+💬 <b>Your take?</b>
+<i>Which AI coding agent do you use most frequently for workflow automation?</i>
+↗️ <b>Forward</b> this to a dev who should see it.
+
+🔗 <a href="https://github.com/heygen-com/hyperframes">GitHub repository</a>
+📖 <a href="https://telegra.ph/HyperFrames-11-02">Full breakdown</a>
+🌐 <a href="https://hyperframes.heygen.com">Project homepage</a>
+
+📣 <a href="https://t.me/GitHub_Open_Source"><b>@GitHub_Open_Source</b></a> — daily open-source picks
+
+#opensource #typescript #devtools #ai
