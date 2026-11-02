@@ -110,8 +110,27 @@ class StateStore:
             "sources": sorted(set(prev.get("sources") or []) | set(candidate.get("sources") or [])),
         }
 
-    def set_queue(self, candidates: list[dict[str, Any]]) -> None:
-        self.data["queue"] = candidates
+    def set_queue(self, candidates: list[dict[str, Any]], *, merge: bool = True) -> None:
+        """Replace or extend the pipeline.
+
+        The queue is a pipeline, not a daily list: three posts a day decide
+        much faster than a nightly collect refills it. Overwriting it every
+        night threw away the part of yesterday's selection that had not been
+        published yet. With ``merge`` the fresh results are prepended to
+        whatever is still unpublished, and a candidate that appears again is
+        refreshed rather than duplicated.
+        """
+        fresh = list(candidates or [])
+        if not merge:
+            self.data["queue"] = fresh
+            return
+        existing = list(self.data.get("queue") or [])
+        fresh_keys = {self.repo_key(c).lower() for c in fresh}
+        kept = [c for c in existing if self.repo_key(c).lower() not in fresh_keys]
+        # fresh first (better data), then the survivors of previous runs
+        merged = fresh + kept
+        # keep the pipeline bounded: 4x the daily slot capacity is plenty
+        self.data["queue"] = merged[:120]
 
     def pop_queue_candidate(self, key: str) -> None:
         self.data["queue"] = [c for c in self.data.get("queue", []) if self.repo_key(c) != key]

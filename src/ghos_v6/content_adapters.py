@@ -556,7 +556,10 @@ def build_crosspost_text(
         return build_mastodon_text(record, generated)
     if key == "Facebook":
         return build_Facebook_text(record, generated)
-    return clip_text(_lead(record, _generated(record, generated)), 500)
+    # Any future platform still has to carry the return loop: a crosspost
+    # that does not point back to the channel is a donation, not growth.
+    lead = clip_text(_lead(record, _generated(record, generated)), 380)
+    return f"{lead}\n\n{telegram_cta_line(record)}"
 
 
 def build_devto_title(record: dict[str, Any], generated: dict[str, Any] | None = None) -> str:

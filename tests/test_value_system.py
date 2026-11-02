@@ -228,3 +228,86 @@ def test_portrait_card_fits_telegram_photo_limits():
         )
         size = Image.open(path).size
     assert size == (1080, 1350), "4:5 portrait is what fills a phone column"
+
+
+def test_every_external_surface_carries_the_channel_loop():
+    """Traffic rule: nothing leaves the system without a way back to the
+    owner's channel. Checked for every platform, including unknown ones."""
+    from ghos_v6.content_adapters import (
+        build_Facebook_text,
+        build_bluesky_text,
+        build_crosspost_text,
+        build_devto_body,
+        build_mastodon_text,
+    )
+
+    record = {
+        "full_name": "t8y2/dbx",
+        "name": "dbx",
+        "url": "https://github.com/t8y2/dbx",
+        "homepage": "https://dbxio.com",
+        "stars": 28443,
+        "forks": 2598,
+        "language": "Rust",
+        "license": {"spdx_id": "Apache-2.0"},
+        "description": "Manage 100+ databases from one 25 MB client",
+        "readme_summary": "DBX is a compact Rust client for relational and NoSQL engines.",
+        "key_features": ["100+ databases", "desktop, CLI and Docker"],
+        "discussion_question": "Which database do you query most?",
+        "telegraph_url": "https://telegra.ph/dbx-11-01",
+    }
+    generated = {
+        "hook": "Manage 100+ databases from one 25 MB binary",
+        "summary": "compact Rust client",
+        "key_features": ["100+ databases"],
+        "verdict": "essential if you juggle engines",
+    }
+    surfaces = {
+        "bluesky": build_bluesky_text(record, generated),
+        "mastodon": build_mastodon_text(record, generated),
+        "Facebook": build_Facebook_text(record, generated),
+        "devto": build_devto_body(record, generated),
+        "threads": build_crosspost_text("threads", record, generated),
+        "hashnode": build_crosspost_text("hashnode", record, generated),
+    }
+    for platform, text in surfaces.items():
+        assert "GitHub_Open_Source" in text, f"{platform} has no channel link"
+
+
+def test_bluesky_keeps_the_channel_link_even_with_a_huge_hook():
+    from ghos_v6.content_adapters import build_bluesky_text
+
+    record = {
+        "full_name": "owner/" + "r" * 60,
+        "name": "r" * 60,
+        "url": "https://github.com/owner/" + "r" * 60,
+        "stars": 90000,
+        "language": "Rust",
+        "description": "word " * 60,
+        "key_features": ["feature " * 20] * 3,
+    }
+    generated = {"hook": "h " * 50, "verdict": "v " * 40, "summary": "s " * 80}
+    text = build_bluesky_text(record, generated)
+    assert "GitHub_Open_Source" in text
+    assert len(text) <= 300
+
+
+def test_queue_is_a_pipeline_not_a_daily_list():
+    """Three posts a day drain the queue faster than a nightly collect can
+    refill it. A fresh collect must extend the pipeline, not replace it."""
+    import tempfile
+
+    from ghos_v6.state import StateStore
+
+    with tempfile.TemporaryDirectory() as tmp:
+        store = StateStore(tmp)
+        store.set_queue([{"full_name": f"old/r{index}"} for index in range(5)])
+        store.pop_queue_candidate("old/r0")  # published
+        store.set_queue([{"full_name": "new/r1"}, {"full_name": "old/r3"}])
+        names = [c["full_name"] for c in store.data["queue"]]
+
+    assert names[0] == "new/r1"          # fresh data comes first
+    assert "old/r3" in names             # refreshed, not duplicated
+    assert names.count("old/r3") == 1
+    assert "old/r1" in names             # yesterday's survivors are kept
+    assert "old/r0" not in names         # published is not resurrected

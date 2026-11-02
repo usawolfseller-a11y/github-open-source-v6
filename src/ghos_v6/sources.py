@@ -9,6 +9,7 @@ import html
 import logging
 import re
 import time
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import unquote, urljoin, urlparse
@@ -447,6 +448,50 @@ def collect_hn(merged: dict[str, dict[str, Any]], *, days: int = 7) -> None:
             )
 
 
+@dataclass(frozen=True)
+class SourceChannel:
+    """A Telegram channel that is a *verified* daily source.
+
+    Recorded so the choice is auditable instead of a name in an env var:
+    measured posts/day and GitHub-link density decide whether a channel
+    stays in the rotation, and the note says why it was kept.
+    """
+
+    handle: str
+    posts_per_day: float
+    github_links: int
+    github_posts: int
+    checked_on: str
+    note: str = ""
+
+
+# Measured 2026-11-01 through the public t.me/s preview (no account
+# needed). Only channels that post every day are kept; a dead channel costs
+# a fetch per run and adds nothing.
+VERIFIED_DAILY_SOURCES: tuple[SourceChannel, ...] = (
+    SourceChannel("open_source_friend", 3.2, 20, 20, "2026-11-01", "owner's channel"),
+    SourceChannel("github_repos", 4.2, 20, 20, "2026-11-01", ""),
+    SourceChannel("gitbless", 5.8, 19, 20, "2026-11-01", ""),
+    SourceChannel("bestofgithub", 1.1, 20, 20, "2026-11-01", ""),
+)
+
+# Dropped, with the measurement that dropped them. Kept here so nobody
+# re-adds a dead channel by guessing.
+REJECTED_SOURCES: dict[str, str] = {
+    "githubtrending": "last post 2026-09-23 (~40 days of silence)",
+    "gitradar_": "0 posts in the public preview",
+    "githubawesome": "last post 2026-03-12",
+    "opensource_ai": "3 posts in 16 days, 0 GitHub links",
+    "ai_newz": "4 GitHub links in 18 days — a news channel, not a project source",
+    "opensourceprojects": "last post 2020",
+}
+
+
+def verified_channel_handles() -> tuple[str, ...]:
+    """Handles of the verified daily sources, in priority order."""
+    return tuple(source.handle for source in VERIFIED_DAILY_SOURCES)
+
+
 def collect_telegram_web(merged: dict[str, dict[str, Any]], channels: tuple[str, ...]) -> None:
     for channel in channels:
         url = f"https://t.me/s/{channel}"
@@ -492,12 +537,7 @@ def collect_telegram_web(merged: dict[str, dict[str, Any]], channels: tuple[str,
 #   opensourceprojects  last post 2020
 # Defaults must be channels that actually answer, so a missing env var
 # cannot quietly empty the Telegram half of the fuel supply.
-DEFAULT_TELEGRAM_SOURCES = (
-    "open_source_friend",
-    "github_repos",
-    "gitbless",
-    "bestofgithub",
-)
+DEFAULT_TELEGRAM_SOURCES = verified_channel_handles()
 
 
 def collect_candidates(

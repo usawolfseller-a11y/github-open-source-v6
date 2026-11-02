@@ -58,6 +58,7 @@ def _parser() -> argparse.ArgumentParser:
     fb = sub.add_parser("facebook-handoff", help="Append Facebook rows to the make.com sheet")
     fb.add_argument("--limit", type=int, default=1)
     sub.add_parser("moderation", help="Poll discussion updates and delete obvious spam")
+    sub.add_parser("sources", help="Show verified daily source channels and the rejected ones")
 
     scheduled = sub.add_parser("scheduled", help="Dispatch by the GitHub cron string")
     scheduled.add_argument("--schedule", required=True)
@@ -139,6 +140,24 @@ def main(argv: list[str] | None = None) -> int:
             result = facebook_handoff_command(config, store, limit=args.limit)
         elif args.command == "moderation":
             result = moderation_command(config, store)
+        elif args.command == "sources":
+            from .sources import REJECTED_SOURCES, VERIFIED_DAILY_SOURCES
+
+            result = {
+                "ok": True,
+                "daily": [
+                    {
+                        "handle": source.handle,
+                        "posts_per_day": source.posts_per_day,
+                        "github_links": source.github_links,
+                        "github_posts": source.github_posts,
+                        "checked_on": source.checked_on,
+                        "note": source.note,
+                    }
+                    for source in VERIFIED_DAILY_SOURCES
+                ],
+                "rejected": REJECTED_SOURCES,
+            }
         elif args.command == "scheduled":
             result = _run_scheduled(config, store, args.schedule)
         else:  # pragma: no cover - argparse prevents this
