@@ -1,3 +1,5 @@
 {"discovered": 269, "enriched": 90, "passed_gate": 77, "queued": 35, "rejections": {"no_license": 13}, "ts": "2026-11-01T10:20:50.584811Z", "type": "collect_completed"}
 {"repo": "morluto/rea", "score": 86.778, "telegram_message_id": 4, "telegraph_url": "https://telegra.ph/REA-Reverse-Engineer-Binaries-and-App-Behavior-with-AI-Agents-11-01", "ts": "2026-11-01T10:59:57.998888Z", "type": "project_published"}
 {"repo": "h4ckf0r0day/obscura", "score": 86.778, "telegram_message_id": 5, "telegraph_url": "https://telegra.ph/Obscura-A-Lightweight-Rust-Headless-Browser-for-Web-Scraping-and-AI-Agents-11-01", "ts": "2026-11-01T11:43:27.733662Z", "type": "project_published"}
+{"preview_host": "readme", "repo": "graphify-labs/graphify", "ts": "2026-11-02T10:40:15.571534Z", "type": "published_as_text"}
+{"repo": "graphify-labs/graphify", "score": 86.778, "telegram_message_id": 34, "telegraph_url": "https://telegra.ph/Graphify-Turn-Any-Codebase-into-a-Queryable-Knowledge-Graph-11-02", "ts": "2026-11-02T10:40:15.572719Z", "type": "project_published"}
