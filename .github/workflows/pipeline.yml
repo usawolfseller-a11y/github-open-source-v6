@@ -16,6 +16,7 @@ on:
           - digest
           - report
           - moderation
+          - facebook-handoff
       slot:
         description: Publish slot label (publish command only)
         type: string
@@ -36,10 +37,11 @@ on:
     - cron: "50 19 * * *"    # daily views snapshot
     - cron: "40 16 * * 0"    # weekly owner report
     # Continuous housekeeping.
-    - cron: "*/30 * * * *"   # crossposts
+    - cron: "5,35 * * * *"   # crossposts (avoids the :00/:30 article slot)
     - cron: "30 13 * * *"    # article of the day
     - cron: "10 19 * * *"    # AI Brief · daily, after the last project slot
-    - cron: "15 * * * *"     # moderation · hourly (was every 6h)
+    - cron: "15 */3 * * *"   # moderation · every 3h
+    - cron: "0 18 * * *"     # Facebook handoff (make.com), after the last project slot
 
 permissions:
   contents: read
@@ -97,6 +99,17 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      # A queued run starts from the commit that was current when it was
+      # scheduled. If the previous run already committed its state, this
+      # run must see it, otherwise it republishes the same project.
+      - name: Sync latest state
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          git -c http.extraheader="Authorization: Basic $AUTH" fetch origin main
+          git reset --hard FETCH_HEAD
       - name: Install
         run: |
           python -m pip install --require-hashes -r requirements.lock
@@ -112,7 +125,7 @@ jobs:
         run: |
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
             case "$COMMAND" in
-              collect|publish|crossposts|article|news|digest|report|moderation) ;;
+              collect|publish|crossposts|article|news|digest|report|moderation|facebook-handoff) ;;
               *) echo "::error::invalid command: $COMMAND"; exit 1 ;;
             esac
             if [[ "$COMMAND" == "publish" ]]; then
