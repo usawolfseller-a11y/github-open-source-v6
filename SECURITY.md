@@ -55,13 +55,19 @@ Out of scope:
   persisted checkout credentials. A separate job commits the state, has no
   access to publishing secrets, and refuses to commit a state that lost
   published records.
-- A queued run syncs `origin/main` before it starts, so it cannot republish a
-  post that the previous run already committed.
+- A queued run syncs `origin/main` before it starts, and the `commit-state`
+  job syncs `main` again before comparing/committing, so a stale queued run
+  cannot lose the state or republish a post.
+- `download_bytes` follows redirects manually and validates every hop, so a
+  public URL cannot bounce the bot to a private address.
 - Cross-posts are crowned from all of today's posts, not only from pending
   ones; the losers stay `held`. A failed Telegram publish removes the
   candidate and records a dead-letter instead of blocking the queue.
-- The deterministic fallback (no Gemini) is `safety="reject"`: the bot fails
-  closed rather than publishing without a safety verdict.
+- The deterministic fallback (no Gemini) is `safety="reject"` for every
+  project, including dual-use: the bot fails closed rather than publishing
+  without a safety verdict. A Gemini outage keeps the candidate in the queue.
+- Moderation ignores Telegram service senders (`is_automatic_forward`, user
+  777000), so the channel's own forwarded posts are not deleted.
 
 ## Known operational risks
 

@@ -81,7 +81,11 @@ class Config:
             state_dir=Path(os.getenv("GHOS_STATE_DIR") or "state"),
             telegram_bot_token=(os.getenv("TELEGRAM_BOT_TOKEN") or "").strip(),
             telegram_test_channel_id=_int_or_none("TELEGRAM_TEST_CHANNEL_ID"),
-            telegram_main_channel_id=(os.getenv("TELEGRAM_MAIN_CHANNEL_ID") or "").strip(),
+            telegram_main_channel_id=(
+                os.getenv("TELEGRAM_MAIN_CHANNEL_ID")
+                or os.getenv("MAIN_TELEGRAM_CHANNEL")
+                or ""
+            ).strip(),
             telegram_owner_chat_id=_int_or_none("TELEGRAM_OWNER_CHAT_ID"),
             telegram_source_channels=_csv("TELEGRAM_SOURCE_CHANNELS"),
             GitHub_token=(os.getenv("GH_API_TOKEN") or os.getenv("GITHUB_TOKEN") or "").strip(),

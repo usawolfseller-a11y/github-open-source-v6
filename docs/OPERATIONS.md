@@ -193,9 +193,9 @@ git checkout <commit> -- state/state.json
 | `5,35 * * * *` | crossposts |
 | `30 13 * * *` | article of the day |
 | `10 19 * * *` | AI Brief |
-| `15 */3 * * *` | moderation |
-| `0 18 * * *` | Facebook handoff (make.com) |
-| `10 16 * * 0`, `10 18 * * 4`, `50 19 * * *`, `40 16 * * 0` | digest / poll / metrics / report |
+| `45 */3 * * *` | moderation |
+| `20 18 * * *` | Facebook handoff (make.com) |
+| `10 16 * * 0`, `10 18 * * 4`, `20 20 * * *`, `40 16 * * 0` | digest / poll / metrics / report |
 
 Перед запуском `run` делает `git fetch origin main` и `reset --hard FETCH_HEAD`,
 поэтому отложенный запуск видит свежий state. Не убирайте этот шаг: без него

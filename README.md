@@ -173,7 +173,15 @@ A second audit (logic and operations) is also addressed:
   check time.
 - `news.fetch_primary_text` is SSRF-checked and bounded; cross-post image
   downloads happen only for the day's winner.
-- Facebook handoff runs daily at 18:00 and selects the best post of the day.
+- Facebook handoff runs daily at 18:20 and selects the best post of the day.
+
+A third audit (regressions) is fixed too: redirects are followed instead of
+aborting the download, `commit-state` syncs `main` before committing, the
+day's social winner is fixed once a post goes out, the deterministic fallback
+rejects dual-use projects as well, a Gemini outage keeps the candidate in the
+queue, ranking uses the full README length, crons are staggered, moderation
+ignores service senders, and the legacy `MAIN_TELEGRAM_CHANNEL` name is
+accepted.
 
 ## License
 

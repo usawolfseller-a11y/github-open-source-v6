@@ -77,15 +77,15 @@ def _run_scheduled(config: Config, store: StateStore, schedule: str) -> dict[str
         "30 13 * * *": lambda: article_of_day(config, store),
         # Daily since 2026-11-02: the video brief is a format with its own
         # slot, after the last project post, when the day's videos are out.
-        "10 19 * * *": lambda: news_command(config, store),
+        "15 19 * * *": lambda: news_command(config, store),
         # Weekly cycle: digest + poll on Sunday, poll closed on Thursday,
         # metrics every evening, learning after closing.
         "10 16 * * 0": lambda: digest_command(config, store),
         "10 18 * * 4": lambda: close_poll_command(config, store),
-        "50 19 * * *": lambda: metrics_command(config, store),
+        "20 20 * * *": lambda: metrics_command(config, store),
         "40 16 * * 0": lambda: report_command(config, store),
-        "15 */3 * * *": lambda: moderation_command(config, store),
-        "0 18 * * *": lambda: facebook_handoff_command(config, store),
+        "45 */3 * * *": lambda: moderation_command(config, store),
+        "20 18 * * *": lambda: facebook_handoff_command(config, store),
     }
     # Some crons must run two commands in order (close the poll, then learn
     # from the fresh tallies). Keeping them on one cron avoids a race where
