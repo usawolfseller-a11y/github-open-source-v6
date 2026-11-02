@@ -667,3 +667,47 @@ def test_briefs_never_enter_the_ranking_or_poll_system():
     metrics_body = source.split("def metrics_command")[1].split("def close_poll_command")[0]
     assert "published_records()" in metrics_body
     assert "news_topics" not in metrics_body.split("return")[0] or "AI Briefs live in news_topics" in metrics_body
+
+
+def test_only_the_best_post_of_the_day_is_crossposted():
+    """Owner decision after the agents' warning about blanket publishing:
+    three posts a day must not all go to Bluesky, Mastodon and Facebook.
+    Only the top-scored post of each day leaves Telegram; the rest are
+    marked 'held' so state does not accumulate a backlog."""
+    from datetime import datetime, timedelta, timezone
+
+    from ghos_v6.config import Config
+    from ghos_v6.pipeline import process_crossposts
+    from ghos_v6.state import StateStore
+
+    store = StateStore("/tmp/crosspost_hold_state")
+    store.data = {"published": {}, "events": []}
+    now = datetime.now(timezone.utc)
+    posts = [
+        ("midday", 71.0, 2),
+        ("morning", 88.0, 3),   # strongest of the day
+        ("evening", 60.0, 4),
+    ]
+    for name, score, hours_ago in posts:
+        store.data["published"][f"owner/{name}"] = {
+            "full_name": f"owner/{name}",
+            "name": name,
+            "score": score,
+            "published_at": (now - timedelta(hours=hours_ago)).isoformat(),
+            "crossposts": {
+                "bluesky": {"status": "pending", "attempts": 0, "due_at": (now - timedelta(minutes=5)).isoformat()},
+                "mastodon": {"status": "pending", "attempts": 0, "due_at": (now - timedelta(minutes=5)).isoformat()},
+            },
+        }
+
+    config = Config(telegram_bot_token="x", feature_bluesky=True, feature_mastodon=True,
+                    bluesky_handle="o", bluesky_app_password="p",
+                    mastodon_instance_url="https://example.social", mastodon_access_token="t")
+    process_crossposts(config, store)
+
+    statuses = {key: rec["crossposts"]["bluesky"]["status"] for key, rec in store.data["published"].items()}
+    assert statuses["owner/morning"] != "held", "the best post of the day must go out"
+    assert statuses["owner/midday"] == "held"
+    assert statuses["owner/evening"] == "held"
+    # and held posts do not pile up as pending work for tomorrow
+    assert store.data["published"]["owner/midday"]["crossposts"]["bluesky"]["held_reason"] == "not_best_of_day"

@@ -545,6 +545,39 @@ def process_crossposts(config: Config, store: StateStore) -> dict[str, Any]:
         "mastodon": config.feature_mastodon,
         "Facebook": config.feature_Facebook,
     }
+
+    def best_of_day(platform: str) -> str:
+        """The strongest post of each day that still owes a cross-post.
+
+        Owner decision: three project posts a day all going to Bluesky,
+        Mastodon and Facebook meant 63 cross-posts a week for 21 projects.
+        That is blanket publishing, which the multi-platform agent warns
+        against. Only the best-scored post of the day leaves Telegram; the
+        rest stay in the channel. dev.to already worked this way.
+        """
+        pending: dict[str, list[tuple[float, str]]] = {}
+        for record_key, record in (store.data.get("published") or {}).items():
+            info = (record.get("crossposts") or {}).get(platform) or {}
+            if info.get("status") not in {"pending", "failed"}:
+                continue
+            published_at = _parse_iso(record.get("published_at"))
+            if not published_at:
+                continue
+            pending.setdefault(published_at.date().isoformat(), []).append(
+                (float(record.get("score") or 0), record_key)
+            )
+        best_key = ""
+        best_score = float("-inf")
+        for items in pending.values():
+            score, record_key = max(items)
+            if score > best_score:
+                best_score, best_key = score, record_key
+        return best_key
+
+    winners = {
+        platform: best_of_day(platform) for platform, is_on in enabled.items() if is_on
+    }
+
     for key, record in list(store.data.get("published", {}).items()):
         generated = record.get("generated") or {}
         image_data, content_type = _download_record_image(record)
@@ -556,6 +589,11 @@ def process_crossposts(config: Config, store: StateStore) -> dict[str, Any]:
                     status_info["status"] = "disabled"
                 continue
             if status_info.get("status") not in {"pending", "failed"}:
+                continue
+            winner = winners.get(platform) or ""
+            if winner and key != winner:
+                status_info["status"] = "held"
+                status_info["held_reason"] = "not_best_of_day"
                 continue
             due = _parse_iso(status_info.get("due_at"))
             if due and due > now:
