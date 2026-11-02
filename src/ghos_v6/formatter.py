@@ -241,6 +241,35 @@ def _language_icon(project: dict[str, Any]) -> str:
     return "💻"
 
 
+def _is_placeholder_clone(command: str) -> bool:
+    """True when the "install" line is only ``git clone`` with nothing else."""
+    value = str(command or "").strip().lower()
+    return value.startswith("git clone") and "&&" not in value and ";" not in value
+
+
+def _quick_start_belongs_in_post(command: str) -> bool:
+    """Should the install line sit in the post itself?
+
+    Rule from the editorial agents: the post earns its place with a story
+    and a judgement, not with a manual. A single short command is a useful
+    proof ("this really is one command"); a wall of clone-and-compose is
+    noise that pushes the verdict off the first screen.
+
+    Also: ``git clone`` is what we print when the README documents nothing.
+    It tells the reader nothing they do not already know, so it never takes
+    a line of the post.
+    """
+    value = str(command or "").strip()
+    if not value:
+        return False
+    if len(value) > 90 or value.count("\n") > 1:
+        return False
+    lowered = value.lower()
+    if lowered.startswith("git clone") and "&&" not in lowered and ";" not in lowered:
+        return False  # placeholder, not an instruction
+    return True
+
+
 def _story_html(project: dict[str, Any]) -> str:
     """The readable spine of the post: situation, cost, turn.
 
@@ -350,7 +379,7 @@ def format_project_post(
     features = [_clip(str(f), 150) for f in (project.get("key_features") or []) if str(f).strip()][:6]
     summary = _clip(str(project.get("readme_summary") or project.get("primary_use_case") or ""), 650)
     quick_raw = str(project.get("quick_start") or "").strip()[:400]
-    quick_visible_default = bool(quick_raw) and len(quick_raw) <= 120 and quick_raw.count("\n") <= 1
+    quick_visible_default = _quick_start_belongs_in_post(quick_raw)
 
     deep_parts: list[tuple[str, str, str, bool]] = []
     if project.get("who_for"):
@@ -359,7 +388,9 @@ def format_project_post(
         deep_parts.append(("📌", "Why it matters now", _clip(str(project["why_now"]), 300), False))
     if project.get("verdict"):
         deep_parts.append(("✅", "Verdict", _clip(str(project["verdict"]), 280), False))
-    if quick_raw and not quick_visible_default:
+    # A placeholder clone command is not worth a line anywhere in the post,
+    # collapsed or not: the README button is one tap away.
+    if quick_raw and not quick_visible_default and not _is_placeholder_clone(quick_raw):
         deep_parts.append(("🚀", "Quick start", quick_raw, True))
 
     links: list[str] = []

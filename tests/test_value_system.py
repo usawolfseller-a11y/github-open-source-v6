@@ -341,3 +341,22 @@ def test_queue_stays_a_week_of_fuel_and_readme_does_not_ride_along():
     assert 'candidate["readme_excerpt"] = readme[:1_200]' in pipeline
     assert "queue = passing[:28]" in pipeline
     assert "merged[:40]" in state
+
+
+def test_quick_start_only_takes_post_space_when_it_earns_it():
+    """Editorial agents: the post earns its place with a story and a
+    judgement, not with a manual. One short command proves a point; a
+    wall of clone-and-compose belongs to the article, and a placeholder
+    `git clone` tells the reader nothing at all."""
+    from ghos_v6.formatter import _is_placeholder_clone, _quick_start_belongs_in_post
+
+    assert _quick_start_belongs_in_post("cargo install dbx") is True
+    assert _quick_start_belongs_in_post("docker run -d -p 8080:8080 ghcr.io/o/app") is True
+    assert _quick_start_belongs_in_post("npm install -g @scope/tool") is True
+    # placeholder clone: never printed
+    assert _quick_start_belongs_in_post("git clone https://github.com/o/r.git") is False
+    assert _is_placeholder_clone("git clone https://github.com/o/r.git") is True
+    # long multi-step setup: article, not post
+    wall = "git clone https://github.com/o/r && cd r && cp .env.example .env && docker compose up -d --build"
+    assert _quick_start_belongs_in_post(wall) is False
+    assert _quick_start_belongs_in_post("a" * 200) is False
