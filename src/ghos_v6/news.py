@@ -255,8 +255,12 @@ def _source_score(url: str) -> int:
         score += 90
     if host in OFFICIAL_DOMAINS or any(host.endswith("." + domain) for domain in OFFICIAL_DOMAINS):
         score += 90
+    # Docs score above a landing page: a landing page advertises, a doc
+    # page states what actually shipped. But +55 on top of an official
+    # domain put a docs sub-page 43 points above the launch announcement
+    # itself, so a real "introducing X" post was never chosen.
     if host.startswith("docs.") or "docs" in host.split("."):
-        score += 55
+        score += 10
     if host == "arxiv.org":
         score += 75
     if host.endswith(".edu"):
@@ -372,8 +376,51 @@ def _clip(value: Any, limit: int) -> str:
     return (word or cut).rstrip(" ,;:") + "…"
 
 
+HYPE_WORDS = (
+    "insane", "insanely", "huge", "massive", "bombshell", "breaking",
+    "unbelievable", "crazy", "mind-blowing", "must-see", "ultimate",
+    "best ever", "game changer", "game-changer", "revolutionary",
+)
+
+
+def clean_brief_headline(headline: str) -> str:
+    """Repair a headline the model copied from a YouTube title.
+
+    Two failures were measured on real output:
+    1. "SpaceXSI Releases Grok Bot" — two brand names glued together
+       ("SpaceX's" + "xAI"). A person reads that as one nonsense word.
+    2. ALL-CAPS shout words and hype adjectives carried over from the
+       video title, which the brief prompt forbids but the model copies
+       when the title is written in that register.
+    """
+    text = re.sub(r"\s+", " ", str(headline or "")).strip()
+    if not text:
+        return ""
+    # Two brand names glued together: "SpaceX's xAI" reached us as "SpaceXSI".
+    # Guessing at any capitalised tail would also cut "OpenAI" and "xAI",
+    # which are correct words, so match the specific known pairs only.
+    text = re.sub(r"\bSpaceX(SI|XAI)\b", "SpaceX xAI", text)
+    text = re.sub(r"\bOpen(SI)\b", "OpenAI", text)
+    # Shout words become sentence case.
+    text = re.sub(
+        r"\b[A-Z]{4,}\b",
+        lambda m: m.group(0).capitalize() if m.group(0).lower() not in {"API", "SDK", "CLI", "GPU", "CPU", "MP4", "HTML", "CSS", "JSON"} else m.group(0),
+        text,
+    )
+    # Drop a leading hype word that carries no information.
+    lowered = text.lower()
+    for word in HYPE_WORDS:
+        if lowered.startswith(word + " "):
+            text = text[len(word) + 1 :].lstrip()
+            text = text[:1].upper() + text[1:]
+            break
+    text = text.replace("?!", "?").replace("!!", "!")
+    text = re.sub(r"\s+([,.!?])", r"\1", text)
+    return text.strip()
+
+
 def format_ai_brief(brief: dict[str, Any]) -> str:
-    headline = _clip(brief.get("headline") or "Verified AI update", 150)
+    headline = _clip(clean_brief_headline(brief.get("headline")) or "Verified AI update", 150)
     happened = [_clip(item, 280) for item in brief.get("what_happened") or [] if str(item).strip()][:4]
     confirmed = [_clip(item, 220) for item in brief.get("confirmed") or [] if str(item).strip()][:3]
     video_only = [_clip(item, 220) for item in brief.get("video_only_claims") or [] if str(item).strip()][:2]

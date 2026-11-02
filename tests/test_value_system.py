@@ -492,3 +492,65 @@ def test_news_prefilter_is_time_based_not_time_of_day_dependent():
             "description": "A developer tool.",
         }
         assert prefilter_entry(entry, now=now) == (True, ""), f"failed at {hour}:00"
+
+
+def test_launch_announcement_beats_its_own_docs_page():
+    """A 'docs' bonus of +55 on top of the official-domain bonus made every
+    documentation sub-page outrank the launch post that announced the thing.
+    The brief was then written from reference docs, which state what exists
+    (not what changed) — and it produced garbled headlines."""
+    from ghos_v6.news import _source_score
+
+    announcement = _source_score("https://x.ai/news/introducing-grok-bot")
+    docs = _source_score("https://docs.x.ai/grok-bot/overview")
+    landing = _source_score("https://x.ai/bot")
+    assert announcement > docs, "the announcement must win"
+    assert docs > landing or docs >= landing
+    # a docs page on a non-official host must not outrank an official blog
+    assert _source_score("https://blog.example.com/x") < _source_score("https://openai.com/blog/x")
+
+
+def test_brief_headline_is_repaired_but_real_acronyms_survive():
+    """Measured on live output: 'SpaceXSI Releases Grok Bot' (two brands
+    glued) and ALL-CAPS hype carried over from the YouTube title."""
+    from ghos_v6.news import clean_brief_headline as clean
+
+    assert clean("SpaceXSI Releases Grok Bot AI Teammates") == "SpaceX xAI Releases Grok Bot AI Teammates"
+    assert clean("HUGE GPT-6.2 BEL LEAK! Opus 6") == "GPT-6.2 BEL Leak! Opus 6"
+    assert clean("Insane New Video Model Beats Everything") == "New Video Model Beats Everything"
+    # real acronyms are not sentence-cased away
+    assert "API" in clean("OpenAI ships API for GPT-6 in the CLI")
+    assert clean("") == ""
+
+
+def test_transient_model_errors_are_retried_and_permanent_ones_are_not():
+    from ghos_v6.Gemini import HttpError, generate_with_backoff, is_transient_error
+
+    assert is_transient_error(HttpError(429, "You exceeded your current quota"))
+    assert is_transient_error(HttpError(503, "This model is currently experiencing high demand"))
+    assert not is_transient_error(HttpError(400, "Invalid schema"))
+    assert not is_transient_error(ValueError("bad json"))
+
+    waits: list[float] = []
+    calls = {"n": 0}
+
+    def flaky():
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise HttpError(503, "high demand")
+        return "ok"
+
+    assert generate_with_backoff(flaky, sleep=waits.append) == "ok"
+    assert calls["n"] == 3
+    assert waits == [20.0, 40.0]  # linear backoff, not a tight loop
+
+    def broken():
+        raise HttpError(400, "bad request")
+
+    calls["n"] = 0
+    try:
+        generate_with_backoff(broken, sleep=waits.append)
+    except HttpError:
+        pass
+    else:
+        raise AssertionError("permanent errors must not be swallowed")

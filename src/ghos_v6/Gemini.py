@@ -9,6 +9,7 @@ import html
 import json
 import logging
 import re
+import time
 from typing import Any
 
 from .http import HttpError, request_json, sanitize
@@ -123,6 +124,42 @@ JARGON_TERMS = (
     "inference", "fine-tune", "fine-tuning", "deterministic", "codebase",
     "cli", "json", "yaml", "http", "orm", "crud", "idempotent",
 )
+
+
+# The model answers 429 (quota) and 503 (high demand) on real traffic, both
+# of which are temporary. Treat them as "wait", not "the slot is lost".
+TRANSIENT_STATUS = {429, 500, 502, 503, 504}
+
+
+def is_transient_error(exc: BaseException) -> bool:
+    text = str(exc).lower()
+    if any(marker in text for marker in ("quota", "rate limit", "resource exhausted",
+                                         "high demand", "overloaded", "temporarily")):
+        return True
+    status = getattr(exc, "status", None) or getattr(exc, "status_code", None)
+    return status in TRANSIENT_STATUS
+
+
+def generate_with_backoff(call, *, attempts: int = 3, base_delay: float = 20.0, sleep=time.sleep):
+    """Run ``call`` and retry only on transient model errors.
+
+    Measured in one session: two independent quota errors and one
+    "experiencing high demand" burst of 3 failures. Without this, a slot
+    would silently fall back to the deterministic text — a weaker post
+    published at the scheduled minute, which is worse than a slightly
+    late good one.
+    """
+    last: BaseException | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            return call()
+        except Exception as exc:  # noqa: BLE001 - classify, then re-raise
+            last = exc
+            if not is_transient_error(exc) or attempt == attempts:
+                raise
+            sleep(base_delay * attempt)
+    assert last is not None
+    raise last
 
 
 def jargon_hits(text: str) -> list[str]:
@@ -676,12 +713,14 @@ def generate_project_content(
     """
     if client is not None and client.configured:
         try:
-            base = client.generate_project(candidate)
+            # Retried on 429/503 before giving up: a weak deterministic post
+            # published on time is worse than the good one a minute later.
+            base = generate_with_backoff(lambda: client.generate_project(candidate))
         except Exception as exc:  # noqa: BLE001 - editorial fallback must keep slot alive
             logger.warning("Gemini project generation failed; using fallback: %s", sanitize(str(exc))[:300])
             return deterministic_project_content(candidate)
         try:
-            surfaces = client.generate_surfaces(candidate, base)
+            surfaces = generate_with_backoff(lambda: client.generate_surfaces(candidate, base), attempts=2)
         except Exception as exc:  # noqa: BLE001 - per-surface copy must not kill a slot
             logger.warning("Gemini surface copy failed; using shared text: %s", sanitize(str(exc))[:300])
             surfaces = {}
