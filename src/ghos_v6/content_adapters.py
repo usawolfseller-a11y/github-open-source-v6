@@ -549,12 +549,16 @@ def build_crosspost_text(
     record: dict[str, Any],
     generated: dict[str, Any] | None = None,
 ) -> str:
+    # Normalise hard: the caller passes "Facebook", the state file may hold
+    # "facebook".  Comparing a lowercased key against a capitalised literal
+    # is exactly how the Facebook branch used to be skipped, silently
+    # degrading a 1 558-char post into a 169-char fallback.
     key = clean_text(platform).lower()
     if key == "bluesky":
         return build_bluesky_text(record, generated)
     if key == "mastodon":
         return build_mastodon_text(record, generated)
-    if key == "Facebook":
+    if key == "facebook":
         return build_Facebook_text(record, generated)
     # Any future platform still has to carry the return loop: a crosspost
     # that does not point back to the channel is a donation, not growth.

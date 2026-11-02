@@ -360,3 +360,24 @@ def test_quick_start_only_takes_post_space_when_it_earns_it():
     wall = "git clone https://github.com/o/r && cd r && cp .env.example .env && docker compose up -d --build"
     assert _quick_start_belongs_in_post(wall) is False
     assert _quick_start_belongs_in_post("a" * 200) is False
+
+
+def test_facebook_crosspost_never_falls_back_to_the_short_generic_text():
+    """Regression: build_crosspost_text lowercased the platform name and then
+    compared it to "Facebook".  The branch never matched, so the Facebook
+    post silently degraded to a 169-char lead + link.  Both spellings must
+    produce the real structured post."""
+    from ghos_v6.content_adapters import build_Facebook_text, build_crosspost_text
+
+    record = {"full_name": "AprilNEA/OpenLogi", "name": "OpenLogi", "url": "https://github.com/AprilNEA/OpenLogi",
+              "description": "Native Logitech config", "language": "Rust", "stars": 24808, "forks": 892,
+              "license": {"spdx_id": "Apache-2.0"}}
+    generated = {"hook": "Remap your Logitech buttons without a heavy electron app.",
+                 "summary": "OpenLogi talks HID++ directly and stores config in TOML.",
+                 "key_features": ["Multi-step workflows", "Per-app profiles", "DPI presets", "SmartShift"],
+                 "who_for": "Power users on Linux.", "why_now": "Vendor software is bloated.",
+                 "quick_start": "cargo install openlogi", "discussion_question": "Which feature do you miss?"}
+    expected = build_Facebook_text(record, generated)
+    for spelling in ("Facebook", "facebook", "FACEBOOK"):
+        assert build_crosspost_text(spelling, record, generated) == expected
+    assert len(expected) > 500  # the real structured post, not the fallback
