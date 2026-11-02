@@ -198,7 +198,13 @@ def prefilter_entry(
         return False, "outside_72h"
     title = str(entry.get("title") or "")
     description = str(entry.get("description") or "")
-    if _contains_any(f"{title}\n{description}", SPONSORED_TERMS):
+    # Channel videos almost always open with a sponsorship block ("Sponsored
+    # by X · Paid partnership"). Scanning the whole description rejected
+    # 15 of 15 videos as sponsored, including the honest ones. A sponsor in
+    # the first lines of the description is the signal; a sponsor mentioned
+    # deep in the body is not the topic of the video.
+    sponsor_block = description[:600]
+    if _contains_any(f"{title}\n{sponsor_block}", SPONSORED_TERMS):
         return False, "sponsored"
     if _contains_any(title, LEAK_TERMS):
         return False, "leak_or_rumor_title"

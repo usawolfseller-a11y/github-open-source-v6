@@ -444,3 +444,51 @@ def test_jargon_audit_and_seo_fallbacks():
     # description never ends in an ellipsis
     described = {"surfaces": {"seo_description": "A very long description " * 12}}
     assert not build_seo_description(record, described).endswith("…")
+
+
+def test_sponsor_block_at_the_top_does_not_reject_the_whole_video():
+    """Every WorldofAI video opens with a sponsor line, so scanning the whole
+    description rejected 15 of 15 videos as 'sponsored'.  The signal is a
+    sponsor in the opening block; a sponsor deep in the body is not the
+    topic of the video."""
+    from datetime import datetime, timedelta, timezone
+
+    from ghos_v6.news import prefilter_entry
+
+    now = datetime.now(timezone.utc)
+    base = {
+        "video_id": "abc123",
+        "url": "https://www.youtube.com/watch?v=abc123",
+        "published": now - timedelta(hours=5),
+        "title": "Grok Bot AI Teammates for developers",
+        "description": "Intro about open-source coding agents and GitHub workflows.",
+    }
+    ok, reason = prefilter_entry(base, now=now)
+    assert (ok, reason) == (True, "")
+
+    # sponsor line at the top: rejected, and for the right reason
+    top = dict(base, description="Sponsored by Printify - Paid partnership\n\n" + base["description"])
+    assert prefilter_entry(top, now=now) == (False, "sponsored")
+
+    # sponsor mentioned far into the body: still accepted
+    deep = dict(base, description=base["description"] + "\n" + "context " * 120 + "\nThis video is sponsored by someone.")
+    assert prefilter_entry(deep, now=now)[0] is True
+
+
+def test_news_prefilter_is_time_based_not_time_of_day_dependent():
+    """A video published 20 hours ago must pass at any hour. The old check
+    compared against midnight UTC and rejected recent videos in the evening."""
+    from datetime import datetime, timedelta, timezone
+
+    from ghos_v6.news import prefilter_entry
+
+    for hour in (0, 6, 12, 18, 23):
+        now = datetime.now(timezone.utc).replace(hour=hour, minute=0, second=0, microsecond=0)
+        entry = {
+            "video_id": "v1",
+            "url": "https://www.youtube.com/watch?v=v1",
+            "published": now - timedelta(hours=20),
+            "title": "Open-source coding agent ships on GitHub",
+            "description": "A developer tool.",
+        }
+        assert prefilter_entry(entry, now=now) == (True, ""), f"failed at {hour}:00"
