@@ -41,7 +41,10 @@ def score_candidate(candidate: dict[str, Any], *, now: datetime | None = None) -
     momentum += min(3.0, hn_points / 45.0)
     momentum = min(20.0, momentum)
 
-    readme_len = len(str(candidate.get("readme") or candidate.get("readme_excerpt") or ""))
+    readme_len = int(
+        candidate.get("readme_len")
+        or len(str(candidate.get("readme") or candidate.get("readme_excerpt") or ""))
+    )
     content = min(8.0, readme_len / 1800.0)
     if candidate.get("homepage"):
         content += 1.5

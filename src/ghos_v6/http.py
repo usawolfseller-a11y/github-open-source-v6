@@ -165,7 +165,7 @@ def download_bytes(
                 if not location:
                     raise HttpError(response.status_code, "redirect without Location")
                 current = urljoin(current, location)
-                break
+                continue
             response.raise_for_status()
             chunks: list[bytes] = []
             total = 0

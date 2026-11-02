@@ -715,7 +715,7 @@ Worth a serious look if the problem matches your stack. Read the repository docu
         "quick_start": quick_start,
         "discussion_question": "Would you run this in production, or keep it as a self-hosted tool? Why?",
         "category": "developer-tools",
-        "safety": "dual_use" if candidate.get("is_dual_use") else "reject",
+        "safety": "reject",
         "safety_reason": "deterministic fallback: no model, fail closed",
         "social_text": _clip_sentence(description or summary, 240),
         "article_title": f"{name}: what it does and why developers should care",

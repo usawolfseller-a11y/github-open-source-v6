@@ -162,6 +162,7 @@ def collect_command(
         # publish slot re-fetches it before generation. Keeping 14 KB per
         # queued candidate put ~700 KB into a file that is committed on
         # every run, so only a short excerpt survives into state.
+        candidate["readme_len"] = len(readme)
         candidate["readme"] = ""
         candidate["readme_excerpt"] = readme[:1_200]
         decision = evaluate(candidate, gate_cfg)
@@ -386,6 +387,18 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
         candidate["is_dual_use"] = pre_decision.is_dual_use
 
         generated = generate_project_content(Gemini, candidate)
+        if not generated.get("llm_used"):
+            # No model, no verdict. Do not spend the candidate: leave it at
+            # the head of the queue and let the next slot retry.
+            store.event("publish_skipped", slot=slot, reason="gemini_unavailable", repo=key)
+            store.save()
+            return {
+                "ok": False,
+                "published": False,
+                "reason": "gemini_unavailable",
+                "repo": key,
+                "queue_unchanged": True,
+            }
         candidate["safety"] = generated.get("safety")
         post_decision = evaluate(candidate, gate_cfg, require_safety=True)
         candidate["is_dual_use"] = bool(
@@ -507,6 +520,7 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
                     "platform": "telegram",
                     "error": error,
                     "created_at": iso_now(),
+                    "telegraph_url": telegraph_url,
                     "note": "removed from queue; may or may not have been sent",
                 }
             )
@@ -618,20 +632,18 @@ def process_crossposts(config: Config, store: StateStore) -> dict[str, Any]:
     }
 
     def best_of_day() -> str:
-        """The strongest post published today, whether or not it still owes
-        a cross-post.
+        """The day's single winner, fixed as soon as one post has gone out.
 
         Owner decision: three project posts a day all going to Bluesky,
         Mastodon and Facebook meant 63 cross-posts a week for 21 projects.
         That is blanket publishing, which the multi-platform agent warns
-        against. Only the best-scored post of the day leaves Telegram; the
-        rest stay in the channel. dev.to already worked this way.
+        against. Only one post per day leaves Telegram; the rest stay in the
+        channel. dev.to already worked this way.
 
         The winner is chosen from *all* of today's posts, not only from the
-        ones that still have a pending cross-post. Otherwise the first run
-        publishes the first post, the next run sees only the second post as
-        pending and crowns it "best of the day", and so on — every post
-        eventually goes out.
+        ones that still have a pending cross-post. And once any post has
+        already been published to a platform today, the day's winner is
+        fixed: a later, higher-scoring post must not take a second slot.
         """
         today = datetime.now(timezone.utc).date().isoformat()
         best_key = ""
@@ -640,6 +652,14 @@ def process_crossposts(config: Config, store: StateStore) -> dict[str, Any]:
             published_at = _parse_iso(record.get("published_at"))
             if not published_at or published_at.date().isoformat() != today:
                 continue
+            for info in (record.get("crossposts") or {}).values():
+                if info.get("status") != "published":
+                    continue
+                crosspost_at = _parse_iso(info.get("published_at"))
+                if crosspost_at and crosspost_at.date().isoformat() == today:
+                    # The day's slot is used. Keep the same winner for every
+                    # platform so a second post cannot sneak in later.
+                    return record_key
             score = float(record.get("score") or 0)
             if score > best_score:
                 best_score, best_key = score, record_key
@@ -1207,43 +1227,71 @@ _SPAM_RE = re.compile(
 )
 
 
+def _moderation_ignored_sender(sender: dict[str, Any]) -> bool:
+    """Service senders are never moderated.
+
+    Messages forwarded from the channel arrive from Telegram's service user
+    777000 with ``is_automatic_forward`` set. They are not a bot in the
+    ``is_bot`` sense, so the old check deleted the channel's own posts.
+    """
+    return bool(
+        sender.get("is_bot")
+        or sender.get("is_automatic_forward")
+        or sender.get("id") == 777000
+    )
+
+
 def moderation_command(config: Config, store: StateStore) -> dict[str, Any]:
     config.require("TELEGRAM_BOT_TOKEN")
     telegram = TelegramClient(config.telegram_bot_token)
     last_offset = int(store.data.setdefault("last_runs", {}).get("telegram_update_offset") or 0)
-    payload: dict[str, Any] = {"timeout": 0, "limit": 100}
-    if last_offset:
-        payload["offset"] = last_offset + 1
-    updates = list(telegram.api("getUpdates", payload) or [])
+    offset = last_offset + 1 if last_offset else None
     deleted = 0
+    seen = 0
     max_update_id = last_offset
-    for update in updates:
-        update_id = int(update.get("update_id") or 0)
-        max_update_id = max(max_update_id, update_id)
-        message = update.get("message") or update.get("edited_message") or {}
-        chat = message.get("chat") or {}
-        if chat.get("type") not in {"group", "supergroup"}:
-            continue
-        sender = message.get("from") or {}
-        if sender.get("is_bot"):
-            continue
-        text = str(message.get("text") or message.get("caption") or "")
-        urls = re.findall(r"https?://|t\.me/", text, flags=re.I)
-        suspicious = bool(_SPAM_RE.search(text)) or len(urls) >= 3
-        if not suspicious:
-            continue
-        try:
-            member = telegram.api(
-                "getChatMember",
-                {"chat_id": chat.get("id"), "user_id": sender.get("id")},
-            )
-            if (member or {}).get("status") in {"creator", "administrator"}:
+    # getUpdates returns at most 100 updates. A busy discussion group can
+    # produce more than that between two runs; loop until the queue is empty
+    # (bounded) instead of silently dropping the tail.
+    for _ in range(20):
+        payload: dict[str, Any] = {"timeout": 0, "limit": 100}
+        if offset:
+            payload["offset"] = offset
+        updates = list(telegram.api("getUpdates", payload) or [])
+        if not updates:
+            break
+        seen += len(updates)
+        for update in updates:
+            update_id = int(update.get("update_id") or 0)
+            max_update_id = max(max_update_id, update_id)
+            message = update.get("message") or update.get("edited_message") or {}
+            chat = message.get("chat") or {}
+            if chat.get("type") not in {"group", "supergroup"}:
                 continue
-            telegram.delete_message(int(chat["id"]), int(message["message_id"]))
-            deleted += 1
-        except Exception as exc:  # noqa: BLE001
-            logger.info("Moderation delete skipped: %s", sanitize(str(exc))[:160])
+            sender = message.get("from") or {}
+            if _moderation_ignored_sender(sender):
+                continue
+            text = str(message.get("text") or message.get("caption") or "")
+            urls = re.findall(r"https?://|t\.me/", text, flags=re.I)
+            suspicious = bool(_SPAM_RE.search(text)) or len(urls) >= 3
+            if not suspicious:
+                continue
+            try:
+                member = telegram.api(
+                    "getChatMember",
+                    {"chat_id": chat.get("id"), "user_id": sender.get("id")},
+                )
+                if (member or {}).get("status") in {"creator", "administrator"}:
+                    continue
+                telegram.delete_message(int(chat["id"]), int(message["message_id"]))
+                deleted += 1
+            except Exception as exc:  # noqa: BLE001
+                logger.info("Moderation delete skipped: %s", sanitize(str(exc))[:160])
+        batch_max = max(int(update.get("update_id") or 0) for update in updates)
+        max_update_id = max(max_update_id, batch_max)
+        offset = batch_max + 1
+        if len(updates) < 100:
+            break
     store.data.setdefault("last_runs", {})["telegram_update_offset"] = max_update_id
-    store.event("moderation_completed", updates=len(updates), deleted=deleted)
+    store.event("moderation_completed", updates=seen, deleted=deleted)
     store.save()
-    return {"ok": True, "updates": len(updates), "deleted": deleted}
+    return {"ok": True, "updates": seen, "deleted": deleted}
