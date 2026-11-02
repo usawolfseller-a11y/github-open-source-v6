@@ -47,10 +47,10 @@ real Bluesky or Mastodon post before touching production.
 - Applies a conservative autonomous quality/safety gate: license,
   activity, community signal, README, permanent dedup and a malicious-
   topic blocklist. Legitimate dual-use security tools are labelled.
-- Uses one structured Gemini call per project for the Telegram post,
-  Telegraph/article text and social copy. A deterministic fallback is used
-  for surface copy when Gemini is unavailable; publishing a project requires
-  a model verdict, so the slot is skipped (fail-closed) without Gemini.
+- Uses two structured Gemini calls per project: an editorial pass and a
+  per-surface copy pass. A deterministic fallback is used for surface copy
+  when Gemini is unavailable; publishing a project requires a model verdict,
+  so the slot is skipped (fail-closed) without Gemini.
 - Publishes long Telegram text posts (up to the 4,096-character Bot API
   budget) with a large preview above the text and inline buttons.
 - Creates a Telegraph full breakdown for every published project.
@@ -117,7 +117,7 @@ state/
 ## Local development
 
 ```bash
-python -m pip install --require-hashes -r requirements.lock
+python -m pip install --require-hashes -r requirements-dev.lock
 python -m pip install --no-deps -e .
 ruff check .
 mypy src
@@ -126,8 +126,10 @@ python tools/secret_scan.py
 ghos-v6 doctor
 ```
 
-Dependencies are locked with hashes in `requirements.lock` (regenerate with
-`pip-compile --generate-hashes requirements.in`). CI runs the same install,
+Dependencies are locked with hashes: `requirements.lock` is runtime-only
+(installed by the publishing job), `requirements-dev.lock` adds the linters and
+tests. Regenerate with `pip-compile --generate-hashes requirements.in` and
+`pip-compile --generate-hashes requirements-dev.in`. CI runs the same install,
 plus gitleaks and CodeQL.
 
 Real credentials belong only in GitHub Secrets/Variables. See

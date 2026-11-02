@@ -620,12 +620,14 @@ def extract_media_urls(readme: str, full_name: str, default_branch: str = "main"
     return [url for _, _, url in scored[:8]]
 
 
-def enrich_candidate(api: GitHubApi, candidate: dict[str, Any]) -> dict[str, Any]:
+def enrich_candidate(
+    api: GitHubApi, candidate: dict[str, Any], *, force: bool = False
+) -> dict[str, Any]:
     full_name = str(candidate.get("full_name") or full_name_from_url(str(candidate.get("url") or "")))
     if not full_name:
         return candidate
     candidate["full_name"] = full_name
-    if not candidate.get("repo_id") or not candidate.get("license"):
+    if force or not candidate.get("repo_id") or not candidate.get("license"):
         raw_repo = api.repo(full_name)
         if raw_repo:
             mapped = map_repo(raw_repo, str((candidate.get("sources") or ["unknown"])[0]))

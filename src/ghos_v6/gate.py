@@ -235,7 +235,7 @@ def evaluate(
         reasons.append("no_community")
 
     readme = str(project.get("readme") or project.get("readme_excerpt") or "")
-    if not project.get("has_readme") and len(readme.strip()) < cfg.min_readme_chars:
+    if len(readme.strip()) < cfg.min_readme_chars:
         reasons.append("no_readme")
     if readme:
         if _EXTERNAL_DOWNLOAD_RE.search(readme):

@@ -20,6 +20,22 @@ class TelegramError(RuntimeError):
         self.error_code = error_code
 
 
+def is_fatal_error(exc: Exception) -> bool:
+    """True when retrying the same candidate cannot succeed.
+
+    401/403 mean the bot is not allowed in the chat; "chat not found" means
+    the target is gone; a network failure/timeout may or may not have sent
+    the message. In all three cases the slot must abort, not silently drop
+    the candidate and move on.
+    """
+    code = getattr(exc, "error_code", None)
+    text = str(exc).lower()
+    return code in {401, 403} or any(
+        term in text
+        for term in ("chat not found", "network failure", "timeout", "connection")
+    )
+
+
 class TelegramClient:
     def __init__(self, bot_token: str):
         self.bot_token = bot_token.strip()

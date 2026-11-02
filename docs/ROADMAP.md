@@ -62,7 +62,7 @@ Measured on the live channel, 2026-11-01:
 - [x] Weekly poll: open Sunday, `stopPoll` Thursday, tally stored
 - [x] `learn`: deterministic multipliers, clamped, written to state
 - [x] 3-post schedule; two-command cron for close+learn
-- [x] 175 tests green
+- [x] 188 tests green
 
 **Exit criteria:** all tests pass, no change to publishing target. ✅
 
@@ -225,3 +225,18 @@ split, but not while the publishing path is unproven.
   (длинное тире заменяется на `-`).
 - **Dependabot**: 6 PR открыты; токен не позволяет их мержить/закрывать.
   Текущие workflow уже используют более новые версии actions.
+
+---
+
+## 10. Аудит №5 (публикация и эксплуатация)
+
+- **Ручное одобрение постов** на старте — вынести в отдельную задачу.
+- **State в отдельной ветке** — чтобы бот не имел write-доступа к `main`.
+- **DNS rebinding pinning** — кастомный adapter с проверенным IP.
+- **Покрытие `doctor.py` (0%) и `pipeline.py` (≈39%)** — интеграционные тесты.
+- **Мёртвый код**: `format_project_caption`, `publish_message`,
+  `GitHubReleaseMediaHost`, `prepare_for_telegram` — удалить после проверки.
+- **ID тестового канала в истории git** — 10 коммитов; перезапись истории
+  требует force-push и решения владельца.
+- **Dependabot**: 6 PR не слиты; токен не позволяет. Runtime-lock и dev-lock
+  разделены, поэтому publishing-job больше не тянет линтеры.

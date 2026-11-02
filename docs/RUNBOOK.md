@@ -260,7 +260,7 @@ never replace a leaked personal session with another shared session.
 Before opening a PR:
 
 ```bash
-python -m pip install --require-hashes -r requirements.lock
+python -m pip install --require-hashes -r requirements-dev.lock
 python -m pip install --no-deps -e .
 ruff check .
 mypy src

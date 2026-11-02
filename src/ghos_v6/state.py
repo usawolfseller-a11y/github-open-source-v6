@@ -33,6 +33,8 @@ DEFAULT_STATE: dict[str, Any] = {
     "dead_letters": [],
     "news_topics": [],
     "last_runs": {},
+    "publish_failures": {},
+    "suppressed": {},
 }
 
 
@@ -59,7 +61,7 @@ class StateStore:
         data = self.data if data is None else data
         if not isinstance(data, dict):
             raise StateCorruptError("state.json must contain a JSON object")
-        for key in ("published", "seen_repos", "last_runs"):
+        for key in ("published", "seen_repos", "last_runs", "publish_failures", "suppressed"):
             if key in data and not isinstance(data.get(key), dict):
                 raise StateCorruptError(f"state.{key} must be an object")
         for key in ("queue", "dead_letters", "news_topics"):
@@ -193,7 +195,21 @@ class StateStore:
 
     def record_published(self, record: dict[str, Any]) -> str:
         key = self.repo_key(record)
-        self.data.setdefault("published", {})[key] = record
+        published = self.data.setdefault("published", {})
+        previous = published.get(key)
+        if previous:
+            # A deliberate revisit must not erase the earlier publication.
+            history = list(previous.get("history") or [])
+            history.append(
+                {
+                    "published_at": previous.get("published_at"),
+                    "telegram_message_id": previous.get("telegram_message_id"),
+                    "telegraph_url": previous.get("telegraph_url"),
+                    "score": previous.get("score"),
+                }
+            )
+            record["history"] = history
+        published[key] = record
         self.pop_queue_candidate(key)
         self.event(
             "project_published",

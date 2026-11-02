@@ -135,9 +135,13 @@ def select_candidate(
         if candidate.get("is_hidden_gem") and gems_today >= 1:
             continue
         eligible.append(candidate)
-    pool = eligible or queue
+    if not eligible:
+        # The day's quota for dual-use / hidden gems is used up. Return None
+        # instead of falling back to the whole queue, which would break the
+        # owner's "one per day" rule.
+        return None
     return max(
-        pool,
+        eligible,
         key=lambda c: (float(c.get("score") or 0) + diversity_bonus(c, published_today))
         * value_multiplier(c, model),
     )
