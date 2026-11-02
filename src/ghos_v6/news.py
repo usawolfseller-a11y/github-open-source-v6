@@ -7,7 +7,6 @@ model card) supports the central claims.
 from __future__ import annotations
 
 import html
-import ipaddress
 import logging
 import re
 from datetime import datetime, timezone
@@ -19,7 +18,7 @@ from defusedxml import ElementTree as ET
 
 from .formatter import utf16_len, visible_text
 from .Gemini import GeminiClient
-from .http import USER_AGENT
+from .http import USER_AGENT, UnsafeUrl, download_bytes, validate_public_url
 
 logger = logging.getLogger(__name__)
 
@@ -325,16 +324,12 @@ def clean_url(url: str) -> str:
 
 
 def _safe_public_url(url: str) -> bool:
-    parsed = urlparse(url)
-    if parsed.scheme != "https" or not parsed.hostname:
-        return False
-    host = parsed.hostname.lower()
-    if host in BLOCKED_DOMAINS or host == "localhost" or host.endswith(".local"):
-        return False
+    """HTTPS-only, DNS-resolved, no private addresses, no redirect bypass."""
     try:
-        return ipaddress.ip_address(host).is_global
-    except ValueError:
-        return True
+        validate_public_url(url)
+    except UnsafeUrl:
+        return False
+    return True
 
 
 def _source_score(url: str) -> int:
@@ -382,18 +377,17 @@ def extract_primary_urls(entry: dict[str, Any], *, limit: int = 6) -> list[str]:
 
 
 def fetch_primary_text(url: str) -> dict[str, str] | None:
-    if not _safe_public_url(url):
+    # download_bytes validates the scheme, resolves DNS, rejects private
+    # addresses and validates every redirect hop. It also bounds the body.
+    try:
+        validate_public_url(url)
+    except UnsafeUrl:
         return None
     try:
-        response = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=30)
-    except requests.RequestException:
+        data = download_bytes(url, max_bytes=1_500_000, timeout=30)
+    except Exception:
         return None
-    if response.status_code != 200:
-        return None
-    content_type = response.headers.get("content-type", "")
-    if "text/html" not in content_type and "text/plain" not in content_type and "application/xhtml" not in content_type:
-        return None
-    raw = response.text[:1_200_000]
+    raw = data.decode("utf-8", errors="replace")[:1_200_000]
     title_match = re.search(r"<title[^>]*>(.*?)</title>", raw, flags=re.I | re.S)
     title = html.unescape(re.sub(r"<[^>]+>", " ", title_match.group(1))).strip() if title_match else ""
     raw = re.sub(r"<script\b.*?</script>|<style\b.*?</style>|<noscript\b.*?</noscript>", " ", raw, flags=re.I | re.S)
@@ -401,7 +395,7 @@ def fetch_primary_text(url: str) -> dict[str, str] | None:
     text = re.sub(r"\s+", " ", text).strip()
     if len(text) < 700:
         return None
-    return {"url": response.url, "title": title[:240], "text": text[:12_000]}
+    return {"url": url, "title": title[:240], "text": text[:12_000]}
 
 
 def synthesize_brief(

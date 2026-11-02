@@ -484,14 +484,36 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
         # cannot carry long text at all (caption ceiling is 1024 chars), so
         # publishing as a photo would silently cost the story.
         preview_url = image_url or telegraph_url or str(candidate.get("url") or "")
-        sent = telegram.send_project(
-            chat_id,
-            text_html,
-            preview_url=preview_url,
-            github_url=str(candidate.get("url") or ""),
-            telegraph_url=telegraph_url,
-            homepage_url=str(candidate.get("homepage") or ""),
-        )
+        try:
+            sent = telegram.send_project(
+                chat_id,
+                text_html,
+                preview_url=preview_url,
+                github_url=str(candidate.get("url") or ""),
+                telegraph_url=telegraph_url,
+                homepage_url=str(candidate.get("homepage") or ""),
+            )
+        except Exception as exc:  # noqa: BLE001 - one bad candidate must not block the queue
+            # A Telegram error (or a timeout after the message was sent)
+            # leaves the candidate at the head of the queue. Every later
+            # slot would pick it again, burn a Gemini call and create
+            # another Telegraph page. Remove it and record it for a human.
+            error = sanitize(str(exc))[:400]
+            store.pop_queue_candidate(key)
+            store.mark_seen(candidate, "publish_error")
+            store.add_dead_letter(
+                {
+                    "repo": key,
+                    "platform": "telegram",
+                    "error": error,
+                    "created_at": iso_now(),
+                    "note": "removed from queue; may or may not have been sent",
+                }
+            )
+            store.event("publish_failed", repo=key, error=error, candidate_removed=True)
+            store.save()
+            logger.warning("Publish failed for %s; candidate removed: %s", key, error)
+            continue
         store.event("published_as_text", repo=key, preview_host=visual_host or "none")
         message_id = int(sent.get("message_id") or 0)
         due = datetime.now(timezone.utc) + timedelta(minutes=30)
@@ -513,7 +535,7 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
                 "image_url": image_url,
                 "visual_kind": effective_visual_kind,
                 "description_fp": dedup.description_fingerprint(str(candidate.get("description") or "")),
-                "readme_fp": dedup.readme_fingerprint(str(candidate.get("readme") or "")),
+                "readme_fp": dedup.readme_fingerprint(dedup.readme_for_fingerprint(candidate)),
                 "revisit_of": candidate.get("revisit_of") or "",
                 "revisit_reason": candidate.get("revisit_reason") or "",
                 "visual_host": visual_host,
@@ -526,6 +548,11 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
                 "articles": {},
             }
         )
+        if not config.is_main_target:
+            # state.json is public. Never commit the private test-channel id
+            # or its t.me/c link; the operator can find the post in Telegram.
+            record["telegram_chat_id"] = "test"
+            record["telegram_link"] = ""
         store.record_published(record)
         store.mark_seen(record, "published")
         store.data.setdefault("last_runs", {})[f"publish:{slot}"] = {
@@ -590,40 +617,50 @@ def process_crossposts(config: Config, store: StateStore) -> dict[str, Any]:
         "Facebook": config.feature_facebook,
     }
 
-    def best_of_day(platform: str) -> str:
-        """The strongest post of each day that still owes a cross-post.
+    def best_of_day() -> str:
+        """The strongest post published today, whether or not it still owes
+        a cross-post.
 
         Owner decision: three project posts a day all going to Bluesky,
         Mastodon and Facebook meant 63 cross-posts a week for 21 projects.
         That is blanket publishing, which the multi-platform agent warns
         against. Only the best-scored post of the day leaves Telegram; the
         rest stay in the channel. dev.to already worked this way.
+
+        The winner is chosen from *all* of today's posts, not only from the
+        ones that still have a pending cross-post. Otherwise the first run
+        publishes the first post, the next run sees only the second post as
+        pending and crowns it "best of the day", and so on — every post
+        eventually goes out.
         """
-        pending: dict[str, list[tuple[float, str]]] = {}
-        for record_key, record in (store.data.get("published") or {}).items():
-            info = (record.get("crossposts") or {}).get(platform) or {}
-            if info.get("status") not in {"pending", "failed"}:
-                continue
-            published_at = _parse_iso(record.get("published_at"))
-            if not published_at:
-                continue
-            pending.setdefault(published_at.date().isoformat(), []).append(
-                (float(record.get("score") or 0), record_key)
-            )
+        today = datetime.now(timezone.utc).date().isoformat()
         best_key = ""
         best_score = float("-inf")
-        for items in pending.values():
-            score, record_key = max(items)
+        for record_key, record in (store.data.get("published") or {}).items():
+            published_at = _parse_iso(record.get("published_at"))
+            if not published_at or published_at.date().isoformat() != today:
+                continue
+            score = float(record.get("score") or 0)
             if score > best_score:
                 best_score, best_key = score, record_key
         return best_key
 
-    winners = {
-        platform: best_of_day(platform) for platform, is_on in enabled.items() if is_on
-    }
+    winner = best_of_day()
+    winners = {platform: winner for platform, is_on in enabled.items() if is_on}
 
     for key, record in list(store.data.get("published", {}).items()):
         generated = record.get("generated") or {}
+        is_winner = any(winners.get(platform) == key for platform in enabled if enabled[platform])
+        if not is_winner:
+            # Mark the losers without downloading their image: the archive
+            # grows forever and the crosspost runs every 30 minutes.
+            for platform, status_info in list((record.get("crossposts") or {}).items()):
+                if platform not in enabled or not enabled[platform]:
+                    continue
+                if status_info.get("status") in {"pending", "failed"}:
+                    status_info["status"] = "held"
+                    status_info["held_reason"] = "not_best_of_day"
+            continue
         image_data, content_type = _download_record_image(record)
         for platform, status_info in list((record.get("crossposts") or {}).items()):
             if platform not in enabled:
@@ -633,11 +670,6 @@ def process_crossposts(config: Config, store: StateStore) -> dict[str, Any]:
                     status_info["status"] = "disabled"
                 continue
             if status_info.get("status") not in {"pending", "failed"}:
-                continue
-            winner = winners.get(platform) or ""
-            if winner and key != winner:
-                status_info["status"] = "held"
-                status_info["held_reason"] = "not_best_of_day"
                 continue
             due = _parse_iso(status_info.get("due_at"))
             if due and due > now:
@@ -739,6 +771,10 @@ def news_command(config: Config, store: StateStore, *, force: bool = False) -> d
 
     rejected: Counter[str] = Counter()
     unresolved: Counter[str] = Counter()
+    # Bound the worst case: a video call plus a text-only retry per entry,
+    # and a hard cap on how many entries may reach the model in one run.
+    llm_attempts = 0
+    max_llm_attempts = 3
     for entry in entries:
         allowed, reason = prefilter_entry(
             entry,
@@ -758,6 +794,10 @@ def news_command(config: Config, store: StateStore, *, force: bool = False) -> d
         # the video alone and every product claim is marked video-only.
         if not primary:
             unresolved["no_fetchable_primary_source"] += 1
+        if llm_attempts >= max_llm_attempts:
+            rejected["llm_attempt_cap"] += 1
+            break
+        llm_attempts += 1
         try:
             brief = synthesize_brief(entry, primary or {}, client, use_video=True)
             video_input = True
@@ -1085,17 +1125,25 @@ def facebook_handoff_command(config: Config, store: StateStore, *, limit: int = 
     from .content_adapters import build_Facebook_text, facebook_media_url
     from .sheets import append_rows, row_for
 
-    pending = [
-        record
-        for record in sorted(store.published_records(), key=lambda r: str(r.get("published_at") or ""))
-        if not (record.get("crossposts") or {}).get("facebook_sheet", {}).get("status") == "queued"
-    ]
-    if not pending:
-        return {"ok": True, "queued": 0, "reason": "nothing_pending"}
     if not config.feature_sheets_handoff:
         return {"ok": True, "queued": 0, "reason": "feature_disabled"}
 
-    selected = pending[:limit]
+    # The handoff takes the best post of the day, not the oldest. The old
+    # implementation sorted by published_at ascending and queued the first
+    # row, so the best project of the day could be skipped for days.
+    today = datetime.now(timezone.utc).date().isoformat()
+    candidates: list[tuple[float, dict[str, Any]]] = []
+    for record in store.published_records():
+        if (record.get("crossposts") or {}).get("facebook_sheet", {}).get("status") == "queued":
+            continue
+        published_at = _parse_iso(record.get("published_at"))
+        if not published_at or published_at.date().isoformat() != today:
+            continue
+        candidates.append((float(record.get("score") or 0), record))
+    if not candidates:
+        return {"ok": True, "queued": 0, "reason": "nothing_pending"}
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    selected = [record for _, record in candidates[:limit]]
     rows = []
     for record in selected:
         generated = record.get("generated") or {}

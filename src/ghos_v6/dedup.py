@@ -57,6 +57,19 @@ def similarity(first: str, second: str) -> float:
     return len(a & b) / min(len(a), len(b))
 
 
+#: The queue stores only this much of a README, so the fingerprint must be
+#: computed over the same prefix at save time and at check time. Hashing the
+#: full README on save and the 1200-char excerpt on check produced two
+#: different fingerprints and let renamed copies through.
+README_FINGERPRINT_CHARS = 1200
+
+
+def readme_for_fingerprint(candidate: dict[str, Any]) -> str:
+    return str(candidate.get("readme_excerpt") or candidate.get("readme") or "")[
+        :README_FINGERPRINT_CHARS
+    ]
+
+
 def readme_fingerprint(readme: str) -> str:
     """Hash of the README body without badges, images or headings' markup."""
     body = re.sub(r"!\[[^\]]*\]\([^)]*\)", " ", readme or "")
@@ -118,7 +131,7 @@ def check(
     published = store_data.get("published") or {}
     description = str(candidate.get("description") or "")
     desc_fp = description_fingerprint(description)
-    readme_fp = readme_fingerprint(str(candidate.get("readme_excerpt") or candidate.get("readme") or ""))
+    readme_fp = readme_fingerprint(readme_for_fingerprint(candidate))
 
     for other_key, record in published.items():
         same_repo = other_key == key or (

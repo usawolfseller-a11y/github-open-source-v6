@@ -62,7 +62,7 @@ Measured on the live channel, 2026-11-01:
 - [x] Weekly poll: open Sunday, `stopPoll` Thursday, tally stored
 - [x] `learn`: deterministic multipliers, clamped, written to state
 - [x] 3-post schedule; two-command cron for close+learn
-- [x] 98 tests green
+- [x] 157 tests green
 
 **Exit criteria:** all tests pass, no change to publishing target. ✅
 
@@ -184,3 +184,17 @@ split, but not while the publishing path is unproven.
   коммитится в `main` и проверяется перед коммитом. Отдельная ветка уберёт
   write-доступ к `main` из CI полностью.
 - **Перевыпуск ключей** (M5) при переезде в боевой репозиторий.
+
+---
+
+## 8. Аудит №2 (логика и эксплуатация)
+
+- **Обязательный PR review для `main`**: сейчас ruleset блокирует force-push и
+  удаление. Требование PR сломает прямые state-коммиты бота, поэтому нужен
+  bypass actor для `github-actions[bot]` или отдельная ветка state.
+- **`TELEGRAM_OWNER_CHAT_ID`** не задан: владелец не будет получать отчёты и
+  алерты. Значение нужно задать вручную в Variables.
+- **`GOOGLE_SERVICE_ACCOUNT_JSON`** отсутствует: Facebook handoff не сможет
+  писать в Sheets, пока секрет не добавлен.
+- **Изоляция декодирования картинок** в отдельном процессе с таймаутом.
+- **State в отдельной ветке** или внешнем хранилище.

@@ -160,6 +160,21 @@ in this branch:
 resetting, and the queue keeps only a 1,200-character README excerpt. See
 [`SECURITY.md`](SECURITY.md) for the full policy and known operational risks.
 
+A second audit (logic and operations) is also addressed:
+
+- A queued run syncs `origin/main` before it starts, so it cannot republish a
+  post that the previous run already committed.
+- Cross-posts are crowned from **all** of today's posts, not only from the
+  ones that still have a pending cross-post; the losers stay `held`.
+- The deterministic fallback (no Gemini) is `safety="reject"` — fail-closed.
+- A failed Telegram publish removes the candidate and records a dead-letter,
+  so one bad project cannot block the queue.
+- The README fingerprint uses the same stored 1200-char prefix at save and
+  check time.
+- `news.fetch_primary_text` is SSRF-checked and bounded; cross-post image
+  downloads happen only for the day's winner.
+- Facebook handoff runs daily at 18:00 and selects the best post of the day.
+
 ## License
 
 MIT. The channel name/branding remains the property of its owner.

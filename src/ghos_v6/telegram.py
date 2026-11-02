@@ -5,6 +5,8 @@ from typing import Any, Sequence
 
 import requests
 
+import time
+
 from .http import sanitize
 from .telegram_payload import build_buttons, build_send_message_payload
 
@@ -27,11 +29,24 @@ class TelegramClient:
     def configured(self) -> bool:
         return bool(self.bot_token)
 
+    def _post(self, url: str, **kwargs: Any) -> requests.Response:
+        """POST once, and once more after a 429 with Telegram's retry_after."""
+        response = self.session.post(url, **kwargs)
+        if response.status_code == 429:
+            try:
+                body = response.json()
+                retry_after = int(((body or {}).get("parameters") or {}).get("retry_after") or 1)
+            except ValueError:
+                retry_after = 1
+            time.sleep(min(retry_after, 30))
+            response = self.session.post(url, **kwargs)
+        return response
+
     def api(self, method: str, payload: dict[str, Any] | None = None) -> Any:
         if not self.configured:
             raise TelegramError("TELEGRAM_BOT_TOKEN is not set")
         try:
-            response = self.session.post(
+            response = self._post(
                 f"{API_BASE}/bot{self.bot_token}/{method}",
                 json=payload or {},
                 timeout=45,
@@ -178,7 +193,7 @@ class TelegramClient:
             data["reply_markup"] = _json.dumps({"inline_keyboard": list(buttons)})
         files = {"photo": (filename.rsplit(".", 1)[0] + ".jpg", photo, "image/jpeg")}
         try:
-            response = self.session.post(
+            response = self._post(
                 f"{API_BASE}/bot{self.bot_token}/sendPhoto",
                 data=data,
                 files=files,

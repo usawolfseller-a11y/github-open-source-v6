@@ -844,6 +844,11 @@ def render_project_card(
     it fills the same phone column with roughly twice the type size, but the
     horizontal card is what the channel uses.
     """
+    # A project name with a newline used to break the text layout; the
+    # exception was caught and the post silently lost its card. Flatten it.
+    candidate = dict(candidate)
+    candidate["name"] = " ".join(str(candidate.get("name") or "").split())
+    candidate["full_name"] = " ".join(str(candidate.get("full_name") or "").split())
     if _is_terminal(candidate, generated):
         return render_terminal_card(candidate, generated, output_path), "neon_terminal"
     if portrait:

@@ -73,7 +73,7 @@ def _run_scheduled(config: Config, store: StateStore, schedule: str) -> dict[str
         "10 7 * * *": lambda: publish_slot(config, store, "europe_morning"),
         "40 12 * * *": lambda: publish_slot(config, store, "europe_midday"),
         "15 17 * * *": lambda: publish_slot(config, store, "us_peak"),
-        "*/30 * * * *": lambda: process_crossposts(config, store),
+        "5,35 * * * *": lambda: process_crossposts(config, store),
         "30 13 * * *": lambda: article_of_day(config, store),
         # Daily since 2026-11-02: the video brief is a format with its own
         # slot, after the last project post, when the day's videos are out.
@@ -84,7 +84,8 @@ def _run_scheduled(config: Config, store: StateStore, schedule: str) -> dict[str
         "10 18 * * 4": lambda: close_poll_command(config, store),
         "50 19 * * *": lambda: metrics_command(config, store),
         "40 16 * * 0": lambda: report_command(config, store),
-        "15 * * * *": lambda: moderation_command(config, store),
+        "15 */3 * * *": lambda: moderation_command(config, store),
+        "0 18 * * *": lambda: facebook_handoff_command(config, store),
     }
     # Some crons must run two commands in order (close the poll, then learn
     # from the fresh tallies). Keeping them on one cron avoids a race where
@@ -119,7 +120,7 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
             return 0 if result.get("ok") else 1
         if args.command == "collect":
-            result = collect_command(config, store)
+            result = collect_command(config, store, extra_pages=args.pages)
         elif args.command == "publish":
             result = publish_slot(config, store, args.slot)
         elif args.command == "crossposts":
@@ -166,7 +167,7 @@ def main(argv: list[str] | None = None) -> int:
             raise RuntimeError(f"Unhandled command {args.command}")
         print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
         return 0
-    except BaseException as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
         message = sanitize(f"{type(exc).__name__}: {exc}")[:1200]
         logging.error("Command failed: %s", message)
         if store is not None:

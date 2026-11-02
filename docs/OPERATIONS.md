@@ -183,3 +183,20 @@ git checkout <commit> -- state/state.json
 - Dependabot, CodeQL и gitleaks включены. Не отключайте их.
 - При инциденте: `git revert` + новый релиз. Не правьте `state/state.json`
   руками при работающих кронах.
+
+### Расписание после аудита №2
+
+| Cron | Команда |
+|---|---|
+| `20 4 * * *` | collect |
+| `10 7 * * *`, `40 12 * * *`, `15 17 * * *` | publish (3 поста в день) |
+| `5,35 * * * *` | crossposts |
+| `30 13 * * *` | article of the day |
+| `10 19 * * *` | AI Brief |
+| `15 */3 * * *` | moderation |
+| `0 18 * * *` | Facebook handoff (make.com) |
+| `10 16 * * 0`, `10 18 * * 4`, `50 19 * * *`, `40 16 * * 0` | digest / poll / metrics / report |
+
+Перед запуском `run` делает `git fetch origin main` и `reset --hard FETCH_HEAD`,
+поэтому отложенный запуск видит свежий state. Не убирайте этот шаг: без него
+возможна повторная публикация.
