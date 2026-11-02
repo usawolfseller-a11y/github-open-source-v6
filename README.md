@@ -8,10 +8,12 @@ Autonomous, zero-cost discovery and publishing system for the
 > name and account handles belong to their owner; no GitHub brand rights
 > are claimed. Add the same disclaimer to every public account profile.
 
-> **Rollout state:** the code is production-shaped, but the repository
-> Variables lock it to a private test channel (`APP_ENV=test`,
-> `PUBLISH_TARGET=test`). It must not be pointed at the main channel until
-> the test acceptance checklist in [`docs/RUNBOOK.md`](docs/RUNBOOK.md) passes.
+> **Rollout state:** the code is production-shaped, but the repository is
+> configured for a private test channel (`APP_ENV=test`; `PUBLISH_TARGET`
+> defaults to `test` in `config.py`). `TELEGRAM_TEST_CHANNEL_ID` and
+> `TELEGRAM_OWNER_CHAT_ID` must be set in Variables before publishing; the
+> bot fails closed when they are missing. It must not be pointed at the main
+> channel until the test acceptance checklist in [`docs/RUNBOOK.md`](docs/RUNBOOK.md) passes.
 >
 > **Publishing workflows in this repository are disabled on purpose.** This
 > GitHub account is a test account; the owner's instruction was to stop
@@ -46,8 +48,9 @@ real Bluesky or Mastodon post before touching production.
   activity, community signal, README, permanent dedup and a malicious-
   topic blocklist. Legitimate dual-use security tools are labelled.
 - Uses one structured Gemini call per project for the Telegram post,
-  Telegraph/article text and social copy. A deterministic fallback keeps
-  a slot alive when Gemini is unavailable.
+  Telegraph/article text and social copy. A deterministic fallback is used
+  for surface copy when Gemini is unavailable; publishing a project requires
+  a model verdict, so the slot is skipped (fail-closed) without Gemini.
 - Publishes long Telegram text posts (up to the 4,096-character Bot API
   budget) with a large preview above the text and inline buttons.
 - Creates a Telegraph full breakdown for every published project.

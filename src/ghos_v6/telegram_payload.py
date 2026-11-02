@@ -14,8 +14,22 @@ from __future__ import annotations
 import json
 import urllib.request
 from typing import Any, Callable, Sequence
+from urllib.parse import urlparse
 
 API_BASE = "https://api.telegram.org"
+
+
+def _is_https_url(value: str) -> bool:
+    """Telegram rejects the whole sendMessage when one button URL is invalid."""
+    try:
+        parsed = urlparse(value)
+    except ValueError:
+        return False
+    return (
+        parsed.scheme == "https"
+        and bool(parsed.hostname)
+        and not any(char.isspace() for char in value)
+    )
 
 
 def build_buttons(
@@ -25,11 +39,11 @@ def build_buttons(
     homepage_url: str = "",
 ) -> list[list[dict[str, str]]]:
     row: list[dict[str, str]] = []
-    if github_url.startswith("https://"):
+    if _is_https_url(github_url):
         row.append({"text": "🔗 GitHub", "url": github_url})
-    if telegraph_url.startswith("https://"):
+    if _is_https_url(telegraph_url):
         row.append({"text": "📖 Full breakdown", "url": telegraph_url})
-    if homepage_url.startswith("https://") and homepage_url != github_url:
+    if _is_https_url(homepage_url) and homepage_url != github_url:
         row.append({"text": "🌐 Homepage", "url": homepage_url})
     return [row] if row else []
 
@@ -49,7 +63,7 @@ def build_send_message_payload(
         "parse_mode": "HTML",
         "disable_notification": disable_notification,
     }
-    if preview_url.startswith("https://"):
+    if _is_https_url(preview_url):
         payload["link_preview_options"] = {
             "url": preview_url,
             "prefer_large_media": True,

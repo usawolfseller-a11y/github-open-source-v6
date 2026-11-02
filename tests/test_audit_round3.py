@@ -18,7 +18,7 @@ class _FakeSocial:
     def __init__(self, *args, **kwargs):
         pass
 
-    def post(self, text, url="", image_data=b"", content_type="", image_alt=""):
+    def post(self, text, url="", image_data=b"", content_type="", image_alt="", idempotency_key=""):
         return {"url": "https://social.example/post/1"}
 
 

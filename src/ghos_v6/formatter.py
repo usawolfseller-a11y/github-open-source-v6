@@ -538,7 +538,7 @@ def format_project_caption(project: dict[str, Any], *, limit: int = CAPTION_LIMI
     question. The full breakdown lives behind the button.
     """
     name = _esc(str(project.get("name") or "Unknown project"))
-    hook = _clip(str(project.get("hook") or project.get("description") or ""), 190)
+    hook = _esc(_clip(str(project.get("hook") or project.get("description") or ""), 190))
     lang = str(project.get("language") or "").strip()
     lic = _license_name(project)
     activity_icon, activity_label = _activity_parts(project)

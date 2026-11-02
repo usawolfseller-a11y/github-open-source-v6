@@ -166,6 +166,10 @@ def main(argv: list[str] | None = None) -> int:
         else:  # pragma: no cover - argparse prevents this
             raise RuntimeError(f"Unhandled command {args.command}")
         print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+        # A skipped slot (e.g. gemini_unavailable) is not success: the
+        # workflow must see a non-zero exit and alert the owner.
+        if isinstance(result, dict) and result.get("ok") is False:
+            return 1
         return 0
     except Exception as exc:  # noqa: BLE001
         message = sanitize(f"{type(exc).__name__}: {exc}")[:1200]

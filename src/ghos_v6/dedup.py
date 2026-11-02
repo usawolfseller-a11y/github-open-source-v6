@@ -133,12 +133,21 @@ def check(
     desc_fp = description_fingerprint(description)
     readme_fp = readme_fingerprint(readme_for_fingerprint(candidate))
 
+    candidate_id = candidate.get("repo_id") or candidate.get("id")
     for other_key, record in published.items():
+        other_id = record.get("repo_id") or record.get("id")
         same_repo = other_key == key or (
-            candidate.get("repo_id") and str(other_key) == f"id:{candidate['repo_id']}"
+            candidate_id is not None
+            and other_id is not None
+            and str(other_id) == str(candidate_id)
+        )
+        # Old records may not carry a fingerprint. Fall back to the stored
+        # description so a renamed/transferred repo is still caught.
+        record_desc_fp = record.get("description_fp") or description_fingerprint(
+            str(record.get("description") or "")
         )
         same_content = bool(
-            (desc_fp and desc_fp == record.get("description_fp"))
+            (desc_fp and desc_fp == record_desc_fp)
             or (readme_fp and readme_fp == record.get("readme_fp"))
             or similarity(description, str(record.get("description") or "")) >= CONTENT_SIMILARITY
         )

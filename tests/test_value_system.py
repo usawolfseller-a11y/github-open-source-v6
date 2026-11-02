@@ -177,7 +177,7 @@ def test_channel_polls_must_be_anonymous():
     from ghos_v6.polls import is_channel
 
     assert is_channel("@GitHub_Open_Source")
-    assert is_channel("-1003909350927")
+    assert is_channel("-1009999999999")
     assert not is_channel(8652931211)
 
 
@@ -572,14 +572,14 @@ def test_production_target_fails_loudly_when_the_channel_is_missing():
         telegram_bot_token="x",
         app_env="production",
         publish_target="main",
-        telegram_main_channel_id=-1002416441486,
+        telegram_main_channel_id=-1008888888888,
     )
     assert ready.is_main_target
-    assert ready.telegram_chat_id == -1002416441486
+    assert ready.telegram_chat_id == -1008888888888
     # in test mode the main channel id is ignored on purpose
     test = Config(telegram_bot_token="x", app_env="test", publish_target="test",
-                  telegram_test_channel_id=-1003909350927, telegram_main_channel_id=-1002416441486)
-    assert test.telegram_chat_id == -1003909350927
+                  telegram_test_channel_id=-1009999999999, telegram_main_channel_id=-1008888888888)
+    assert test.telegram_chat_id == -1009999999999
 
 
 def test_every_cron_in_the_workflow_has_a_route_in_the_code():
