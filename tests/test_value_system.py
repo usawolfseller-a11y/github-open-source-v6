@@ -311,3 +311,33 @@ def test_queue_is_a_pipeline_not_a_daily_list():
     assert names.count("old/r3") == 1
     assert "old/r1" in names             # yesterday's survivors are kept
     assert "old/r0" not in names         # published is not resurrected
+
+
+def test_gemini_is_called_once_per_published_post_not_per_candidate():
+    """Quota rule: deterministic ranking decides first, Gemini only writes
+    the post that is actually going out. Generating copy for the whole
+    queue would burn ~28 calls a run for ~25 unused texts."""
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parents[1] / "src" / "ghos_v6" / "pipeline.py").read_text(encoding="utf-8")
+    body = source.split("def publish_slot(")[1].split("\ndef ")[0]
+    # one call site inside the slot, after selection
+    assert body.count("generate_project_content(") == 1
+    assert body.index("select_candidate(") < body.index("generate_project_content(")
+    # and the retry budget is bounded, not 10
+    assert "max_attempts = 4" in body
+    assert "while attempts < max_attempts" in body
+
+
+def test_queue_stays_a_week_of_fuel_and_readme_does_not_ride_along():
+    """State is committed on every run: 14 KB of README per queued candidate
+    made a 700 KB file. The queue keeps an excerpt only, and stays ~a week
+    and a half of slots."""
+    from pathlib import Path
+
+    pipeline = (Path(__file__).resolve().parents[1] / "src" / "ghos_v6" / "pipeline.py").read_text(encoding="utf-8")
+    state = (Path(__file__).resolve().parents[1] / "src" / "ghos_v6" / "state.py").read_text(encoding="utf-8")
+    assert 'candidate["readme"] = ""' in pipeline
+    assert 'candidate["readme_excerpt"] = readme[:1_200]' in pipeline
+    assert "queue = passing[:28]" in pipeline
+    assert "merged[:40]" in state

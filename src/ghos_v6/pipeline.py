@@ -153,8 +153,12 @@ def collect_command(
         # Keep the committed queue reasonably small; Gemini gets enough
         # README context without storing whole repositories in git.
         readme = str(candidate.get("readme") or "")
-        candidate["readme"] = readme[:14_000]
-        candidate["readme_excerpt"] = readme[:6_000]
+        # The README is used by the gate right here and nowhere else: the
+        # publish slot re-fetches it before generation. Keeping 14 KB per
+        # queued candidate put ~700 KB into a file that is committed on
+        # every run, so only a short excerpt survives into state.
+        candidate["readme"] = ""
+        candidate["readme_excerpt"] = readme[:1_200]
         decision = evaluate(candidate, gate_cfg)
         candidate["is_hidden_gem"] = decision.is_hidden_gem
         candidate["is_dual_use"] = decision.is_dual_use
@@ -167,7 +171,11 @@ def collect_command(
             store.mark_seen(candidate, f"rejected:{reason}")
 
     passing = rank_candidates(passing)
-    queue = passing[:35]
+    # The queue is a buffer, not a warehouse: three slots a day means a
+    # week of fuel is ~21 posts. Anything beyond that is inventory that
+    # gets stale (stars change, projects get archived) and bloats the
+    # committed state file. 28 = 9 days at the current cadence.
+    queue = passing[:28]
     store.set_queue(queue)
     store.data.setdefault("last_runs", {})["collect"] = {
         "started_at": started,
@@ -301,9 +309,14 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
     Gemini = GeminiClient(config.Gemini_api_key, config.Gemini_model)
     api = GitHubApi(config.GitHub_token)
     gate_cfg = GateConfig()
+    # One Gemini call per published post, never per queued candidate: the
+    # queue is ranked deterministically, so generating copy for projects that
+    # may never be posted would burn quota for nothing. The cap also bounds
+    # the worst case (a run of rejected candidates) to 4 calls, not 10.
+    max_attempts = 4
     attempts = 0
 
-    while attempts < 10:
+    while attempts < max_attempts:
         attempts += 1
         published_today = _today_records(store)
         candidate = select_candidate(

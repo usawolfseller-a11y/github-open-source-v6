@@ -129,8 +129,8 @@ class StateStore:
         kept = [c for c in existing if self.repo_key(c).lower() not in fresh_keys]
         # fresh first (better data), then the survivors of previous runs
         merged = fresh + kept
-        # keep the pipeline bounded: 4x the daily slot capacity is plenty
-        self.data["queue"] = merged[:120]
+        # keep the pipeline bounded: about a week and a half of slots
+        self.data["queue"] = merged[:40]
 
     def pop_queue_candidate(self, key: str) -> None:
         self.data["queue"] = [c for c in self.data.get("queue", []) if self.repo_key(c) != key]

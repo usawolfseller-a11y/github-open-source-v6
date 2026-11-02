@@ -473,6 +473,7 @@ VERIFIED_DAILY_SOURCES: tuple[SourceChannel, ...] = (
     SourceChannel("github_repos", 4.2, 20, 20, "2026-11-01", ""),
     SourceChannel("gitbless", 5.8, 19, 20, "2026-11-01", ""),
     SourceChannel("bestofgithub", 1.1, 20, 20, "2026-11-01", ""),
+    SourceChannel("github", 7.6, 19, 20, "2026-11-02", "highest volume of the set"),
 )
 
 # Dropped, with the measurement that dropped them. Kept here so nobody
