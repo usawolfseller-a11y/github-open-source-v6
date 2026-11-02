@@ -711,3 +711,28 @@ def test_only_the_best_post_of_the_day_is_crossposted():
     assert statuses["owner/evening"] == "held"
     # and held posts do not pile up as pending work for tomorrow
     assert store.data["published"]["owner/midday"]["crossposts"]["bluesky"]["held_reason"] == "not_best_of_day"
+
+
+def test_surface_lead_replaces_the_first_bullet_instead_of_stacking():
+    """Found while auditing the bodies: Mastodon inserted its own lead as an
+    extra bullet and then kept the generic key_features, so the post opened
+    with a sentence written for this platform and continued with a feature
+    list that belonged to the project, not to the sentence. The lead must
+    take the first slot, not add to the list."""
+    from ghos_v6.content_adapters import build_mastodon_text
+
+    record = {"full_name": "AprilNEA/OpenLogi", "name": "OpenLogi", "url": "https://github.com/AprilNEA/OpenLogi",
+              "description": "Native Logitech config", "language": "Rust", "stars": 24808}
+    generated = {
+        "hook": "Remap your Logitech buttons.",
+        "key_features": ["Configure multi-step workflows", "Switch per-app profiles", "Control DPI presets"],
+        "surfaces": {"mastodon_headline": "Native Logitech settings",
+                     "mastodon_lead": "Runs locally with no account and no vendor app."},
+    }
+    text = build_mastodon_text(record, generated)
+    bullets = [line for line in text.splitlines() if line.startswith("•")]
+    assert bullets[0] == "• Runs locally with no account and no vendor app."
+    # the lead must not also appear as a separate bullet below the features
+    assert sum("Runs locally with no account" in b for b in bullets) == 1
+    # and the post still carries concrete features after the lead
+    assert any("multi-step" in b for b in bullets)

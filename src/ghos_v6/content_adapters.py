@@ -466,9 +466,15 @@ def build_mastodon_text(record: dict[str, Any], generated: dict[str, Any] | None
     if lead and icon and not masto_headline:
         lead = f"{icon} {lead}"
     masto_lead = surface_field(generated, "mastodon_lead")
-    bullets = [f"• {feature}" for feature in _features(generated)[:2]]
+    features = _features(generated)
     if masto_lead:
-        bullets.insert(0, f"• {masto_lead}")
+        # The platform lead takes the first bullet slot instead of being
+        # stacked on top of the generic feature list. Otherwise the post
+        # opens with a sentence written for Mastodon and continues with a
+        # feature list that answers a question nobody asked.
+        bullets = [f"• {masto_lead}", *[f"• {feature}" for feature in features[:1]]]
+    else:
+        bullets = [f"• {feature}" for feature in features[:2]]
     if not bullets:
         detail = clip_text(_detail(record, generated), 180)
         bullets = [detail] if detail else []
