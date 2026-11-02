@@ -26,10 +26,146 @@
       "finished_at": "2026-11-01T10:59:57.999032Z",
       "repo": "morluto/rea",
       "telegram_message_id": 4
+    },
+    "publish:test": {
+      "finished_at": "2026-11-02T19:59:24.481942Z",
+      "repo": "aprilnea/openlogi",
+      "telegram_message_id": 35
     }
   },
   "news_topics": [],
+  "publish_failures": {},
   "published": {
+    "aprilnea/openlogi": {
+      "articles": {},
+      "card_style": "",
+      "category": "DevTools",
+      "contributors_count": 153,
+      "created_at": "2026-05-24T10:10:36Z",
+      "crossposts": {
+        "Facebook": {
+          "attempts": 0,
+          "due_at": "2026-11-02T20:29:24.481609+00:00",
+          "status": "disabled"
+        },
+        "bluesky": {
+          "attempts": 0,
+          "due_at": "2026-11-02T20:29:24.481609+00:00",
+          "status": "disabled"
+        },
+        "mastodon": {
+          "attempts": 0,
+          "due_at": "2026-11-02T20:29:24.481609+00:00",
+          "status": "disabled"
+        }
+      },
+      "description": "⚡️A native, local-first alternative to Logitech Options+, written in Rust 🦀 — remap buttons, DPI, and SmartShift over HID++. No account, no telemetry.",
+      "description_fp": "ca282b10b2fcb07b",
+      "forks": 898,
+      "full_name": "AprilNEA/OpenLogi",
+      "generated": {
+        "article_markdown": "## What it is\n\nOpenLogi is a native, local-first alternative to Logitech Options+, written in Rust and built on GPUI. It gives you full control over Logitech mice, keyboards, and webcams over HID++ and UVC protocols without requiring an account or telemetry.\n\n## Why it matters\n\nProprietary device configuration suites are typically heavy resource hogs that demand cloud accounts and telemetry access. Linux users are frequently left out entirely. OpenLogi solves this by providing a lightweight, transparent tool that stores all configuration inside a simple plain-text TOML file.\n\n## Key features\n\n- Configure DPI presets, report rates, and SmartShift wheel behavior without an active internet connection.\n- Define per-application profiles that automatically switch based on the currently focused app.\n- Assign actions rings, separate tap and hold bindings, or multi-step macros to mouse buttons.\n- Control Litra lighting power, brightness, and color temperature directly from your desktop.\n- Manage UVC webcam settings and live previews with automatic release of the hardware stream.\n\n## Quick start\n\nTo install OpenLogi from source using Cargo, run:\n\n```bash\ncargo install openlogi\n```\n\n## Who should try it\n\nThis tool is ideal for developers, Linux desktop users, and privacy-conscious power users who rely on Logitech hardware and want to ditch bloated companion software.\n\n## Verdict\n\nAn essential utility for anyone tired of proprietary mouse software, provided you are comfortable with software still under active development.",
+        "article_title": "OpenLogi: Native Local-First Logitech Configuration for Linux and macOS",
+        "card_hook": "Logitech options without bloat",
+        "card_subline": "A native, local-first control panel for Logitech gear written in Rust",
+        "category": "DevTools",
+        "discussion_question": "Which Logitech mouse feature do you miss most when using Linux?",
+        "hook": "Remap Logitech mice and keyboards on Linux, macOS, and Windows via an open-source Rust utility without telemetry.",
+        "key_features": [
+          "Configure DPI presets, report rates, and SmartShift wheel behavior without an active internet connection",
+          "Define per-application profiles that automatically switch based on the currently focused app",
+          "Assign actions rings, separate tap and hold bindings, or multi-step macros to mouse buttons",
+          "Control Litra lighting power, brightness, and color temperature directly from your desktop",
+          "Manage UVC webcam settings and live previews with automatic release of the hardware stream"
+        ],
+        "llm_used": true,
+        "quick_start": "cargo install openlogi",
+        "safety": "ok",
+        "safety_reason": "Legitimate open-source hardware configuration tool.",
+        "scene": "You plug an MX Master into your Linux workstation or a clean macOS setup, only to realize the vendor configuration suite requires an account, telemetry, and hundreds of megabytes of RAM.",
+        "social_text": "Tired of heavy vendor apps for your mouse? Control Logitech gear locally with a native Rust utility.",
+        "summary": "OpenLogi talks directly to Logitech hardware over HID++ and UVC protocols, bypassing proprietary companion suites entirely. Built using a native Rust stack with GPUI, it stores all configurations in a plain-text TOML file that can be easily version-controlled or synced between machines. It exposes both a low-overhead GUI and a CLI automation API for managing device settings.",
+        "surfaces": {
+          "Facebook_body": "Are you tired of heavy background software running just to change your mouse settings or adjust your desk lighting? Many computer accessories require bulky programs that track your data or fail to work properly on certain operating systems. This open-source utility lets you take full control of your mouse, keyboard, and connected accessories without needing an internet connection or an account. You can easily adjust pointer speeds, program custom button actions, and manage your device settings from a clean, lightweight interface. It works by communicating directly with your hardware behind the scenes, cutting out unnecessary bloat and keeping all your configuration settings saved securely in a simple text file on your computer. This makes it easy to back up your preferences or move them to another machine. It is ideal for power users, developers, and anyone who wants a fast, private way to manage their desktop peripherals without corporate software getting in the way.",
+          "Facebook_headline": "Control your mouse and keyboard settings easily",
+          "Facebook_lead": "Tired of heavy background software just to change your mouse settings? This lightweight alternative lets you customize buttons and lighting completely offline.",
+          "bluesky_headline": "Remap your mouse without bloated software",
+          "bluesky_lead": "Control your mouse buttons, DPI, and lighting locally on any major operating system without an account.",
+          "devto_body": "## What it is OpenLogi is an open-source, local-first configuration utility written in Rust that allows users to manage Logitech mice, keyboards, and lighting accessories on Linux, macOS, and Windows. It serves as an alternative to proprietary suites like Logitech Options+, communicating directly with hardware over HID++ and UVC protocols without requiring telemetry or an internet connection. ## How it works The project leverages a native Rust stack built with GPUI to provide a low-overhead graphical user interface as well as a command-line automation interface. Instead of storing configurations in opaque registry keys or cloud databases, it writes all settings to a plain-text TOML file, making it easy to version-control or sync across machines. ## Key features - Configure DPI presets, report rates, and SmartShift wheel behavior offline - Define per-application profiles that switch based on the focused app - Assign custom actions, tap-and-hold bindings, and multi-step macros - Control Litra lighting power, brightness, and color temperature - Manage UVC webcam settings with automatic stream release ## Getting started To run the project from source, ensure you have the Rust toolchain installed. Clone the repository and build the application using Cargo: ```bash git clone https://github.com/AprilNEA/OpenLogi.git cd OpenLogi cargo build --release ``` ## When not to use it While functional, the software is still under active development. If you rely on rock-solid stability for mission-critical enterprise setups or prefer official vendor support, you may want to wait for more mature releases.",
+          "mastodon_headline": "An open-source Rust utility for Logitech hardware",
+          "mastodon_lead": "Bypass proprietary companion suites with a native app that talks directly to your hardware via HID and stores settings in plain text.",
+          "seo_description": "Remap Logitech mice and keyboards on Linux, macOS, and Windows with an open-source Rust utility. No accounts, no telemetry, and fully local configs.",
+          "seo_query": "open-source alternative to logitech options",
+          "seo_title": "Open-source alternative to Logitech Options - OpenLogi",
+          "telegraph_angle": "Explain the architectural shift from proprietary companion apps to direct hardware communication via open protocols, focusing on privacy and local-first configuration."
+        },
+        "tension": "Official companion apps drain system resources, force unwanted cloud sign-ins, and completely shut out Linux users from accessing hardware features they paid for.",
+        "turn": "OpenLogi replaces the bloated vendor stack with a lightweight, native utility that runs anywhere, respects your privacy, and keeps your settings in a flat text file.",
+        "verdict": "An essential utility for anyone tired of proprietary mouse software, provided you are comfortable with software still under active development.",
+        "who_for": "Developers and power users trapped on Linux or bloated desktop environments who want full control over their Logitech peripherals.",
+        "why_now": "Logitech's official configuration software remains heavy, closed-source, and absent on Linux, leaving users without a native way to configure advanced device features."
+      },
+      "homepage": "https://openlogi.org",
+      "id": 1248194723,
+      "image_url": "https://i.ibb.co/ZPjP1SK/aprilnea-openlogi-readme-preview-9a90bd36af17.jpg",
+      "is_dual_use": false,
+      "is_hidden_gem": false,
+      "language": "Rust",
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "node_id": "MDc6TGljZW5zZTI=",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0"
+      },
+      "media_urls": [
+        "https://assets.openlogi.org/screenshots/macos/light/devices-grid.png",
+        "https://assets.openlogi.org/screenshots/macos/light/cards/easy-switch.png",
+        "https://assets.openlogi.org/screenshots/macos/light/cards/buttons.png",
+        "https://assets.openlogi.org/screenshots/macos/light/cards/actions-ring.png",
+        "https://assets.openlogi.org/screenshots/macos/light/cards/keys.png",
+        "https://assets.openlogi.org/screenshots/macos/light/cards/dpi.png",
+        "https://assets.openlogi.org/screenshots/macos/light/cards/smartshift.png",
+        "https://assets.openlogi.org/screenshots/macos/light/cards/scrolling.png"
+      ],
+      "name": "OpenLogi",
+      "open_issues": 620,
+      "published_at": "2026-11-02T19:59:24.481632Z",
+      "pushed_at": "2026-11-02T17:00:06Z",
+      "readme_fp": "799567fc23cf3602",
+      "repo_id": 1248194723,
+      "revisit_of": "",
+      "revisit_reason": "",
+      "score": 86.778,
+      "slot": "test",
+      "sources": [
+        "github_search"
+      ],
+      "stars": 24963,
+      "telegram_chat_id": "test",
+      "telegram_link": "",
+      "telegram_message_id": 35,
+      "telegraph_url": "https://telegra.ph/OpenLogi-Native-Local-First-Logitech-Configuration-for-Linux-and-macOS-11-02",
+      "topics": [
+        "dpi",
+        "gpui",
+        "hid",
+        "hidpp",
+        "local-first",
+        "logitech",
+        "logitech-mouse",
+        "logitech-options",
+        "mouse-remapping",
+        "mx-master",
+        "privacy",
+        "rust",
+        "smartshift"
+      ],
+      "updated_at": "2026-11-02T19:38:03Z",
+      "url": "https://github.com/AprilNEA/OpenLogi",
+      "visual_host": "imgbb",
+      "visual_kind": "readme"
+    },
     "graphify-labs/graphify": {
       "articles": {},
       "card_style": "",
@@ -628,71 +764,6 @@
       ],
       "updated_at": "2026-11-01T10:14:03Z",
       "url": "https://github.com/t8y2/dbx"
-    },
-    {
-      "archived": false,
-      "contributors_count": 147,
-      "created_at": "2026-05-24T10:10:36Z",
-      "default_branch": "master",
-      "description": "⚡️A native, local-first alternative to Logitech Options+, written in Rust 🦀 — remap buttons, DPI, and SmartShift over HID++. No account, no telemetry.",
-      "disabled": false,
-      "fork": false,
-      "forks": 892,
-      "forks_count": 892,
-      "full_name": "AprilNEA/OpenLogi",
-      "has_readme": true,
-      "homepage": "https://openlogi.org",
-      "id": 1248194723,
-      "is_dual_use": false,
-      "is_hidden_gem": false,
-      "language": "Rust",
-      "license": {
-        "key": "apache-2.0",
-        "name": "Apache License 2.0",
-        "node_id": "MDc6TGljZW5zZTI=",
-        "spdx_id": "Apache-2.0",
-        "url": "https://api.github.com/licenses/apache-2.0"
-      },
-      "media_urls": [
-        "https://assets.openlogi.org/screenshots/macos/light/devices-grid.png",
-        "https://assets.openlogi.org/screenshots/macos/light/cards/easy-switch.png",
-        "https://assets.openlogi.org/screenshots/macos/light/cards/buttons.png",
-        "https://assets.openlogi.org/screenshots/macos/light/cards/actions-ring.png",
-        "https://assets.openlogi.org/screenshots/macos/light/cards/keys.png",
-        "https://assets.openlogi.org/screenshots/macos/light/cards/dpi.png",
-        "https://assets.openlogi.org/screenshots/macos/light/cards/smartshift.png",
-        "https://assets.openlogi.org/screenshots/macos/light/cards/scrolling.png"
-      ],
-      "name": "OpenLogi",
-      "open_issues": 604,
-      "open_issues_count": 604,
-      "pushed_at": "2026-11-01T06:40:47Z",
-      "readme_excerpt": "> [!WARNING]\n> **OpenLogi is under active development** and not yet stable — features and config may still change. Give the repo a **Star** ⭐ and **Watch** 👀 it to get notified when a new release lands.\n\n<p align=\"center\">\n    <img src=\"https://assets.openlogi.org/brand/openlogi-icon.png\" width=\"138\" alt=\"OpenLogi\"/>\n</p>\n\n<h1 align=\"center\">OpenLogi</h1>\n<p align=\"center\"><strong>⚡️ A native, local-first alternative to Logitech Options+, written in Rust 🦀<br/>Unlock the full capabilities of Logitech mice, keyboards, and webcams over HID++ and UVC</strong></p>\n\n<div align=\"center\">\n    <a href=\"https://github.com/AprilNEA/OpenLogi/releases/latest\" target=\"_blank\">\n    <img alt=\"GitHub release\" src=\"https://img.shields.io/github/v/release/AprilNEA/OpenLogi?style=flat\"></a>\n    <a href=\"https://github.com/AprilNEA/OpenLogi/releases\" target=\"_blank\">\n    <img alt=\"GitHub downloads\" src=\"https://img.shields.io/github/downloads/AprilNEA/OpenLogi/total.svg?style=flat\"></a>\n    <a href=\"https://github.com/AprilNEA/OpenLogi/commits\" target=\"_blank\">\n    <img alt=\"GitHub commit\" src=\"https://img.shields.io/github/commit-activity/m/AprilNEA/OpenLogi?style=flat\"></a>\n    <a href=\"#license\">\n ",
-      "repo_id": 1248194723,
-      "score": 86.778,
-      "source_name": "github_search",
-      "sources": [
-        "github_search"
-      ],
-      "stargazers_count": 24808,
-      "stars": 24808,
-      "topics": [
-        "dpi",
-        "gpui",
-        "hid",
-        "hidpp",
-        "local-first",
-        "logitech",
-        "logitech-mouse",
-        "logitech-options",
-        "mouse-remapping",
-        "mx-master",
-        "privacy",
-        "rust",
-        "smartshift"
-      ],
-      "updated_at": "2026-11-01T10:17:52Z",
-      "url": "https://github.com/AprilNEA/OpenLogi"
     },
     {
       "archived": false,
@@ -2145,8 +2216,8 @@
     "aprilnea/openlogi": {
       "first_seen_at": "2026-11-01T10:20:50.580175Z",
       "full_name": "AprilNEA/OpenLogi",
-      "last_decision": "queued",
-      "last_seen_at": "2026-11-01T10:20:50.580177Z",
+      "last_decision": "published",
+      "last_seen_at": "2026-11-02T19:59:24.481931Z",
       "repo_id": 1248194723,
       "sources": [
         "github_search"
@@ -3013,5 +3084,6 @@
       ]
     }
   },
+  "suppressed": {},
   "version": 1
 }
