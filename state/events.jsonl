@@ -22,3 +22,5 @@
 {"command": "article-update", "error": "PlatformError: dev.to HTTP 429: Retry later\n", "ts": "2026-11-03T10:32:45.914279Z", "type": "command_failed"}
 {"deleted": 0, "ts": "2026-11-03T10:35:20.207141Z", "type": "moderation_completed", "updates": 0}
 {"repo": "horizon-rust/horizon", "ts": "2026-11-03T10:36:44.630528Z", "type": "article_recreated", "url": "https://dev.to/githubopensource/minecraft-in-rust-open-source-horizon-engine-4774"}
+{"preview_host": "imgbb", "repo": "kajisho5/ffmpeg-skill", "ts": "2026-11-03T10:38:11.894742Z", "type": "published_as_text"}
+{"repo": "kajisho5/ffmpeg-skill", "score": 93.385, "telegram_message_id": 40, "telegraph_url": "https://telegra.ph/ffmpeg-skill-Local-Video-Editor-and-MCP-Server-for-AI-Coding-Agents-11-03", "ts": "2026-11-03T10:38:11.895083Z", "type": "project_published"}

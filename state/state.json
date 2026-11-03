@@ -38,6 +38,11 @@
       "repo": "h4ckf0r0day/obscura",
       "telegram_message_id": 5
     },
+    "publish:layout_smoke": {
+      "finished_at": "2026-11-03T10:38:11.895159Z",
+      "repo": "kajisho5/ffmpeg-skill",
+      "telegram_message_id": 40
+    },
     "publish:manual": {
       "finished_at": "2026-11-01T10:59:57.999032Z",
       "repo": "morluto/rea",
@@ -535,6 +540,129 @@
       "visual_host": "imgbb",
       "visual_kind": "readme"
     },
+    "kajisho5/ffmpeg-skill": {
+      "articles": {},
+      "card_style": "editorial_daily",
+      "category": "DevTools",
+      "contributors_count": 10,
+      "created_at": "2026-09-03T14:33:38Z",
+      "crossposts": {
+        "bluesky": {
+          "attempts": 0,
+          "due_at": "2026-11-03T18:00:00+00:00",
+          "status": "pending"
+        }
+      },
+      "description": "Local video editor for coding agents: 42 FFmpeg tools with a machine-readable contract and an MCP server, for Claude Code, Cursor and Codex. Cut, captions, reframe, loudness, platform exports. No cloud, no API keys.",
+      "description_fp": "0d1bf7665adfce8f",
+      "forks": 348,
+      "full_name": "kajisho5/ffmpeg-skill",
+      "generated": {
+        "article_markdown": "## What it is\n\n`ffmpeg-skill` is an agent skill and Model Context Protocol server designed to give coding assistants like Claude Code, Cursor, and Codex direct control over local media processing. Rather than forcing an LLM to guess raw shell strings, it provides 42 typed tools that execute through standard Python scripts backed by FFmpeg.\n\n## Why it matters\n\nLLMs frequently struggle with media manipulation because they lack context about local file parameters and often omit necessary verification steps. This package bridges that gap by establishing a predictable execution contract. Every task follows a disciplined lifecycle of probing the source file, performing a precise operation, and validating the final output against expected specifications.\n\n## Key features\n\n- Access 42 distinct tools covering cuts, silence removal, subtitle burning, and audio loudness normalization.\n- Expose core capabilities via an MCP server with configurable full-listing modes.\n- Generate runtime input schemas directly from underlying Python argument parsers to prevent documentation drift.\n- Operate entirely offline without external API keys, accounts, or cloud round-trips.\n\n## Quick start\n\n```bash\nsudo apt install ffmpeg\nnpx ffmpeg-skill\nnpx ffmpeg-skill doctor\n```\n\n## Who should try it\n\nDevelopers who regularly build automated video pipelines or use AI coding agents to handle multimedia assets will find this tool immensely practical. It removes the guesswork from script generation and keeps sensitive media processing strictly on your local machine.\n\n## Verdict\n\nA well-architected bridge between AI agents and local media processing. If you work with video files and use MCP-compatible assistants, it is a straightforward addition to your workflow.",
+        "article_title": "ffmpeg-skill: Local Video Editor and MCP Server for AI Coding Agents",
+        "card_hook": "Local video editor for coding agents",
+        "card_subline": "Cut, caption, and transcode media locally using 42 FFmpeg tools and an MCP server",
+        "category": "DevTools",
+        "discussion_question": "Which coding agent interface do you use most often for local automation tasks?",
+        "hook": "Give your coding agent local FFmpeg capabilities with 42 typed tools and zero cloud dependencies.",
+        "key_features": [
+          "Run 42 local FFmpeg tools spanning cuts, subtitles, audio dynamics, and HDR conversion",
+          "Expose an MCP server with a core toolset that expands dynamically via environment variables",
+          "Generate command line arguments and schemas directly from shared Python argparse parsers",
+          "Verify operations automatically through integrated probe and check routines",
+          "Execute entirely offline without requiring cloud services, accounts, or API keys"
+        ],
+        "llm_used": true,
+        "quick_start": "npx ffmpeg-skill",
+        "safety": "ok",
+        "safety_reason": "The repository is a legitimate local developer tool and MCP server for interacting with FFmpeg.",
+        "scene": "You ask your coding agent to trim a video recording, and it immediately writes a fragile shell command with guessed frame rates and incorrect codec flags.",
+        "social_text": "Give your coding agent local video editing capabilities with 42 typed FFmpeg tools and zero cloud dependencies.",
+        "summary": "This package integrates local media processing directly into coding agents by wrapping FFmpeg in a structured set of Python scripts and an MCP server. It enforces a strict operational loop where the agent first probes media properties, executes an explicit transformation command, and then verifies the resulting file. The MCP interface exposes these tools dynamically while maintaining a lightweight context footprint for the connected client.",
+        "surfaces": {
+          "Facebook_body": "Automating video and audio tasks within your AI assistant is now much easier. Instead of relying on expensive cloud services or writing complex conversion scripts from scratch, you can let your coding assistant handle media processing directly on your computer.\n\nThis project wraps standard media tools into structured functions that your assistant can run locally. The system follows a careful loop: it first checks the properties of your media file, runs the specific transformation you requested, and then automatically verifies that the output file is correct.\n\nEverything runs completely offline on your own machine. There are no cloud accounts to set up, no subscription fees, and no file size limits imposed by external servers. You keep full control over your media files while saving time on routine editing tasks.\n\nThis utility is designed specifically for developers and creators who use AI coding assistants and want to automate local video and audio workflows without sending sensitive files to third-party servers.",
+          "Facebook_headline": "Give your AI assistant video editing skills",
+          "Facebook_lead": "Process audio and video files directly inside your coding assistant without uploading anything to the cloud or paying for external services.",
+          "bluesky_headline": "Let your coding assistant edit videos locally",
+          "bluesky_lead": "Add 42 local media tools to your AI coding assistant with zero cloud dependencies.",
+          "devto_body": "## What it is\n\nffmpeg-skill is an open-source Python package that integrates local media processing directly into AI coding assistants. By wrapping standard command-line media tools in a structured set of typed functions and a Model Context Protocol server, it allows assistants like Claude Code or Cursor to cut, convert, and inspect audio and video files locally.\n\n## How it works\n\nThe package exposes 42 distinct tools that map to standard media operations. It enforces a strict operational loop: the agent probes media properties, executes an explicit transformation command, and verifies the resulting file. Commands and schemas are generated dynamically from shared Python argparse parsers.\n\n## Key features\n\n- 42 local media tools covering cuts, subtitles, audio dynamics, and HDR conversion.\n- Dynamic MCP server that expands its toolset via environment variables.\n- Automated verification routines through integrated probe and check commands.\n- 100 percent offline execution with zero cloud dependencies or API keys.\n\n## Getting started\n\nEnsure you have Python and FFmpeg installed on your system path. Clone the repository and install the package:\n\n```bash\ngit clone https://github.com/kajisho5/ffmpeg-skill.git\ncd ffmpeg-skill\npip install .\n```\n\nConfigure your MCP client to point to the local server instance to begin using the media tools within your coding assistant.\n\n## When not to use it\n\nDo not use this package if you do not have FFmpeg installed on your system path, or if you are not using an MCP-compatible AI coding assistant for local workflows.",
+          "seo_description": "Integrate 42 local FFmpeg tools into your AI coding assistant with zero cloud dependencies. An open-source Python package for automated media workflows.",
+          "seo_query": "local ffmpeg tools for ai coding assistants",
+          "seo_title": "Local FFmpeg tools for AI coding assistants - ffmpeg-skill",
+          "telegraph_angle": "Explain the architectural benefits of giving local CLI tools standardized machine-readable contracts for AI coding assistants."
+        },
+        "tension": "The generated command fails silently, corrupts the container format, or re-encodes a stream that only needed a fast lossless copy.",
+        "turn": "This skill provides your agent with typed FFmpeg tools and a mandatory probe-and-verify workflow, though it still relies on you having FFmpeg installed locally.",
+        "verdict": "An essential utility for anyone building automated media workflows with Claude Code or Cursor, provided you already have FFmpeg on your path.",
+        "who_for": "Developers using AI coding assistants who need to automate video and audio processing tasks locally.",
+        "why_now": "The rise of MCP-compatible coding agents makes it practical to give local CLI tools standardized machine-readable contracts."
+      },
+      "homepage": "https://www.npmjs.com/package/ffmpeg-skill",
+      "id": 1356077516,
+      "image_url": "https://i.ibb.co/chXv98y2/kajisho5-ffmpeg-skill-preview-74ec2f255a09.jpg",
+      "is_dual_use": false,
+      "is_hidden_gem": false,
+      "language": "Python",
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "node_id": "MDc6TGljZW5zZTEz",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit"
+      },
+      "media_urls": [
+        "https://raw.githubusercontent.com/kajisho5/ffmpeg-skill/main/docs/demos/captions_pop_karaoke.gif",
+        "https://raw.githubusercontent.com/kajisho5/ffmpeg-skill/main/docs/demos/reframe_crop.gif",
+        "https://raw.githubusercontent.com/kajisho5/ffmpeg-skill/main/docs/demos/silence_removal.gif",
+        "https://raw.githubusercontent.com/kajisho5/ffmpeg-skill/main/docs/demos/loudness.gif",
+        "https://raw.githubusercontent.com/kajisho5/ffmpeg-skill/main/brand/app-icon.png",
+        "https://raw.githubusercontent.com/kajisho5/ffmpeg-skill/main/brand/logo/ffmpeg-skill-wordmark-black.svg"
+      ],
+      "name": "ffmpeg-skill",
+      "open_issues": 5,
+      "published_at": "2026-11-03T10:38:11.894911Z",
+      "pushed_at": "2026-10-31T22:51:32Z",
+      "readme_fp": "49501740e5f25cc1",
+      "repo_id": 1356077516,
+      "revisit_of": "",
+      "revisit_reason": "",
+      "score": 93.385,
+      "slot": "layout_smoke",
+      "sources": [
+        "telegram:open_source_friend"
+      ],
+      "stars": 4419,
+      "telegram_chat_id": "test",
+      "telegram_link": "",
+      "telegram_message_id": 40,
+      "telegraph_url": "https://telegra.ph/ffmpeg-skill-Local-Video-Editor-and-MCP-Server-for-AI-Coding-Agents-11-03",
+      "topics": [
+        "agent-skills",
+        "ai-agents",
+        "audio-processing",
+        "captions",
+        "claude-code",
+        "codex",
+        "coding-agent",
+        "cursor",
+        "ffmpeg",
+        "loudness-normalization",
+        "mcp",
+        "mcp-server",
+        "model-context-protocol",
+        "python",
+        "subtitles",
+        "transcoding",
+        "video",
+        "video-editing",
+        "video-processing",
+        "whisper"
+      ],
+      "updated_at": "2026-11-03T10:34:10Z",
+      "url": "https://github.com/kajisho5/ffmpeg-skill",
+      "visual_host": "imgbb",
+      "visual_kind": "card"
+    },
     "morluto/rea": {
       "articles": {},
       "card_style": "",
@@ -766,80 +894,6 @@
     }
   },
   "queue": [
-    {
-      "archived": false,
-      "contributors_count": 10,
-      "created_at": "2026-09-03T14:33:38Z",
-      "default_branch": "main",
-      "description": "Local video editor for coding agents: 42 FFmpeg tools with a machine-readable contract and an MCP server, for Claude Code, Cursor and Codex. Cut, captions, reframe, loudness, platform exports. No cloud, no API keys.",
-      "disabled": false,
-      "fork": false,
-      "forks": 348,
-      "forks_count": 348,
-      "full_name": "kajisho5/ffmpeg-skill",
-      "has_readme": true,
-      "homepage": "https://www.npmjs.com/package/ffmpeg-skill",
-      "id": 1356077516,
-      "is_dual_use": false,
-      "is_hidden_gem": false,
-      "language": "Python",
-      "license": {
-        "key": "mit",
-        "name": "MIT License",
-        "node_id": "MDc6TGljZW5zZTEz",
-        "spdx_id": "MIT",
-        "url": "https://api.github.com/licenses/mit"
-      },
-      "media_urls": [
-        "https://raw.githubusercontent.com/kajisho5/ffmpeg-skill/main/docs/demos/captions_pop_karaoke.gif",
-        "https://raw.githubusercontent.com/kajisho5/ffmpeg-skill/main/docs/demos/reframe_crop.gif",
-        "https://raw.githubusercontent.com/kajisho5/ffmpeg-skill/main/docs/demos/silence_removal.gif",
-        "https://raw.githubusercontent.com/kajisho5/ffmpeg-skill/main/docs/demos/loudness.gif",
-        "https://raw.githubusercontent.com/kajisho5/ffmpeg-skill/main/brand/app-icon.png",
-        "https://raw.githubusercontent.com/kajisho5/ffmpeg-skill/main/brand/logo/ffmpeg-skill-wordmark-black.svg"
-      ],
-      "name": "ffmpeg-skill",
-      "non_software_reason": "",
-      "open_issues": 5,
-      "open_issues_count": 5,
-      "owner_repo_count": 1,
-      "pushed_at": "2026-10-31T22:51:32Z",
-      "readme": "",
-      "readme_excerpt": "<p align=\"center\">\n  <picture>\n    <source media=\"(prefers-color-scheme: dark)\" srcset=\"brand/app-icon-dark.png\">\n    <img src=\"brand/app-icon.png\" width=\"128\" alt=\"ffmpeg-skill app icon\">\n  </picture>\n</p>\n\n<p align=\"center\">\n  <picture>\n    <source media=\"(prefers-color-scheme: dark)\" srcset=\"brand/logo/ffmpeg-skill-wordmark-white.svg\">\n    <img src=\"brand/logo/ffmpeg-skill-wordmark-black.svg\" height=\"48\" alt=\"ffmpeg-skill\">\n  </picture>\n</p>\n\n<p align=\"center\"><b>Give your coding agent a video editor.</b><br>\nClaude Code, Cursor, Codex or any MCP client edits your footage with local FFmpeg, then checks its own output.<br>\nNo cloud · No API keys · Python standard library</p>\n\n<p align=\"center\">\n  <a href=\"#quick-start\"><b>Quick start</b></a> ·\n  <a href=\"docs/demos.md\">Demos</a> ·\n  <a href=\"#tools\">Tools</a> ·\n  <a href=\"#mcp\">MCP</a> ·\n  <a href=\"https://www.npmjs.com/package/ffmpeg-skill\">npm</a>\n</p>\n\n<p align=\"center\">\n  <a href=\"https://github.com/kajisho5/ffmpeg-skill/actions/workflows/ci.yml\"><img src=\"https://github.com/kajisho5/ffmpeg-skill/actions/workflows/ci.yml/badge.svg\" alt=\"tests\"></a>\n  <a href=\"https://www.npmjs.com/package/ffmpeg-skill\"><img src=\"https://img.s",
-      "readme_len": 80000,
-      "repo_id": 1356077516,
-      "score": 93.385,
-      "source_name": "telegram:open_source_friend",
-      "sources": [
-        "telegram:open_source_friend"
-      ],
-      "stargazers_count": 4410,
-      "stars": 4410,
-      "topics": [
-        "agent-skills",
-        "ai-agents",
-        "audio-processing",
-        "captions",
-        "claude-code",
-        "codex",
-        "coding-agent",
-        "cursor",
-        "ffmpeg",
-        "loudness-normalization",
-        "mcp",
-        "mcp-server",
-        "model-context-protocol",
-        "python",
-        "subtitles",
-        "transcoding",
-        "video",
-        "video-editing",
-        "video-processing",
-        "whisper"
-      ],
-      "updated_at": "2026-11-03T09:06:52Z",
-      "url": "https://github.com/kajisho5/ffmpeg-skill"
-    },
     {
       "archived": false,
       "contributors_count": 170,
@@ -3416,8 +3470,8 @@
     "kajisho5/ffmpeg-skill": {
       "first_seen_at": "2026-11-03T09:18:06.899970Z",
       "full_name": "kajisho5/ffmpeg-skill",
-      "last_decision": "queued",
-      "last_seen_at": "2026-11-03T09:18:06.899972Z",
+      "last_decision": "published",
+      "last_seen_at": "2026-11-03T10:38:11.895152Z",
       "repo_id": 1356077516,
       "sources": [
         "telegram:open_source_friend"
