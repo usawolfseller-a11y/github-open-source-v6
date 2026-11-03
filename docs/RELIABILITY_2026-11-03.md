@@ -254,3 +254,10 @@ workflow, `.env.example`); удалены также Variables `FACEBOOK_PAGE_ID
 dev.to, Bluesky, Mastodon), `TELEGRAM_MAIN_CHANNEL_ID=@GitHub_Open_Source`,
 все флаги площадок включены, `Doctor`/`Publishing pipeline`/`CI`/`CodeQL`/
 `Lifecycle guard` — `active`. Расписания работают до понедельника.
+
+**Повторная проверка guard (2026-11-03):** после возврата статуса записи в
+`pending` тот же `crossposts` дал `processed: 1, published: 0, failed: 1`,
+а в `state.json` сохранилось
+`status: failed, attempts: 1, error: "Mastodon status … is not publicly
+visible (HTTP 404); check the account's moderation state"`. Ложного
+`published` больше нет; проблема аккаунта видна владельцу в логах и state.
