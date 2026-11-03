@@ -72,6 +72,8 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
      'DEFAULT_RANGE = "Sheet1!A1"', "sheet range breaks the make.com layout"),
     (".env.example", "FEATURE_SHEETS_HANDOFF=false", "FEATURE_SHEETS_HANDOFF=true",
      "documented Sheets hand-off default flipped"),
+    ("src/ghos_v6/platforms.py", "        if status_id:\n", "        if False:\n",
+     "Mastodon public read-back disabled"),
 ]
 
 COPY_ITEMS = (

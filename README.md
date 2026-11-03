@@ -21,8 +21,8 @@ Autonomous, zero-cost discovery and publishing system for the
 > secrets validates and commits the state. See [`SECURITY.md`](SECURITY.md).
 >
 > **Reliability + intent tests (2026-11-03):** CI is green on Python 3.13 —
-> **297 tests**, **65.66 % branch-inclusive coverage** (69 % lines,
-> 55 % branches) and **23/23 intentional mutations killed** by
+> **300 tests**, **65.75 % branch-inclusive coverage** (69 % lines,
+> 55 % branches) and **24/24 intentional mutations killed** by
 > `tools/mutation_check.py`. The wheel ships all 142 card icons; state
 > compaction, a weekly lifecycle guard and executable owner-rule invariants
 > are in place. Every outbound CTA points at the real production channel;

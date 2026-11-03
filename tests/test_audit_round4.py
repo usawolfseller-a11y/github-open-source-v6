@@ -111,7 +111,16 @@ def test_mastodon_uses_idempotency_key(monkeypatch):
         response._content_consumed = True
         return response
 
+    def fake_get(url, **kwargs):
+        response = requests.Response()
+        response.status_code = 200
+        response._content = b'{"id": 1}'
+        response._content_consumed = True
+        return response
+
     monkeypatch.setattr(client.session, "post", fake_post)
+    # The adapter now reads the new status back as an anonymous subscriber.
+    monkeypatch.setattr(requests, "get", fake_get)
     client.post("hello", idempotency_key="owner/repo:mastodon")
     assert captured["headers"]["Idempotency-Key"] == "owner/repo:mastodon"
 

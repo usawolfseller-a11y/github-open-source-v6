@@ -318,7 +318,32 @@ class MastodonClient:
         )
         if response.status_code not in {200, 201}:
             raise _error("Mastodon post", response)
-        return dict(response.json() or {})
+        status = dict(response.json() or {})
+        status_id = str(status.get("id") or "")
+        if status_id:
+            # A brand-new or moderated account can answer 201 with a status URL
+            # while the post is invisible to the public. Check the same
+            # unauthenticated view a subscriber has; federation can lag a
+            # couple of seconds, so try twice before calling it a failure.
+            for attempt in range(2):
+                try:
+                    public = requests.get(
+                        f"{self.base}/api/v1/statuses/{status_id}",
+                        headers={"User-Agent": USER_AGENT},
+                        timeout=30,
+                    )
+                except requests.RequestException as exc:
+                    raise PlatformError(f"Mastodon read-back failed: {exc}") from exc
+                if public.status_code == 200:
+                    break
+                if attempt == 0:
+                    time.sleep(2)
+            else:
+                raise PlatformError(
+                    f"Mastodon status {status_id} is not publicly visible "
+                    f"(HTTP {public.status_code}); check the account's moderation state"
+                )
+        return status
 
 
 class FacebookClient:

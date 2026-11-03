@@ -185,3 +185,72 @@ cancel-in-progress: false` в GitHub Actions допускает только о�
 dev.to smoke article, Facebook-handoff после добавления Secrets/Variables,
 переключение трёх Variables на `production`/`main`, остановка v5 в день
 переключения и отзыв временного PAT.
+
+---
+
+## 9. Мультиплатформенный прогон 2026-11-03 и окно до понедельника
+
+Владелец потребовал проверить **все** площадки и оставить расписания
+работать до понедельника **2026-11-09**, с одним условием: посты по-прежнему
+уходят в приватный тестовый канал, но **все исходящие ссылки и CTA должны
+вести на реальный `@GitHub_Open_Source`**.
+
+### Ссылки
+
+`content_adapters.public_telegram_link()` отфильтровывает приватные
+`t.me/c/...`, `telegram_cta_url()` и `telegram_cta_line()` возвращают
+`https://t.me/GitHub_Open_Source`, подпись в `formatter`/`news`, автор
+Telegraph и `build_devto_body` используют тот же адрес. `digest_command`
+теперь тоже берёт только публичную ссылку. Всё это закреплено в
+`tests/test_facebook_and_links.py` и в mutation gate (**24/24**).
+
+### Facebook: «непонятные переменные» удалены
+
+Выяснилось, откуда они брались: в `process_crossposts` оставалась ветка
+прямого Meta Graph API (`FacebookClient`) с `FEATURE_FACEBOOK`,
+`FACEBOOK_PAGE_ID` и `FACEBOOK_PAGE_ACCESS_TOKEN`. Это противоречит правилу
+владельца «Facebook публикует make.com из Google-таблицы». Прямой адаптер
+выведен из рабочего контура (`config.py`, `pipeline.py`, `doctor.py`, оба
+workflow, `.env.example`); удалены также Variables `FACEBOOK_PAGE_ID` и
+`FEATURE_FACEBOOK`. **Page-токен и id страницы больше не нужны.** Единственный
+флаг — `FEATURE_SHEETS_HANDOFF`, единственный новый Secret —
+`GOOGLE_SERVICE_ACCOUNT_JSON`.
+
+### Живые результаты (все в тестовом таргете)
+
+| Площадка | Результат |
+|---|---|
+| Telegram, тестовый канал | `multi_smoke` → `horizon-rust/horizon`, `published: true`, Telegraph-страница создана |
+| Bluesky | **опубликовано**: <https://bsky.app/profile/githubopensource.bsky.social/post/3mzfkqoxkao25>; публичный API подтверждает CTA на `@GitHub_Open_Source`, приватных `t.me/c/` нет |
+| Mastodon | клиент вернул HTTP 201 и URL, но статус **публично не существует** (`GET /api/v1/statuses/...` → 404, у аккаунта «Posts 0»). См. ниже |
+| dev.to | **опубликовано**: <https://dev.to/githubopensource/minecraft-in-rust-open-source-horizon-engine-3pc1>; статья содержит ссылки на реальный канал |
+| AI Brief | `ai_brief_published` в тестовый канал |
+| Telegraph | страница на каждый пост, как требует владелец |
+| Facebook / make.com | не проверялся: нет сервисного аккаунта Google |
+
+**Находка и исправление.** Mastodon может ответить 201, когда пост не виден
+подписчикам (новый/модерируемый аккаунт), а конвейер молча писал
+`status: published`. Добавлен анонимный read-back нового статуса (две
+попытки): если пост не читается публично, `MastodonClient.post` поднимает
+`PlatformError`, и кросспост уходит в `failed`/`dead_letter` вместо ложного
+успеха. Тесты и мутация на отключение этой проверки добавлены.
+
+### Что должен дать владелец, чтобы закрыть тестирование
+
+1. **Secret `GOOGLE_SERVICE_ACCOUNT_JSON`** — JSON сервисного аккаунта одной
+   строкой (передаётся только в GitHub Secrets, не в чат/файлы).
+2. **Variable `FACEBOOK_SHEETS_ID`** — id Google-таблицы.
+3. **Variable `FACEBOOK_SHEETS_RANGE`** — диапазон; дефолт `facebook!A1` уже
+   в коде, если лист называется иначе — указать свой.
+4. Расшарить таблицу на **e-mail сервисного аккаунта** с ролью «Редактор» и
+   включить сценарий **make.com**, который её читает.
+5. Проверить **Mastodon-аккаунт**: подтверждение e-mail, отсутствие
+   ограничений/модерации, видимость первого поста. Это не секрет и не код —
+   доступ владельца к аккаунту.
+6. После окна наблюдения до **2026-11-09** — решение о переключении трёх
+   Variables на `production`/`main`, остановка v5 в тот же день и отзыв PAT.
+
+Всё остальное уже есть: 7 Secrets (Telegram, Gemini, ImgBB, Telegraph,
+dev.to, Bluesky, Mastodon), `TELEGRAM_MAIN_CHANNEL_ID=@GitHub_Open_Source`,
+все флаги площадок включены, `Doctor`/`Publishing pipeline`/`CI`/`CodeQL`/
+`Lifecycle guard` — `active`. Расписания работают до понедельника.
