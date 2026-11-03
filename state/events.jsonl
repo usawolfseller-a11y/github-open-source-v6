@@ -17,3 +17,4 @@
 {"platform": "bluesky", "repo": "horizon-rust/horizon", "ts": "2026-11-03T09:49:22.633325Z", "type": "crosspost_published", "url": "https://bsky.app/profile/githubopensource.bsky.social/post/3mzfkqoxkao25"}
 {"platform": "devto", "repo": "horizon-rust/horizon", "ts": "2026-11-03T09:51:09.465778Z", "type": "article_published", "url": "https://dev.to/githubopensource/minecraft-in-rust-open-source-horizon-engine-3pc1"}
 {"Gemini_video_input": true, "official_url": "https://x.ai/news/introducing-grok-bot", "topic": "grok-bot", "ts": "2026-11-03T09:52:17.634168Z", "type": "ai_brief_published", "video_id": "Nj7rnWJE92o"}
+{"command": "article-update", "error": "PlatformError: dev.to update HTTP 404: {'error': 'not found', 'status': 404}", "ts": "2026-11-03T10:26:56.489761Z", "type": "command_failed"}
