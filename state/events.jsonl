@@ -10,3 +10,4 @@
 {"discovered": 450, "enriched": 120, "passed_gate": 66, "queued": 28, "rejections": {"description_not_english": 13, "fork": 1, "narrow:library:boilerplate": 1, "narrow:topic:dataset": 1, "narrow:topic:plugin": 1, "no_community": 19, "no_license": 29, "no_push_date": 1, "no_readme": 1, "not_software:topic:dataset": 1, "not_software:topic:music": 1, "not_software:topic:notes": 1, "not_software:topic:prompts": 1, "not_software:topic:roadmap": 1, "readme_not_english": 7, "stars<100": 7, "velocity_too_high": 1}, "ts": "2026-11-03T09:18:06.913970Z", "type": "collect_completed"}
 {"projects_7d": 5, "sent": true, "ts": "2026-11-03T09:18:51.271390Z", "type": "weekly_report"}
 {"reason": "feature_devto_disabled", "repo": "unslothai/unsloth", "ts": "2026-11-03T09:20:34.539397Z", "type": "article_skipped"}
+{"reason": "channel_not_public", "ts": "2026-11-03T09:22:18.961823Z", "type": "metrics_skipped"}
