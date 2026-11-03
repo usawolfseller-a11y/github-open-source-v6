@@ -20,3 +20,4 @@
 {"command": "article-update", "error": "PlatformError: dev.to update HTTP 404: {'error': 'not found', 'status': 404}", "ts": "2026-11-03T10:26:56.489761Z", "type": "command_failed"}
 {"command": "article-update", "error": "PlatformError: dev.to update HTTP 404: {'error': 'not found', 'status': 404}", "ts": "2026-11-03T10:30:31.075241Z", "type": "command_failed"}
 {"command": "article-update", "error": "PlatformError: dev.to HTTP 429: Retry later\n", "ts": "2026-11-03T10:32:45.914279Z", "type": "command_failed"}
+{"deleted": 0, "ts": "2026-11-03T10:35:20.207141Z", "type": "moderation_completed", "updates": 0}
