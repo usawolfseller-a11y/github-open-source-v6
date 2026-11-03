@@ -10,7 +10,7 @@ from .config import Config
 from .Gemini import GeminiClient
 from .http import sanitize
 from .news import fetch_worldofai_entries
-from .platforms import BlueskyClient, DevToClient, FacebookClient, MastodonClient
+from .platforms import BlueskyClient, DevToClient, MastodonClient
 from .sources import GitHubApi
 from .telegram import TelegramClient
 from .telegraph import TelegraphClient
@@ -41,9 +41,6 @@ def run_doctor(
         "DEV_API_KEY": bool(config.dev_api_key),
         "BLUESKY_APP_PASSWORD": bool(config.bluesky_app_password),
         "MASTODON_ACCESS_TOKEN": bool(config.mastodon_access_token),
-        # Not required: Facebook is published by make.com from a Sheet row.
-        # Kept only for the optional direct Graph API client.
-        "FACEBOOK_PAGE_ACCESS_TOKEN": bool(config.Facebook_page_access_token),
     }
     checks["env_presence"] = presence
 
@@ -207,14 +204,9 @@ def run_doctor(
         except BaseException as exc:  # noqa: BLE001
             checks["mastodon"] = {"ok": False, "error": _safe_error(exc)}
 
-    if config.Facebook_page_access_token:
-        try:
-            page = FacebookClient(config.Facebook_page_id, config.Facebook_page_access_token).verify()
-            checks["Facebook"] = {"ok": True, "id": page.get("id"), "name": page.get("name")}
-        except BaseException as exc:  # noqa: BLE001
-            checks["Facebook"] = {"ok": False, "error": _safe_error(exc)}
-    else:
-        checks["Facebook"] = {"ok": False, "skipped": "no Page token yet"}
+    # Facebook is published by make.com from a sheet row. v6 deliberately
+    # holds no Page id/token, so there is no Graph API call to verify here.
+    checks["Facebook"] = {"ok": True, "skipped": "make.com publishes from a Sheet row"}
 
     try:
         sample_candidate = {

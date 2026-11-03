@@ -218,7 +218,8 @@ split, but not while the publishing path is unproven.
   ветка state.
 - **Ручные настройки**: `PUBLISH_TARGET`, `TELEGRAM_TEST_CHANNEL_ID`,
   `TELEGRAM_OWNER_CHAT_ID`, `GOOGLE_SERVICE_ACCOUNT_JSON`,
-  `FACEBOOK_PAGE_ACCESS_TOKEN`. Токен не имеет права записи Variables/Secrets.
+  `FACEBOOK_SHEETS_ID`, `FACEBOOK_SHEETS_RANGE`. Page-токен не нужен:
+  прямой Graph API удалён 2026-11-03.
 - **Покрытие `doctor.py` (0%) и `pipeline.py` (27%)**: нужны интеграционные
   тесты с фейковыми клиентами.
 - **Шрифты**: положить TTF в `assets/fonts` или явно принять fallback Pillow

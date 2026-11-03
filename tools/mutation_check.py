@@ -59,6 +59,19 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
      "documented default contradicts the owner rule"),
     ("docs/OWNER_RULES.md", "3 поста в день", "4 поста в день",
      "documented owner decision changed"),
+    ("src/ghos_v6/content_adapters.py",
+     'TELEGRAM_CHANNEL_URL = "https://t.me/GitHub_Open_Source"',
+     'TELEGRAM_CHANNEL_URL = "https://t.me/wrong_channel"',
+     "return loop points at the wrong channel"),
+    ("src/ghos_v6/content_adapters.py",
+     'if "/c/" in link or "/+" in link or "joinchat" in link:',
+     "if False:", "private test-channel links leak into public copy"),
+    ("src/ghos_v6/pipeline.py", '"via": "make.com"', '"via": "graph.facebook.com"',
+     "Facebook hand-off attributed to the direct Graph API"),
+    ("src/ghos_v6/sheets.py", 'DEFAULT_RANGE = "facebook!A1"',
+     'DEFAULT_RANGE = "Sheet1!A1"', "sheet range breaks the make.com layout"),
+    (".env.example", "FEATURE_SHEETS_HANDOFF=false", "FEATURE_SHEETS_HANDOFF=true",
+     "documented Sheets hand-off default flipped"),
 ]
 
 COPY_ITEMS = (

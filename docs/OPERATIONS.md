@@ -69,7 +69,9 @@ PYTHONPATH=src python3 -m ghos_v6.cli news --force
 не изменился ли формат спонсорской строки у канала.
 
 **Кросс-посты не уходят.**
-Проверить `FEATURE_BLUESKY` / `FEATURE_MASTODON` / `FEATURE_FACEBOOK`.
+Проверить `FEATURE_BLUESKY` / `FEATURE_MASTODON`. Для Facebook —
+`FEATURE_SHEETS_HANDOFF` и наличие `GOOGLE_SERVICE_ACCOUNT_JSON`; Page-токен
+не нужен и в v6 не читается.
 Потом `crossposts.*.status` в записи поста: `pending` → `sent` или
 `dead_letter`.
 

@@ -108,11 +108,13 @@ credit the reporter unless they prefer to remain anonymous.
 The following still require a human with access to the production repository.
 Values are never stored in this repository.
 
-- Secret `FACEBOOK_PAGE_ACCESS_TOKEN` — a long-lived Page token for the direct
-  Meta adapter. Facebook crossposts stay disabled until it exists.
 - Secret `GOOGLE_SERVICE_ACCOUNT_JSON` and Variables `FACEBOOK_SHEETS_ID`,
-  `FACEBOOK_SHEETS_RANGE`, `FEATURE_SHEETS_HANDOFF` — required only for the
-  make.com sheet hand-off.
+  `FACEBOOK_SHEETS_RANGE`, `FEATURE_SHEETS_HANDOFF` — the only things needed
+  for Facebook. The service-account e-mail must have Editor access to the
+  sheet, and the make.com scenario must be switched on.
+- No `FACEBOOK_PAGE_ACCESS_TOKEN`, `FACEBOOK_PAGE_ID` or `FEATURE_FACEBOOK`:
+  the direct Graph API adapter was removed from the live path on 2026-11-03.
+  v6 never holds a Page token.
 - Production repository: re-issue every key. Keys for the brand accounts
   currently live in the test account's secrets.
 - Confirm the `Lifecycle guard` issues are reviewed; confirm `Budgets and

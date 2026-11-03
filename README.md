@@ -21,11 +21,13 @@ Autonomous, zero-cost discovery and publishing system for the
 > secrets validates and commits the state. See [`SECURITY.md`](SECURITY.md).
 >
 > **Reliability + intent tests (2026-11-03):** CI is green on Python 3.13 —
-> **284 tests**, **65.53 % branch-inclusive coverage** (69 % lines,
-> 55 % branches) and **18/18 intentional mutations killed** by
+> **297 tests**, **65.66 % branch-inclusive coverage** (69 % lines,
+> 55 % branches) and **23/23 intentional mutations killed** by
 > `tools/mutation_check.py`. The wheel ships all 142 card icons; state
 > compaction, a weekly lifecycle guard and executable owner-rule invariants
-> are in place. See
+> are in place. Every outbound CTA points at the real production channel;
+> Facebook is published only through make.com + a Google Sheet row (no Page
+> token, no `FEATURE_FACEBOOK`). See
 > [`docs/RELIABILITY_2026-11-03.md`](docs/RELIABILITY_2026-11-03.md).
 
 ## New here? Read these in order

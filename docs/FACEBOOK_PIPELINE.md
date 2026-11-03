@@ -33,8 +33,11 @@ ghos-v6 facebook-handoff → строка в Sheet  → make.com → Facebook Pa
 | Вы уже умеете | да | нет |
 | Картинка | URL из колонки `media_urls` | нужен публичный хост |
 
-Поэтому основной путь — hand-off. Прямой `FacebookClient` в v6 остаётся
-на случай, если Page-токен когда-нибудь появится.
+Поэтому **единственный** путь — hand-off. Прямой `FacebookClient` удалён из
+рабочего контура 2026-11-03 (`config.py`, `pipeline.py`, `doctor.py`,
+workflow): он остался в `platforms.py` только как справочная реализация.
+Флага `FEATURE_FACEBOOK` больше нет, `FACEBOOK_PAGE_ID` и
+`FACEBOOK_PAGE_ACCESS_TOKEN` не читаются и не передаются.
 
 ## Колонки
 
@@ -59,11 +62,17 @@ ghos-v6 facebook-handoff → строка в Sheet  → make.com → Facebook Pa
    - **Variable** `FACEBOOK_SHEETS_RANGE` — лист и ячейка, по умолчанию `facebook!A1`.
    - **Variable** `FEATURE_SHEETS_HANDOFF=true` (по умолчанию выключено).
 
-`FACEBOOK_PAGE_ACCESS_TOKEN` для этой схемы **не нужен**: в Facebook
-публикует make.com, а v6 только пишет строку в таблицу. Токен остаётся
-необязательным для прямого `FacebookClient` и по умолчанию выключен
-(`FEATURE_FACEBOOK=false`) — если когда-нибудь захочется публиковать мимо
-make. Пока переменная пустая, ничего не ломается и в логах тишина.
+`FACEBOOK_PAGE_ACCESS_TOKEN` и `FACEBOOK_PAGE_ID` **не нужны и не
+читаются**: в Facebook публикует make.com, а v6 только пишет строку в
+таблицу. Единственный флаг — `FEATURE_SHEETS_HANDOFF`. Прямой Graph API из
+v6 удалён, поэтому лишних «непонятных» Facebook-переменных в настройках
+больше нет.
+
+**Что должен дать владелец:** (1) JSON сервисного аккаунта одной строкой в
+Secret `GOOGLE_SERVICE_ACCOUNT_JSON`; (2) id таблицы в `FACEBOOK_SHEETS_ID`;
+(3) расшарить таблицу на e-mail этого сервисного аккаунта с ролью
+«Редактор»; (4) включить сценарий make.com, который читает лист.
+Диапазон `FACEBOOK_SHEETS_RANGE` уже имеет рабочий дефолт `facebook!A1`.
 3. Проверка без публикации:
 
 ```bash

@@ -191,15 +191,20 @@ PYTHONPATH=src python3 -m ghos_v6.cli doctor
 **Секреты** (GitHub → Settings → Secrets): `TELEGRAM_BOT_TOKEN`,
 `GEMINI_API_KEY`, `IMGBB_API_KEY`, `TELEGRAPH_ACCESS_TOKEN`,
 `DEV_API_KEY`, `BLUESKY_APP_PASSWORD`, `MASTODON_ACCESS_TOKEN`,
-`FACEBOOK_PAGE_ACCESS_TOKEN`, `GOOGLE_SERVICE_ACCOUNT_JSON`.
+`GOOGLE_SERVICE_ACCOUNT_JSON` (для make.com; пока не задан).
 
 **Переменные** (Settings → Variables): `APP_ENV`, `PUBLISH_TARGET`,
 `GITHUB_REPOSITORY`, `GEMINI_MODEL`, `TELEGRAM_MAIN_CHANNEL_ID`,
 `TELEGRAM_TEST_CHANNEL_ID`, `TELEGRAM_OWNER_CHAT_ID`,
 `TELEGRAM_SOURCE_CHANNELS`, `BLUESKY_HANDLE`, `MASTODON_INSTANCE_URL`,
-`FACEBOOK_PAGE_ID`, `FACEBOOK_SHEETS_ID`, `FACEBOOK_SHEETS_RANGE`,
+`FACEBOOK_SHEETS_ID`, `FACEBOOK_SHEETS_RANGE`,
 `FEATURE_TELEGRAPH`, `FEATURE_DEVTO`, `FEATURE_BLUESKY`, `FEATURE_MASTODON`,
-`FEATURE_FACEBOOK`, `FEATURE_AI_BRIEF`, `FEATURE_SHEETS_HANDOFF`.
+`FEATURE_AI_BRIEF`, `FEATURE_SHEETS_HANDOFF`.
+
+**Удалено 2026-11-03:** `FACEBOOK_PAGE_ID`, `FACEBOOK_PAGE_ACCESS_TOKEN`,
+`FEATURE_FACEBOOK` и легаси `FEATURE_Facebook`. Прямой Graph API выведен из
+рабочего контура: Facebook публикует make.com из строки Google-таблицы,
+поэтому Page-токен и id страницы v6 не нужны.
 
 **Никогда не печатайте значения секретов** ни в чат, ни в логи. Ошибки уже
 очищаются в `http.py::sanitize`.

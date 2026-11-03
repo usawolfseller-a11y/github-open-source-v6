@@ -149,7 +149,7 @@ def test_defaults_encode_owner_decisions(monkeypatch):
     for name in (
         "APP_ENV", "PUBLISH_TARGET", "GEMINI_MODEL", "FEATURE_TELEGRAPH",
         "FEATURE_DEVTO", "FEATURE_BLUESKY", "FEATURE_MASTODON",
-        "FEATURE_FACEBOOK", "FEATURE_AI_BRIEF", "FEATURE_SHEETS_HANDOFF",
+        "FEATURE_AI_BRIEF", "FEATURE_SHEETS_HANDOFF",
     ):
         monkeypatch.delenv(name, raising=False)
     cfg = Config.from_env()
@@ -161,7 +161,7 @@ def test_defaults_encode_owner_decisions(monkeypatch):
         getattr(cfg, flag)
         for flag in (
             "feature_devto", "feature_bluesky", "feature_mastodon",
-            "feature_facebook", "feature_ai_brief", "feature_sheets_handoff",
+            "feature_ai_brief", "feature_sheets_handoff",
         )
     ), "start with every optional flag off"
     assert cfg.Gemini_model == "gemini-3.5-flash-lite"
@@ -171,7 +171,10 @@ def test_defaults_encode_owner_decisions(monkeypatch):
     assert "model_available" in doctor_src, "a retired model must fail the health check"
     env_example = (REPO / ".env.example").read_text(encoding="utf-8")
     assert "FEATURE_TELEGRAPH=true" in env_example
+    assert "FEATURE_SHEETS_HANDOFF=false" in env_example
     assert "APP_ENV=test" in env_example and "PUBLISH_TARGET=test" in env_example
+    assert not hasattr(cfg, "feature_facebook"), "no direct Facebook switch"
+    assert not hasattr(cfg, "Facebook_page_access_token"), "no Page token in v6"
 
 
 # --- format, links and surfaces -------------------------------------------
@@ -242,6 +245,10 @@ def test_facebook_goes_through_make_com_sheet_not_direct_page_api():
     src = inspect.getsource(pipeline.facebook_handoff_command)
     assert "append_rows" in src and "row_for" in src
     assert "FacebookClient" not in src, "v6 must never publish to the Page directly"
+    assert '"via": "make.com"' in src
+    crossposts = inspect.getsource(pipeline.process_crossposts)
+    assert "FacebookClient" not in crossposts
+    assert "feature_facebook" not in crossposts
 
 
 def test_seo_and_telegraph_are_steered_to_different_queries():

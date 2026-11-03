@@ -322,6 +322,12 @@ class MastodonClient:
 
 
 class FacebookClient:
+    """Legacy direct Page adapter. NOT wired into v6's publishing path.
+
+    The owner requires Facebook posts to go through make.com reading a Google
+    Sheet row (see sheets.py). Nothing in config.py, doctor.py or pipeline.py
+    constructs this client; it is kept only as a reference implementation.
+    """
     API = "https://graph.facebook.com/v26.0"
 
     def __init__(self, page_id: str, page_access_token: str):

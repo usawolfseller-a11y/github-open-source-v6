@@ -84,7 +84,7 @@ daily 19:50 metrics, Thu 18:10 close + learn.
 | `DEV_API_KEY` | Optional article-of-day |
 | `BLUESKY_APP_PASSWORD` | Optional Bluesky crossposts |
 | `MASTODON_ACCESS_TOKEN` | Optional Mastodon crossposts |
-| `FACEBOOK_PAGE_ACCESS_TOKEN` | Optional direct Facebook Page posts (needs a Page token, not a user token) |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Service account that appends Facebook rows to the make.com sheet |
 
 Facebook is published by make.com from a Google Sheet. v6 feeds that sheet
 with `ghos-v6 facebook-handoff`; full setup in `docs/FACEBOOK_PIPELINE.md`.
@@ -103,13 +103,15 @@ every GitHub link through a third-party domain. Links stay `github.com`.
    posts `setup` there; run **Doctor** to discover `TELEGRAM_TEST_CHANNEL_ID`.
 6. Run `ghos-v6 doctor` until 13/13 answer.
 7. Enable one surface at a time: `FEATURE_DEVTO` → `FEATURE_BLUESKY` →
-   `FEATURE_MASTODON` → `FEATURE_FACEBOOK` → `FEATURE_AI_BRIEF`.
+   `FEATURE_MASTODON` → `FEATURE_AI_BRIEF` → `FEATURE_SHEETS_HANDOFF`.
+   (The owner explicitly authorised enabling them together for the
+   2026-11-03…2026-11-09 observation window.)
 8. Only after the acceptance checklist passes: `APP_ENV=production`,
    `PUBLISH_TARGET=main`, `TELEGRAM_MAIN_CHANNEL_ID=<main channel>`.
 
-Note the exact spelling `FEATURE_FACEBOOK`. The legacy `FEATURE_Facebook`
-spelling is still read for backward compatibility, but new setups must use
-the canonical name; the two spellings are no longer mixed in the workflows.
+There is **no** `FEATURE_FACEBOOK` and no `FACEBOOK_PAGE_ACCESS_TOKEN`:
+Facebook is published by make.com from a sheet row, switched by
+`FEATURE_SHEETS_HANDOFF` only. See `docs/FACEBOOK_PIPELINE.md`.
 
 ## Post types on the test channel
 
@@ -150,7 +152,7 @@ mapped to `GH_API_TOKEN`.
 | `FEATURE_DEVTO` | `false` until article smoke test |
 | `FEATURE_BLUESKY` | `false` until social smoke test |
 | `FEATURE_MASTODON` | `false` until social smoke test |
-| `FEATURE_FACEBOOK` | `false`; no Page token in initial rollout |
+| `FEATURE_SHEETS_HANDOFF` | `false` until the Google service account exists |
 | `FEATURE_AI_BRIEF` | `false` until three sample briefs pass review |
 
 `TELEGRAM_SOURCE_CHANNELS` may contain public usernames separated by
@@ -245,12 +247,18 @@ preferred over publishing a candidate that does not pass the gate.
 
 ## Facebook status
 
-The legacy path wrote Facebook posts into Google Sheets for an external
-consumer. v6 instead contains a direct Meta Pages API adapter, kept
-behind `FEATURE_FACEBOOK=false`. It needs a long-lived Page access
-token created through the owner's Meta OAuth flow. Do not copy a
-personal Facebook password, App Secret or short-lived user token into
-this repository.
+Facebook is published **only** by make.com reading a Google Sheet row.
+On 2026-11-03 the direct Meta Pages API adapter was removed from the live
+path (`config.py`, `pipeline.py`, `doctor.yml`, `pipeline.yml`, `.env.example`),
+together with `FACEBOOK_PAGE_ID`, `FACEBOOK_PAGE_ACCESS_TOKEN`,
+`FEATURE_FACEBOOK` and its legacy mixed-case alias. v6 holds no Page token.
+
+To switch it on you need exactly three things: Secret
+`GOOGLE_SERVICE_ACCOUNT_JSON` (one-line service-account JSON), Variable
+`FACEBOOK_SHEETS_ID` (spreadsheet id), Variable `FACEBOOK_SHEETS_RANGE`
+(default `facebook!A1`), plus Editor access for the service-account e-mail
+on that sheet and a running make.com scenario. Full setup:
+[`FACEBOOK_PIPELINE.md`](FACEBOOK_PIPELINE.md).
 
 ## Hashnode status
 
@@ -315,3 +323,35 @@ the split. `requirements.lock` is mandatory for reproducible installs.
 `TELEGRAM_MAIN_CHANNEL_ID` exists in Actions Variables. Its value is a
 production decision: it must be the main channel (`@GitHub_Open_Source`),
 never the test channel id. Verify it before switching `PUBLISH_TARGET=main`.
+
+---
+
+## Observation window: 2026-11-03 → Monday 2026-11-09
+
+The owner authorised live multi-platform publishing on 2026-11-03 with one
+hard constraint: **Telegram posts still go to the private 1:1 test channel,
+but every outbound link and CTA must point at the real production channel**
+`@GitHub_Open_Source`. `public_telegram_link()` filters private `t.me/c/...`
+links and `telegram_cta_url()` falls back to the public channel; the contract
+is pinned in `tests/test_facebook_and_links.py` and in the mutation gate.
+
+For this window the following flags are on: `FEATURE_TELEGRAPH`,
+`FEATURE_BLUESKY`, `FEATURE_MASTODON`, `FEATURE_DEVTO`, `FEATURE_AI_BRIEF`.
+Schedules stay `active` for the whole window. `FEATURE_SHEETS_HANDOFF` stays
+off until the Google service account exists (see Facebook status above).
+
+What to watch until Monday:
+
+- three autonomous Telegram posts a day, all with a large preview, GitHub
+  button and Telegraph breakdown;
+- one best-of-day crosspost to Bluesky and Mastodon, with a CTA to
+  `@GitHub_Open_Source` (never a `t.me/c/` link);
+- the daily dev.to article and the 19:15 AI Brief;
+- Sunday digest, poll, poll-close + `learn` (the `value_model` only appears
+  after real poll data);
+- `state.json` size, `dead_letters`, `Lifecycle guard` issues, CI being green.
+
+**No switch to `main` before Monday.** Switching needs all three Variables
+together (`APP_ENV=production`, `PUBLISH_TARGET=main`,
+`TELEGRAM_MAIN_CHANNEL_ID=@GitHub_Open_Source`), the owner's sign-off after
+watching the window, stopping v5 on the same day, and revoking the setup PAT.

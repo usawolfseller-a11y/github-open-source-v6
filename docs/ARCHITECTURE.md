@@ -142,13 +142,15 @@ GitHub release assets **исключены**: отдают `application/octet-st
 ```
 1. Найти посты, у которых crossposts.*.status == "pending" и due_at прошёл
 2. best_of_day(): выбрать ОДИН лучший пост за последние сутки по score
-3. Победитель → Bluesky / Mastodon / Facebook
+3. Победитель → Bluesky / Mastodon (Facebook — отдельно, через make.com)
 4. Остальные → status "held", reason "not_best_of_day"
 5. Telegraph — отдельно, на каждый пост, не через эту очередь
 ```
 
 Ретраи и dead-letter на каждую площадку. Фича-флаги: `FEATURE_BLUESKY`,
-`FEATURE_MASTODON`, `FEATURE_FACEBOOK`, `FEATURE_DEVTO`.
+`FEATURE_MASTODON`, `FEATURE_DEVTO`. Facebook не в этой очереди:
+`FEATURE_SHEETS_HANDOFF` пишет строку в Google Sheet, откуда публикует
+make.com. Прямого Graph API в v6 нет.
 
 ---
 

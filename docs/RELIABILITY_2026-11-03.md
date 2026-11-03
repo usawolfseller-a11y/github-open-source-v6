@@ -71,7 +71,13 @@
 
 - ~~`pipeline.yml` и `doctor.yml` по-прежнему `disabled_manually`, включать нельзя без письменного решения.~~ **Снято владельцем 2026-11-03:** «публикацию разрешаю и все запреты снимаю». Workflow теперь разрешено включать; документация обновлена. Target lock и fail-closed при пустом тестовом ID сохраняются.
 - Не пройдены acceptance-пункты: 3–5 дней автономных тестовых постов, живой кросспост Bluesky и Mastodon, dev.to smoke article, еженедельный отчёт владельцу, остановка старого бота v5 в день переключения.
-- Не заданы секреты `GOOGLE_SERVICE_ACCOUNT_JSON` и `FACEBOOK_PAGE_ACCESS_TOKEN`; Variables `FACEBOOK_SHEETS_ID`, `FACEBOOK_SHEETS_RANGE`, `FEATURE_SHEETS_HANDOFF` отсутствуют. При выключенных флагах это не ломает текущий контур, но Facebook/Sheets не работают.
+- ~~Не заданы `FACEBOOK_PAGE_ACCESS_TOKEN` / `FACEBOOK_PAGE_ID`.~~ **Снято
+  2026-11-03:** прямой Facebook Graph API удалён из рабочего контура, эти
+  переменные и `FEATURE_FACEBOOK` больше не нужны и не читаются. Для Facebook
+  остаётся только make.com-hand-off: не хватает Secret
+  `GOOGLE_SERVICE_ACCOUNT_JSON` и Variables `FACEBOOK_SHEETS_ID`,
+  `FACEBOOK_SHEETS_RANGE`, `FEATURE_SHEETS_HANDOFF`; таблицу надо расшарить
+  на e-mail сервисного аккаунта, а сценарий make.com включить.
 - Значения секретов не читались; живые вызовы Telegram / Gemini / ImgBB / Telegraph / соцсетей не выполнялись. YouTube RSS даёт 404 из сэндбокса, но контрольный чужой канал тоже 404 — это ограничение сети, не доказанный дефект.
 - PAT, использованный для аудита, должен быть отозван сразу после завершения работ.
 - Архитектурный пункт из `ROADMAP.md` — вынести state в отдельную ветку/хранилище и убрать `fetch-depth: 0` из `commit-state` — **не реализован**: он меняет механизм записи состояния и требует отдельного прогона в Actions. Компактирование снимает остроту, но не заменяет этот шаг.

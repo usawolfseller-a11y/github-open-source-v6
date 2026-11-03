@@ -15,7 +15,7 @@ from typing import Any
 from . import dedup, insights, polls
 from .cards import render_ai_brief_card, render_digest_card
 from .config import Config, telegram_message_link
-from .content_adapters import build_crosspost_text, Facebook_link_url, image_alt_text
+from .content_adapters import build_crosspost_text, image_alt_text, public_telegram_link
 from .formatter import format_project_post
 from .gate import GateConfig, evaluate
 from .Gemini import GeminiClient, generate_project_content
@@ -31,7 +31,7 @@ from .news import (
     prefilter_entry,
     synthesize_brief,
 )
-from .platforms import BlueskyClient, DevToClient, FacebookClient, MastodonClient
+from .platforms import BlueskyClient, DevToClient, MastodonClient
 from .rank import rank_candidates, select_candidate
 from .sources import GitHubApi, collect_candidates, enrich_candidate, enrich_candidates
 from .state import StateStore, iso_now
@@ -631,7 +631,6 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
                 "crossposts": {
                     "bluesky": {"status": "pending" if config.feature_bluesky else "disabled", "due_at": due.isoformat(), "attempts": 0},
                     "mastodon": {"status": "pending" if config.feature_mastodon else "disabled", "due_at": due.isoformat(), "attempts": 0},
-                    "Facebook": {"status": "pending" if config.feature_facebook else "disabled", "due_at": due.isoformat(), "attempts": 0},
                 },
                 "articles": {},
             }
@@ -695,14 +694,11 @@ def process_crossposts(config: Config, store: StateStore) -> dict[str, Any]:
                 clients[platform] = BlueskyClient(config.bluesky_handle, config.bluesky_app_password)
             elif platform == "mastodon":
                 clients[platform] = MastodonClient(config.mastodon_instance_url, config.mastodon_access_token)
-            elif platform == "Facebook":
-                clients[platform] = FacebookClient(config.Facebook_page_id, config.Facebook_page_access_token)
         return clients.get(platform)
 
     enabled = {
         "bluesky": config.feature_bluesky,
         "mastodon": config.feature_mastodon,
-        "Facebook": config.feature_facebook,
     }
 
     def best_of_day() -> str:
@@ -775,19 +771,15 @@ def process_crossposts(config: Config, store: StateStore) -> dict[str, Any]:
                 # and tone differ deliberately.  Private test-channel
                 # t.me/c links are never used in public social copy.
                 text = build_crosspost_text(platform, record, generated)
-                if platform == "Facebook":
-                    result = client.post(text, url=Facebook_link_url(record))
-                    result_url = f"https://www.facebook.com/{result.get('id')}" if result.get("id") else ""
-                else:
-                    result = client.post(
-                        text,
-                        url="",
-                        image_data=image_data,
-                        content_type=content_type,
-                        image_alt=image_alt_text(record, generated),
-                        idempotency_key=f"{key}:{platform}",
-                    )
-                    result_url = str(result.get("url") or "")
+                result = client.post(
+                    text,
+                    url="",
+                    image_data=image_data,
+                    content_type=content_type,
+                    image_alt=image_alt_text(record, generated),
+                    idempotency_key=f"{key}:{platform}",
+                )
+                result_url = str(result.get("url") or "")
                 status_info.update(
                     {"status": "published", "published_at": iso_now(), "url": result_url, "error": ""}
                 )
@@ -1011,7 +1003,7 @@ def digest_command(config: Config, store: StateStore) -> dict[str, Any]:
     lines = ["📰 <b>The Open Source Daily — Top 5 of the Week</b>", ""]
     for index, record in enumerate(records, 1):
         name = html.escape(str(record.get("name") or record.get("full_name") or "Project"))
-        link = str(record.get("telegram_link") or record.get("url") or "")
+        link = public_telegram_link(record) or str(record.get("url") or "")
         title = f'<a href="{html.escape(link, quote=True)}">{name}</a>' if link.startswith("https://") else name
         generated = record.get("generated") or {}
         hook = html.escape(str(generated.get("hook") or record.get("description") or "")[:220])

@@ -58,9 +58,8 @@ class Config:
     bluesky_app_password: str = ""
     mastodon_instance_url: str = "https://mastodon.social"
     mastodon_access_token: str = ""
-    Facebook_page_id: str = ""
-    Facebook_page_access_token: str = ""
-    # make.com hand-off: v6 writes rows, make.com publishes the Page post.
+    # Facebook is published by make.com from a sheet row: v6 never calls the
+    # Graph API and therefore needs no Page id or Page token.
     sheets_spreadsheet_id: str = ""
     sheets_credentials_json: str = ""
     sheets_range: str = "facebook!A1"
@@ -69,7 +68,6 @@ class Config:
     feature_devto: bool = False
     feature_bluesky: bool = False
     feature_mastodon: bool = False
-    feature_facebook: bool = False
     feature_ai_brief: bool = False
     feature_sheets_handoff: bool = False
 
@@ -103,8 +101,6 @@ class Config:
                 os.getenv("MASTODON_INSTANCE_URL") or "https://mastodon.social"
             ).strip().rstrip("/"),
             mastodon_access_token=(os.getenv("MASTODON_ACCESS_TOKEN") or "").strip(),
-            Facebook_page_id=(os.getenv("FACEBOOK_PAGE_ID") or "").strip(),
-            Facebook_page_access_token=(os.getenv("FACEBOOK_PAGE_ACCESS_TOKEN") or "").strip(),
             sheets_spreadsheet_id=(os.getenv("FACEBOOK_SHEETS_ID") or "").strip(),
             sheets_credentials_json=(os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON") or "").strip(),
             sheets_range=(os.getenv("FACEBOOK_SHEETS_RANGE") or "facebook!A1").strip(),
@@ -112,7 +108,6 @@ class Config:
             feature_devto=_bool("FEATURE_DEVTO", False),
             feature_bluesky=_bool("FEATURE_BLUESKY", False),
             feature_mastodon=_bool("FEATURE_MASTODON", False),
-            feature_facebook=_bool("FEATURE_FACEBOOK", _bool("FEATURE_Facebook", False)),
             feature_ai_brief=_bool("FEATURE_AI_BRIEF", False),
             feature_sheets_handoff=_bool("FEATURE_SHEETS_HANDOFF", False),
         )
@@ -147,7 +142,6 @@ class Config:
             "DEV_API_KEY": self.dev_api_key,
             "BLUESKY_APP_PASSWORD": self.bluesky_app_password,
             "MASTODON_ACCESS_TOKEN": self.mastodon_access_token,
-            "FACEBOOK_PAGE_ACCESS_TOKEN": self.Facebook_page_access_token,
         }
         for name in names:
             if not values.get(name):
