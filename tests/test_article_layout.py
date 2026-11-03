@@ -161,3 +161,48 @@ def test_article_id_is_resolved_from_the_editable_article_list():
     ]
     assert DevToClient.resolve_article_id(items, url, 999) == (222, "url_match")
     assert DevToClient.resolve_article_id([], url, 999) == (999, "state_id")
+
+
+def test_article_update_recreates_a_deleted_article(monkeypatch, tmp_path):
+    """A 404 from PUT must not strand the fix or duplicate a live article."""
+    from ghos_v6 import pipeline as pl
+    from ghos_v6.config import Config
+    from ghos_v6.state import StateStore
+
+    store = StateStore(tmp_path)
+    store.data = {
+        "published": {
+            "owner/demo": {
+                "full_name": "owner/demo",
+                "name": "demo",
+                "url": "https://github.com/owner/demo",
+                "published_at": "2026-11-03T09:00:00Z",
+                "generated": _generated(),
+                "articles": {"devto": {"id": 1, "url": "https://dev.to/x/old"}},
+            }
+        },
+        "events": [],
+    }
+
+    class FakeClient:
+        def __init__(self, key):
+            self.key = key
+
+        def my_articles(self):
+            return []
+
+        @staticmethod
+        def resolve_article_id(items, url, fallback):
+            return fallback, "state_id"
+
+        def update_article(self, article_id, record, generated):
+            raise pl.PlatformError("dev.to update HTTP 404: not found")
+
+        def publish_article(self, record, generated):
+            return {"id": 999, "url": "https://dev.to/x/new"}
+
+    monkeypatch.setattr(pl, "DevToClient", FakeClient)
+    result = pl.update_recent_article(Config(dev_api_key="x"), store)
+    assert result["action"] == "created"
+    assert result["created"] == 1 and result["updated"] == 0
+    assert store.data["published"]["owner/demo"]["articles"]["devto"]["url"].endswith("/new")

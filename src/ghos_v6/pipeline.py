@@ -31,7 +31,7 @@ from .news import (
     prefilter_entry,
     synthesize_brief,
 )
-from .platforms import BlueskyClient, DevToClient
+from .platforms import BlueskyClient, DevToClient, PlatformError
 from .rank import rank_candidates, select_candidate
 from .sources import GitHubApi, collect_candidates, enrich_candidate, enrich_candidates
 from .state import StateStore, iso_now
@@ -879,17 +879,32 @@ def update_recent_article(config: Config, store: StateStore) -> dict[str, Any]:
     article_id, id_source = client.resolve_article_id(
         owned, str(info.get("url") or ""), info.get("id") or 0
     )
-    result = client.update_article(
-        article_id, record, record.get("generated") or {}
-    )
+    try:
+        result = client.update_article(
+            article_id, record, record.get("generated") or {}
+        )
+        action = "updated"
+    except PlatformError as exc:
+        # The article can disappear (moderation, manual deletion, a stale
+        # id). A 404 must not strand the fix: publish one fresh, correctly
+        # formatted article instead of failing or duplicating a live post.
+        if "404" not in str(exc):
+            raise
+        result = client.publish_article(record, record.get("generated") or {})
+        action = "created"
+    info["id"] = result.get("id") or info.get("id")
     info["updated_at"] = iso_now()
     info["url"] = str(result.get("url") or info.get("url") or "")
-    store.event("article_updated", repo=key, url=info["url"])
+    store.event(
+        "article_updated" if action == "updated" else "article_recreated",
+        repo=key, url=info["url"],
+    )
     store.save()
     return {
-        "ok": True, "updated": 1, "repo": key, "url": info["url"],
+        "ok": True, "updated": 1 if action == "updated" else 0,
+        "created": 1 if action == "created" else 0,
+        "action": action, "repo": key, "url": info["url"],
         "owned_articles": len(owned), "id_source": id_source,
-        "article_id": article_id,
     }
 
 
