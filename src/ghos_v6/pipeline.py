@@ -877,7 +877,7 @@ def update_recent_article(config: Config, store: StateStore) -> dict[str, Any]:
         logger.warning("dev.to article list unavailable: %s", sanitize(str(exc))[:200])
         owned = []
     article_id, id_source = client.resolve_article_id(
-        str(info.get("url") or ""), info.get("id") or 0
+        owned, str(info.get("url") or ""), info.get("id") or 0
     )
     result = client.update_article(
         article_id, record, record.get("generated") or {}
