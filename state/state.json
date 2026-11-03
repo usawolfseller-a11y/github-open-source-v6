@@ -27,6 +27,11 @@
       "repo": "morluto/rea",
       "telegram_message_id": 4
     },
+    "publish:smoke_e2e": {
+      "finished_at": "2026-11-03T09:13:41.255790Z",
+      "repo": "unslothai/unsloth",
+      "telegram_message_id": 37
+    },
     "publish:test": {
       "finished_at": "2026-11-02T19:59:24.481942Z",
       "repo": "aprilnea/openlogi",
@@ -496,23 +501,79 @@
       "updated_at": "2026-11-01T10:19:19Z",
       "url": "https://github.com/morluto/rea",
       "visual_kind": "readme"
-    }
-  },
-  "queue": [
-    {
-      "archived": false,
-      "contributors_count": 438,
+    },
+    "unslothai/unsloth": {
+      "articles": {},
+      "card_style": "",
+      "category": "AI",
+      "contributors_count": 439,
       "created_at": "2023-11-29T16:50:09Z",
-      "default_branch": "main",
+      "crossposts": {
+        "Facebook": {
+          "attempts": 0,
+          "due_at": "2026-11-03T18:00:00+00:00",
+          "status": "disabled"
+        },
+        "bluesky": {
+          "attempts": 0,
+          "due_at": "2026-11-03T18:00:00+00:00",
+          "status": "disabled"
+        },
+        "mastodon": {
+          "attempts": 0,
+          "due_at": "2026-11-03T18:00:00+00:00",
+          "status": "disabled"
+        }
+      },
       "description": "Local UI to run and train LLMs and diffusion models. Supports GGUF, MLX, Qwen3.8, DeepSeek-V4.1, MiniMax-H3, Gemma 4, FLUX and more.",
-      "disabled": false,
-      "fork": false,
-      "forks": 7346,
-      "forks_count": 7346,
+      "description_fp": "b0a266f8308352bd",
+      "forks": 7360,
       "full_name": "unslothai/unsloth",
-      "has_readme": true,
+      "generated": {
+        "article_markdown": "## What it is\n\nUnsloth is a native desktop application and web UI designed to run, manage, and fine-tune large language models, diffusion models, and audio models locally. Rather than forcing developers to stitch together disparate Python scripts and custom weight loaders, Unsloth provides a cohesive interface that abstracts the underlying hardware execution. It handles everything from model inference to reinforcement learning, supporting a wide range of modern architectures including Qwen3.8, DeepSeek-V4, Gemma 4, and FLUX.\n\n## Why it matters\n\nRunning and fine-tuning models locally has traditionally been bottlenecked by steep setup friction and memory overhead. Developers often spend more time debugging CUDA dependencies and configuration files than actually evaluating model performance. Unsloth removes this administrative overhead by providing pre-built desktop binaries and streamlined installation scripts that configure your local environment automatically, letting you go from download to inference in minutes.\n\n## Key features\n\n- Connects local models directly to coding agents like Claude Code and Codex via single-command tools.\n- Supports multi-GPU setups, NVIDIA, AMD, Intel GPUs, CPUs, and Vulkan backends.\n- Builds training datasets natively from local PDF, CSV, and DOCX files.\n- Exposes secure remote access and LAN sharing via Cloudflare HTTPS integration.\n- Serves all hosted models through an OpenAI-compatible local API endpoint.\n\n## Quick start\n\nYou can install the Unsloth web UI via curl on macOS, Linux, or WSL:\n\n```bash\ncurl -fsSL https://unsloth.ai/install.sh | sh\n```\n\nOr download the native Unsloth Desktop application directly for your operating system from the official releases.\n\n## Who should try it\n\nThis tool is ideal for developers, researchers, and engineers who want to run private models locally, experiment with fine-tuning without cloud costs, or integrate local LLMs directly into their existing coding assistant pipelines.\n\n## Verdict\n\nUnsloth successfully bridges the gap between raw model weights and usable local infrastructure. While your hardware will ultimately cap your maximum throughput, the software eliminates nearly all of the traditional friction associated with local AI development.",
+        "article_title": "Unsloth: Local UI to Run and Train LLMs and Diffusion Models",
+        "card_hook": "Run and train LLMs locally",
+        "card_subline": "A native desktop app for running, training, and connecting local models across hardware",
+        "category": "AI",
+        "discussion_question": "Do you prefer running local models via a desktop UI or a CLI harness?",
+        "hook": "Run and fine-tune local models like Qwen3.8 and DeepSeek-V4 directly from a desktop app.",
+        "key_features": [
+          "Connects local models directly to coding agents like Claude Code and Codex via single-command tools",
+          "Supports multi-GPU setups, NVIDIA, AMD, Intel GPUs, CPUs, and Vulkan backends",
+          "Builds training datasets natively from local PDF, CSV, and DOCX files",
+          "Exposes secure remote access and LAN sharing via Cloudflare HTTPS integration",
+          "Serves all hosted models through an OpenAI-compatible local API endpoint"
+        ],
+        "llm_used": true,
+        "quick_start": "curl -fsSL https://unsloth.ai/install.sh | sh",
+        "safety": "ok",
+        "safety_reason": "Legitimate local AI management and fine-tuning tool.",
+        "scene": "You spend twenty minutes configuring Python virtual environments and custom training scripts just to test a local model on your machine.",
+        "social_text": "Run and fine-tune local models and connect coding agents with a native desktop app.",
+        "summary": "Unsloth provides a unified native desktop app and web UI layer that interfaces directly with local compute hardware to manage, serve, and fine-tune large language and diffusion models. It sits on top of standard containerized or local runtimes, exposing an OpenAI-compatible API and integrating natively with coding agents. Users can deploy local weights, build custom data recipes from local files, and run inference without relying on external cloud providers.",
+        "surfaces": {
+          "Facebook_body": "Running and training custom artificial intelligence models usually requires expensive cloud services or complicated developer tools. If you want to keep your data private and avoid recurring subscription fees, managing everything directly on your own computer is a much better choice. This open-source desktop application lets you run, test, and fine-tune powerful AI models right on your own hardware. Instead of writing complex scripts, you can use a clean interface to work with local files, build training datasets from your documents, and connect your models directly to your favorite coding assistants. It works with standard graphics cards and processors you might already have in your machine. You can share your models securely over your local network and serve everything through a standard local connection. This tool is ideal for developers, designers, and hobbyists who want full control over their AI workflows without relying on external cloud providers. Whether you want to experiment with custom training data or simply run models offline, this app provides a complete local workspace.",
+          "Facebook_headline": "Run and train AI models right on your desktop",
+          "Facebook_lead": "Keep your data private and avoid cloud costs by running and fine-tuning advanced AI models directly from a simple desktop app.",
+          "bluesky_headline": "Train and run local AI models on your own desktop",
+          "bluesky_lead": "Fine-tune models like Qwen and DeepSeek locally without heavy cloud setups or complex Python scripts.",
+          "devto_body": "## What it is Unsloth is a native desktop application and local web interface designed to manage, serve, and fine-tune large language and diffusion models directly on consumer and workstation hardware. Written in Python, it bridges the gap between raw local runtimes and user-friendly desktop management, targeting developers who want to bypass heavy cloud setups. ## How it works The application sits on top of standard containerized and local runtimes to expose an OpenAI-compatible API endpoint. It interfaces directly with local compute hardware, letting you deploy weights, build custom data recipes, and run inference locally without external dependencies. ## Key features - Direct integration with coding assistants via single-command tools - Support for multi-GPU setups, NVIDIA, AMD, Intel hardware, CPUs, and Vulkan backends - Native dataset generation from local PDF, CSV, and DOCX files - Secure remote access and LAN sharing via Cloudflare HTTPS integration - OpenAI-compatible local API endpoint for all hosted models ## Getting started Clone the repository from GitHub, ensure you have Python installed along with your required hardware drivers, and launch the desktop interface to begin managing your local models. ## When not to use it Skip this tool if you lack the local hardware resources required to run or fine-tune large models, or if your workflow strictly mandates managed cloud infrastructure and enterprise hosting support.",
+          "mastodon_headline": "Local desktop GUI and runner for training language and diffusion models",
+          "mastodon_lead": "Manage, serve, and fine-tune models directly on your hardware with multi-GPU support and a local OpenAI-compatible API.",
+          "seo_description": "Run, serve, and fine-tune large language and diffusion models locally on your desktop hardware without relying on external cloud providers.",
+          "seo_query": "run and fine tune local AI models desktop app",
+          "seo_title": "Run and fine-tune local AI models - Open source desktop app",
+          "telegraph_angle": "Explain how this desktop app simplifies local AI model training and eliminates cloud dependency for developers."
+        },
+        "tension": "Complex dependency management and fragmented tooling waste hours of development time before you can even run a simple local inference test.",
+        "turn": "Unsloth packages model management, fine-tuning, and agent connections into a single desktop application and CLI tool, though hardware limitations still dictate your local token throughput.",
+        "verdict": "An essential utility for developers running local AI workflows who want to bypass heavy cloud setups.",
+        "who_for": "Developers and AI engineers running local model workflows who want native desktop control and fine-tuning.",
+        "why_now": "Local fine-tuning frameworks have historically required complex Python scripts, making a unified native desktop and CLI manager essential for local model execution."
+      },
       "homepage": "https://unsloth.ai/docs",
       "id": 725205304,
+      "image_url": "https://i.ibb.co/hJVpQkVw/unslothai-unsloth-readme-preview-bc134d987257.jpg",
       "is_dual_use": false,
       "is_hidden_gem": false,
       "language": "Python",
@@ -530,18 +591,23 @@
         "https://redditinc.com/hs-fs/hubfs/Reddit%20Inc/Brand/Reddit_Logo.png"
       ],
       "name": "unsloth",
-      "open_issues": 539,
-      "open_issues_count": 539,
-      "pushed_at": "2026-11-01T10:18:48Z",
-      "readme_excerpt": "<h1 align=\"center\" style=\"margin:0;\">\n  <a href=\"https://unsloth.ai/docs\"><picture>\n    <source media=\"(prefers-color-scheme: dark)\" srcset=\"https://raw.githubusercontent.com/unslothai/unsloth/main/images/unsloth%20logo%20white%20text.png\">\n    <source media=\"(prefers-color-scheme: light)\" srcset=\"https://raw.githubusercontent.com/unslothai/unsloth/main/images/unsloth%20logo%20black%20text.png\">\n    <img alt=\"Unsloth logo\" src=\"https://raw.githubusercontent.com/unslothai/unsloth/main/images/unsloth%20logo%20black%20text.png\" height=\"80\" style=\"max-width:100%;\">\n  </picture></a>\n</h1>\n<h3 align=\"center\" style=\"margin: 0; margin-top: 0;\">\nUnsloth is the first desktop app to run and train models.\n</h3>\n\n<p align=\"center\">\n  <a href=\"#-features\">Features</a> •\n  <a href=\"#-get-started\">Quickstart</a> •\n  <a href=\"#-free-notebooks\">Notebooks</a> •\n  <a href=\"https://unsloth.ai/docs\">Documentation</a>\n</p>\n\n<p align=\"center\">\n  <a href=\"https://unsloth.ai/docs/desktop\">\n    <img height=\"400\" alt=\"unsloth desktop\" src=\"https://unsloth.ai/cgi/image/unsloth_qwen3.8_final_ut2eqWnYJ-SLmu0s7x522.png?format=raw\" />\n  </a>\n</p>\n\n## ⚡ Get started\nDownload the native Unsloth Desktop app for your o",
+      "open_issues": 418,
+      "published_at": "2026-11-03T09:13:41.255492Z",
+      "pushed_at": "2026-11-03T08:56:07Z",
+      "readme_fp": "ee87534608d18ff7",
       "repo_id": 725205304,
+      "revisit_of": "",
+      "revisit_reason": "",
       "score": 86.778,
-      "source_name": "github_search",
+      "slot": "smoke_e2e",
       "sources": [
         "github_search"
       ],
-      "stargazers_count": 78901,
-      "stars": 78901,
+      "stars": 78993,
+      "telegram_chat_id": "test",
+      "telegram_link": "",
+      "telegram_message_id": 37,
+      "telegraph_url": "https://telegra.ph/Unsloth-Local-UI-to-Run-and-Train-LLMs-and-Diffusion-Models-11-03",
       "topics": [
         "agent",
         "ai",
@@ -564,9 +630,13 @@
         "ui",
         "unsloth"
       ],
-      "updated_at": "2026-11-01T10:18:33Z",
-      "url": "https://github.com/unslothai/unsloth"
-    },
+      "updated_at": "2026-11-03T09:10:28Z",
+      "url": "https://github.com/unslothai/unsloth",
+      "visual_host": "imgbb",
+      "visual_kind": "readme"
+    }
+  },
+  "queue": [
     {
       "archived": false,
       "contributors_count": 125,
@@ -3006,8 +3076,8 @@
     "unslothai/unsloth": {
       "first_seen_at": "2026-11-01T10:20:50.579515Z",
       "full_name": "unslothai/unsloth",
-      "last_decision": "queued",
-      "last_seen_at": "2026-11-01T10:20:50.579518Z",
+      "last_decision": "published",
+      "last_seen_at": "2026-11-03T09:13:41.255779Z",
       "repo_id": 725205304,
       "sources": [
         "github_search"
