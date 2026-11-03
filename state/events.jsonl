@@ -15,7 +15,5 @@
 {"preview_host": "imgbb", "repo": "horizon-rust/horizon", "ts": "2026-11-03T09:48:00.565669Z", "type": "published_as_text"}
 {"repo": "horizon-rust/horizon", "score": 91.132, "telegram_message_id": 38, "telegraph_url": "https://telegra.ph/Horizon-A-Minecraft-Java-Edition-Rewrite-in-Rust-11-03", "ts": "2026-11-03T09:48:00.566007Z", "type": "project_published"}
 {"platform": "bluesky", "repo": "horizon-rust/horizon", "ts": "2026-11-03T09:49:22.633325Z", "type": "crosspost_published", "url": "https://bsky.app/profile/githubopensource.bsky.social/post/3mzfkqoxkao25"}
-{"platform": "mastodon", "repo": "horizon-rust/horizon", "ts": "2026-11-03T09:49:24.859356Z", "type": "crosspost_published", "url": "https://mastodon.social/@GitHubOpenSource/117551881553566436"}
 {"platform": "devto", "repo": "horizon-rust/horizon", "ts": "2026-11-03T09:51:09.465778Z", "type": "article_published", "url": "https://dev.to/githubopensource/minecraft-in-rust-open-source-horizon-engine-3pc1"}
 {"Gemini_video_input": true, "official_url": "https://x.ai/news/introducing-grok-bot", "topic": "grok-bot", "ts": "2026-11-03T09:52:17.634168Z", "type": "ai_brief_published", "video_id": "Nj7rnWJE92o"}
-{"attempts": 1, "error": "Mastodon status 117551917478863729 is not publicly visible (HTTP 404); check the account's moderation state", "platform": "mastodon", "repo": "horizon-rust/horizon", "ts": "2026-11-03T09:58:34.990357Z", "type": "crosspost_failed"}
