@@ -19,3 +19,4 @@
 {"Gemini_video_input": true, "official_url": "https://x.ai/news/introducing-grok-bot", "topic": "grok-bot", "ts": "2026-11-03T09:52:17.634168Z", "type": "ai_brief_published", "video_id": "Nj7rnWJE92o"}
 {"command": "article-update", "error": "PlatformError: dev.to update HTTP 404: {'error': 'not found', 'status': 404}", "ts": "2026-11-03T10:26:56.489761Z", "type": "command_failed"}
 {"command": "article-update", "error": "PlatformError: dev.to update HTTP 404: {'error': 'not found', 'status': 404}", "ts": "2026-11-03T10:30:31.075241Z", "type": "command_failed"}
+{"command": "article-update", "error": "PlatformError: dev.to HTTP 429: Retry later\n", "ts": "2026-11-03T10:32:45.914279Z", "type": "command_failed"}
