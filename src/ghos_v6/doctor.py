@@ -43,8 +43,7 @@ def run_doctor(
         "MASTODON_ACCESS_TOKEN": bool(config.mastodon_access_token),
         # Not required: Facebook is published by make.com from a Sheet row.
         # Kept only for the optional direct Graph API client.
-        "FACEBOOK_PAGE_ACCESS_TOKEN": bool(config.Facebook_page_access_token)
-        or not config.feature_facebook,
+        "FACEBOOK_PAGE_ACCESS_TOKEN": bool(config.Facebook_page_access_token),
     }
     checks["env_presence"] = presence
 
@@ -86,8 +85,27 @@ def run_doctor(
     Gemini = GeminiClient(config.Gemini_api_key, config.Gemini_model)
     try:
         status, models = Gemini.list_models()
-        checks["Gemini_models"] = {"ok": status == 200, "status": status, "count": len(models)}
-        if status != 200:
+        # A model that Google retired must fail the health check loudly: the
+        # pipeline is fail-closed without a model verdict and would otherwise
+        # stop publishing silently.
+        available = {
+            str(item.get("name") if isinstance(item, dict) else item).removeprefix("models/")
+            for item in models
+        }
+        model_ok = not available or config.Gemini_model in available
+        checks["Gemini_models"] = {
+            "ok": status == 200 and model_ok,
+            "status": status,
+            "count": len(models),
+            "configured_model": config.Gemini_model,
+            "model_available": model_ok,
+        }
+        if not model_ok:
+            checks["Gemini_model_lifecycle"] = {
+                "ok": False,
+                "hint": "Set GEMINI_MODEL to a currently available model; see docs/RUNBOOK.md",
+            }
+        if status != 200 or not model_ok:
             report["ok"] = False
         else:
             ping = Gemini.generate_json(

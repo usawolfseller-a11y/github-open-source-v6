@@ -22,6 +22,11 @@ Autonomous, zero-cost discovery and publishing system for the
 > **Security posture:** project code runs in a read-only job with no
 > persisted checkout credentials; a separate job with no publishing
 > secrets validates and commits the state. See [`SECURITY.md`](SECURITY.md).
+>
+> **Reliability audit (2026-11-03):** CI is green on Python 3.13 (196 tests,
+> 66.83 % coverage), the wheel ships all 142 card icons, state compaction and
+> a weekly lifecycle guard were added. The publishing workflows remain
+> disabled. See [`docs/RELIABILITY_2026-11-03.md`](docs/RELIABILITY_2026-11-03.md).
 
 ## New here? Read these in order
 
@@ -34,6 +39,7 @@ Autonomous, zero-cost discovery and publishing system for the
 | 5 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Phases from here to production |
 | 6 | [`docs/AUDIT_2026-11-02.md`](docs/AUDIT_2026-11-02.md) | What was verified by running it, and the four defects found |
 | 7 | [`SECURITY.md`](SECURITY.md) | How to report a vulnerability, security properties, known operational risks |
+| 8 | [`docs/RELIABILITY_2026-11-03.md`](docs/RELIABILITY_2026-11-03.md) | Production-readiness and 5-year reliability audit, and the fixes applied |
 
 The single most important open item: **cross-posting has never been sent
 live**. All three published posts carry `crossposts: disabled`. Prove one

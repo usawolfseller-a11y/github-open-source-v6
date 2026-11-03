@@ -248,7 +248,7 @@ def test_cleanup_dry_run_does_not_delete(tmp_path):
         "published": {"owner/demo": {"telegram_message_id": 35}},
         "last_runs": {},
     }
-    config = Config(telegram_bot_token="x", telegram_test_channel_id=-1003909350927)
+    config = Config(telegram_bot_token="x", telegram_test_channel_id=-1009999999999)
     result = cleanup_test_posts(config, store, dry_run=True)
     assert result["would_delete"] == 1
     assert result["message_ids"] == [35]

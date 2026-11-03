@@ -24,6 +24,8 @@ PUBLISH_TARGET=main
 TELEGRAM_MAIN_CHANNEL_ID=<main channel ID or @GitHub_Open_Source>
 ```
 
+`TELEGRAM_MAIN_CHANNEL_ID` is the canonical name and is configured in Actions Variables. The legacy `MAIN_TELEGRAM_CHANNEL` is still read by `config.py` and passed by both workflows, but new setups must use the canonical name.
+
 If the test ID is empty, publishing fails closed. It never falls back to
 the main channel.
 
@@ -170,22 +172,45 @@ Use **Actions → Publishing pipeline → Run workflow**:
 
 ## Schedule (UTC)
 
-| Time | Action |
-|---|---|
-| 04:20 daily | Collect candidates |
-| 07:10 daily | Project slot 1 |
-| 12:40 daily | Project slot 2 |
-| 13:30 daily | dev.to article-of-day |
-| 15:40 Mon/Wed/Fri | AI Brief, if feature enabled and eligible |
-| 17:15 daily | Project slot 3 |
-| 22:35 daily | Project slot 4 |
-| every 30 min | Due crossposts |
-| Sun 16:10 | Weekly digest + poll |
-| Sun 16:40 | Owner report |
-| every 6 h at :15 | Discussion moderation poll |
+| Time (UTC) | Cron | Action |
+|---|---|---|
+| 04:20 daily | `20 4 * * *` | Collect candidates |
+| 07:10 daily | `10 7 * * *` | Project slot 1 |
+| 12:40 daily | `40 12 * * *` | Project slot 2 |
+| 17:15 daily | `15 17 * * *` | Project slot 3 |
+| 13:30 daily | `30 13 * * *` | dev.to article-of-day |
+| 19:15 daily | `15 19 * * *` | AI Brief (feature flag) |
+| :05 and :35 hourly | `5,35 * * * *` | Due crossposts |
+| 18:20 daily | `20 18 * * *` | Facebook handoff (make.com) |
+| 20:20 daily | `20 20 * * *` | Views snapshot / metrics |
+| every 3 h at :45 | `45 */3 * * *` | Discussion moderation |
+| Sun 16:10 | `10 16 * * 0` | Weekly digest + poll |
+| Sun 16:40 | `40 16 * * 0` | Owner report |
+| Thu 18:50 | `50 18 * * 4` | Close poll **and** `learn` (value model) |
+| Mon 06:17 | `17 6 * * 1` | Lifecycle guard (checks only, no publishing) |
+
+Three project posts a day is an owner decision. `MAX_PROJECT_POSTS_PER_DAY = 3`
+is enforced in code, so a fourth cron must not be added.
 
 GitHub scheduled workflows can be delayed. A missed or empty slot is
 preferred over publishing a candidate that does not pass the gate.
+
+## Long-term operation (5+ years)
+
+- `StateStore` compacts `state.json` on every save: `seen_repos` older than 180
+  days are dropped, full `published` records older than 90 days become a light
+  index (de-duplication keys are kept), lists are capped at 500 items. Keys in
+  `published` are never removed, so `commit-state`'s count guard still holds.
+- `CI` fails when `state.json` exceeds 10 MiB. The weekly **Lifecycle guard**
+  checks that limit, repository activity (GitHub disables schedules after 60
+  quiet days) and whether `GEMINI_MODEL` is still listed by the API; it opens
+  an issue instead of failing silently.
+- `gemini-3.5-flash-lite` may be retired as early as 2027-07-21. Check the
+  model list monthly and update the `GEMINI_MODEL` Variable before switching.
+- Python 3.12 reaches EOL in October 2028; CI now runs 3.13. Rebuild the
+  hashed lock files when moving to the next interpreter.
+- Full analysis and remaining architectural work (state in a separate branch,
+  removing `fetch-depth: 0`): [`RELIABILITY_2026-11-03.md`](RELIABILITY_2026-11-03.md).
 
 ## Acceptance before main-channel switch
 

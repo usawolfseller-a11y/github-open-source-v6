@@ -596,10 +596,14 @@ def test_every_cron_in_the_workflow_has_a_route_in_the_code():
 
     crons = set(re.findall(r'cron:\s*"([^"]+)"', workflow))
     routes = set(re.findall(r'^\s*"([^"]+)":\s*lambda', cli, flags=re.M))
-    missing = crons - routes
+    # Crons that must run two commands in order live in ``pairs`` instead of
+    # ``routes`` (Thursday: close the poll, then update the value model).
+    pairs = set(re.findall(r'"([^"]+)":\s*\(', cli))
+    routed = routes | pairs
+    missing = crons - routed
     assert not missing, f"cron without a route in cli.py: {sorted(missing)}"
     # the daily brief specifically
-    assert "15 19 * * *" in crons and "15 19 * * *" in routes
+    assert "15 19 * * *" in crons and "15 19 * * *" in routed
 
 
 def test_brief_filters_take_reviews_and_launches_but_reject_gossip():

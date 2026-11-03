@@ -10,11 +10,22 @@ import json
 import logging
 import os
 import tempfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_ts(value: Any) -> datetime | None:
+    """Parse an ISO timestamp from state, tolerating the naive form."""
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
 def utcnow() -> datetime:
@@ -90,6 +101,7 @@ class StateStore:
 
     def save(self) -> None:
         self.validate()
+        self._compact_state()
         self.state_dir.mkdir(parents=True, exist_ok=True)
         payload = json.dumps(self.data, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
         fd, tmp_name = tempfile.mkstemp(dir=self.state_dir, prefix="state.", suffix=".tmp")
@@ -107,6 +119,75 @@ class StateStore:
     #: lines pulled down on every run. Keep the tail, roll the head once.
     EVENTS_MAX_LINES = 5000
     EVENTS_KEEP_LINES = 2000
+
+    # Long-term retention. ``state.json`` is committed on every run, so an
+    # ever-growing projection eventually hits GitHub's 100 MB per-file push
+    # limit. Keep every anti-duplication key forever, but shed the heavy
+    # generated payload and stale "seen" entries. v5 solved the same problem
+    # with its monthly "Keep Last 10 Published Posts" workflow.
+    SEEN_REPOS_TTL_DAYS = 180
+    PUBLISHED_FULL_RETENTION_DAYS = 90
+    HISTORY_MAX_ITEMS = 5
+    LIST_MAX_ITEMS = 500
+
+    #: Must survive compaction. ``dedup.check`` needs ids and fingerprints;
+    #: metrics, ranking, digest and cleanup need the rest. The expensive
+    #: ``generated`` / ``articles`` / ``media_urls`` blobs are deliberately
+    #: absent - they are only read for fresh posts.
+    _PUBLISHED_INDEX_FIELDS = (
+        "repo_id", "id", "full_name", "name", "url", "description",
+        "description_fp", "readme_fp", "published_at", "stars",
+        "latest_release_tag", "score", "value_score", "views",
+        "views_at_24h", "views_history", "language", "topics", "category",
+        "slot", "telegram_message_id", "telegram_chat_id", "telegram_link",
+        "telegraph_url", "image_url", "crossposts", "revisit_of",
+        "is_dual_use", "is_hidden_gem",
+    )
+
+    def _compact_state(self) -> None:
+        """Bound the projection without losing de-duplication keys.
+
+        Idempotent: compacted records are marked, so a second save is a no-op.
+        No ``published`` key is ever removed - the ``commit-state`` workflow
+        refuses to commit a state whose published count decreased.
+        """
+        now = utcnow()
+        changed = 0
+
+        seen = self.data.get("seen_repos")
+        if isinstance(seen, dict):
+            cutoff = now - timedelta(days=self.SEEN_REPOS_TTL_DAYS)
+            for key, record in list(seen.items()):
+                stamp = _parse_ts(record.get("last_seen_at")) if isinstance(record, dict) else None
+                if stamp is not None and stamp < cutoff:
+                    del seen[key]
+                    changed += 1
+
+        published = self.data.get("published")
+        if isinstance(published, dict):
+            cutoff = now - timedelta(days=self.PUBLISHED_FULL_RETENTION_DAYS)
+            for key, record in published.items():
+                if not isinstance(record, dict) or record.get("_compact"):
+                    continue
+                stamp = _parse_ts(record.get("published_at"))
+                if stamp is None or stamp >= cutoff:
+                    continue
+                compact = {f: record[f] for f in self._PUBLISHED_INDEX_FIELDS if f in record}
+                history = list(record.get("history") or [])
+                if history:
+                    compact["history"] = history[-self.HISTORY_MAX_ITEMS:]
+                compact["_compact"] = True
+                published[key] = compact
+                changed += 1
+
+        for name in ("dead_letters", "news_topics", "poll_history"):
+            items = self.data.get(name)
+            if isinstance(items, list) and len(items) > self.LIST_MAX_ITEMS:
+                del items[:-self.LIST_MAX_ITEMS]
+                changed += 1
+
+        if changed:
+            self.event("state_compacted", changed=changed)
 
     def _rotate_events(self) -> None:
         try:

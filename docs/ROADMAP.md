@@ -62,7 +62,7 @@ Measured on the live channel, 2026-11-01:
 - [x] Weekly poll: open Sunday, `stopPoll` Thursday, tally stored
 - [x] `learn`: deterministic multipliers, clamped, written to state
 - [x] 3-post schedule; two-command cron for close+learn
-- [x] 188 tests green
+- [x] 196 tests green (coverage 66.83 %)
 
 **Exit criteria:** all tests pass, no change to publishing target. ✅
 
@@ -240,3 +240,23 @@ split, but not while the publishing path is unproven.
   требует force-push и решения владельца.
 - **Dependabot**: 6 PR не слиты; токен не позволяет. Runtime-lock и dev-lock
   разделены, поэтому publishing-job больше не тянет линтеры.
+
+
+---
+
+## 11. После аудита 2026-11-03
+
+Подробности: [`RELIABILITY_2026-11-03.md`](RELIABILITY_2026-11-03.md).
+
+- [x] `TELEGRAM_MAIN_CHANNEL_ID` создана; `APP_ENV=production` резолвит канал
+- [x] wheel содержит все 142 иконки; CI проверяет это
+- [x] `50 18 * * 4` выполняет `close_poll` + `learn`
+- [x] компактирование `state.json` (TTL, индекс, caps) + тесты
+- [x] еженедельный `Lifecycle guard`, size guard в CI, проверка модели в `doctor`
+- [x] CI и workflow на Python 3.13; `license` в формате SPDX; порог покрытия 65 %
+- [x] приватный ID тестового канала удалён из текущих файлов
+- [x] расписание и число тестов в документации приведены в соответствие
+- [ ] State в отдельной ветке / внешнем хранилище; убрать `fetch-depth: 0`
+      из `commit-state` (архитектурный шаг, требует прогона в Actions)
+- [ ] Миграция `GEMINI_MODEL` до июля 2027 и Python до октября 2028
+- [ ] Фазы B/C/E: живые кросспосты, 5 дней тестовых постов, знак владельца

@@ -79,6 +79,10 @@ Out of scope:
   `revisit`; `record_published` preserves the previous record in `history`.
 - `requirements.lock` is runtime-only; `requirements-dev.lock` adds the linters
   and tests. The publishing job installs only the runtime lock.
+- `state.json` is compacted on every save. Anti-duplication keys are kept
+  forever; heavy generated payloads and stale `seen_repos` entries are not.
+- A weekly lifecycle guard watches state size, repository activity and the
+  configured Gemini model; it opens an issue instead of publishing anything.
 
 ## Known operational risks
 
@@ -89,8 +93,8 @@ Out of scope:
   When moving to a production repository, revoke and re-issue every key.
 - `state/state.json` is committed to `main`. It contains no credentials and
   no private test-channel id, but it is public; keep it that way.
-- `TELEGRAM_OWNER_CHAT_ID` is not set in the test repository, so owner alerts
-  and reports will not be delivered. Set it before production.
+- `TELEGRAM_OWNER_CHAT_ID` is configured in Actions Variables; verify it still
+  points at the owner's chat before switching to production.
 - `GOOGLE_SERVICE_ACCOUNT_JSON` is not set, so the Facebook Sheets handoff
   cannot write rows. Set it before enabling `FEATURE_SHEETS_HANDOFF`.
 
@@ -99,49 +103,25 @@ Out of scope:
 We will publish a short note in the release notes for any security fix and
 credit the reporter unless they prefer to remain anonymous.
 
-## Manual repository settings (not applied by the token)
+## Manual repository settings
 
-The fine-grained token used for this remediation could read Actions variables
-but not write them (`PUT /actions/variables/...` returned 404). Set these in
-**Settings → Secrets and variables → Actions**:
+The following still require a human with access to the production repository.
+Values are never stored in this repository.
 
-- Variable `PUBLISH_TARGET` = `test` (optional: `config.py` defaults to
-  `test`, but set it explicitly so the rollout state is visible).
-- Variable `TELEGRAM_TEST_CHANNEL_ID` = the private test channel id
-  (known to the owner; do not paste it into public docs or tests).
-- Variable `TELEGRAM_OWNER_CHAT_ID` = the owner's private chat id. Without it
-  owner reports and alerts are silently not delivered.
-- Secret `GOOGLE_SERVICE_ACCOUNT_JSON` = the service-account JSON. Without it
-  the Facebook Sheets handoff cannot write rows.
-- Secret `FACEBOOK_PAGE_ACCESS_TOKEN` is not set. Facebook publishing is
-  disabled (`FEATURE_FACEBOOK=false`), so this is not blocking; set it before
-  enabling the direct Page adapter.
+- Secret `FACEBOOK_PAGE_ACCESS_TOKEN` — a long-lived Page token for the direct
+  Meta adapter. Facebook crossposts stay disabled until it exists.
+- Secret `GOOGLE_SERVICE_ACCOUNT_JSON` and Variables `FACEBOOK_SHEETS_ID`,
+  `FACEBOOK_SHEETS_RANGE`, `FEATURE_SHEETS_HANDOFF` — required only for the
+  make.com sheet hand-off.
+- Production repository: re-issue every key. Keys for the brand accounts
+  currently live in the test account's secrets.
+- Confirm the `Lifecycle guard` issues are reviewed; confirm `Budgets and
+  alerts` is set on the billing account.
+
+`APP_ENV`, `PUBLISH_TARGET`, `TELEGRAM_TEST_CHANNEL_ID`,
+`TELEGRAM_OWNER_CHAT_ID` and `TELEGRAM_MAIN_CHANNEL_ID` are configured. The
+legacy `MAIN_TELEGRAM_CHANNEL` remains as a compatibility alias and both
+workflows pass it explicitly.
 
 The private test-channel id is intentionally not stored in `state.json` or in
-the docs. `digest_command` stores `"test"` and `close_poll_command` resolves
-the real chat from the config.
-
-`main` is protected by the ruleset `main-protection`, which blocks force-push
-and branch deletion. Required status checks were **not** added: the state bot
-commits directly to `main` with `[skip ci]`, so a required `CI` check would
-block every state commit. To require checks, move the state to a separate
-branch or add a bypass actor for `github-actions[bot]` in the ruleset.
-
-## Known residual risks
-
-- **DNS rebinding:** `validate_public_url()` resolves the host and checks every
-  returned IP, but `requests` resolves the name again when it connects. A
-  malicious DNS server could return a public IP first and a private IP second.
-  Full mitigation requires pinning the resolved IP (custom adapter); the
-  current code blocks the common cases (localhost, private literals, redirects
-  to private hosts).
-- **State commit failure:** if `commit-state` fails after a successful Telegram
-  send, the published record lives only in the 1-day artifact. The job retries
-  the push three times; a manual recovery from the artifact is possible.
-- **Test-channel id in git history:** the private test-channel id was removed
-  from the current files, but it remains in the public commit history. It is
-  an identifier, not a credential; rewriting history would require a
-  force-push and is a deliberate owner decision.
-- **Social timeout:** a Mastodon/Bluesky request that times out may have been
-  published. The crosspost is marked `uncertain` and not retried automatically;
-   Mastodon also sends an `Idempotency-Key` so a manual retry is deduplicated.
+current configuration files; it remains in older git history.

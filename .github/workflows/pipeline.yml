@@ -68,6 +68,8 @@ jobs:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_TEST_CHANNEL_ID: ${{ vars.TELEGRAM_TEST_CHANNEL_ID }}
       TELEGRAM_MAIN_CHANNEL_ID: ${{ vars.TELEGRAM_MAIN_CHANNEL_ID }}
+      # Legacy name kept as a fallback for older setups; config.py reads both.
+      MAIN_TELEGRAM_CHANNEL: ${{ vars.MAIN_TELEGRAM_CHANNEL }}
       TELEGRAM_OWNER_CHAT_ID: ${{ vars.TELEGRAM_OWNER_CHAT_ID }}
       TELEGRAM_SOURCE_CHANNELS: ${{ vars.TELEGRAM_SOURCE_CHANNELS }}
       GH_API_TOKEN: ${{ github.token }}
@@ -100,7 +102,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
           cache: pip
       # A queued run starts from the commit that was current when it was
       # scheduled. If the previous run already committed its state, this

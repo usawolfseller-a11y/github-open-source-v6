@@ -21,7 +21,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
           cache: pip
       - name: Install
         run: |
@@ -35,6 +35,26 @@ jobs:
         run: pytest
       - name: Secret scan
         run: python tools/secret_scan.py
+      - name: Wheel contains the icon assets
+        run: |
+          python -m pip wheel --no-deps -w /tmp/wheels .
+          python - <<'PY'
+          import glob, sys, zipfile
+          wheel = glob.glob('/tmp/wheels/*.whl')[0]
+          pngs = [n for n in zipfile.ZipFile(wheel).namelist() if n.endswith('.png')]
+          print(f'wheel assets: {len(pngs)} PNG files')
+          if len(pngs) < 100:
+              sys.exit('card icons are missing from the built wheel')
+          PY
+      - name: State size guard
+        run: |
+          python - <<'PY'
+          import pathlib, sys
+          size = pathlib.Path('state/state.json').stat().st_size
+          print(f'state.json: {size / 1024 / 1024:.2f} MiB (guard: 10 MiB)')
+          if size > 10 * 1024 * 1024:
+              sys.exit('state.json exceeds the guard; compact or archive it')
+          PY
 
   gitleaks:
     runs-on: ubuntu-latest

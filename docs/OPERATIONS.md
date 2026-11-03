@@ -200,3 +200,18 @@ git checkout <commit> -- state/state.json
 Перед запуском `run` делает `git fetch origin main` и `reset --hard FETCH_HEAD`,
 поэтому отложенный запуск видит свежий state. Не убирайте этот шаг: без него
 возможна повторная публикация.
+
+
+---
+
+## Мониторинг и долгосрочная эксплуатация (с 2026-11-03)
+
+| Сигнал | Где смотреть | Действие |
+|---|---|---|
+| `state.json` > 10 МиБ | шаг «State size guard» в CI, `Lifecycle guard` | проверить компактирование, при необходимости архивировать полные записи |
+| Нет коммитов > 45 дней | `Lifecycle guard` | коммит/issue создаёт активность; иначе через 60 дней GitHub отключит все schedule |
+| `GEMINI_MODEL` исчез из API | `doctor` → `Gemini_models`, `Lifecycle guard` | сменить Variable на актуальную модель; проект fail-closed и молча перестанет публиковать |
+| Рост `Publish to Platforms` ошибок | Actions v5/v6 | разобрать до включения флагов Bluesky/Mastodon |
+| Приближение к квоте артефактов | Billing → Usage, Budgets and alerts | 64 артефакта/день × размер state; триггер — размер, не число запусков |
+
+Полный разбор: [`RELIABILITY_2026-11-03.md`](RELIABILITY_2026-11-03.md).
