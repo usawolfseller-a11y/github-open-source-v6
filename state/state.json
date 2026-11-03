@@ -412,9 +412,10 @@
     "horizon-rust/horizon": {
       "articles": {
         "devto": {
-          "id": 4968180,
+          "id": 4968458,
           "published_at": "2026-11-03T09:51:09.465756Z",
-          "url": "https://dev.to/githubopensource/minecraft-in-rust-open-source-horizon-engine-3pc1"
+          "updated_at": "2026-11-03T10:36:44.630505Z",
+          "url": "https://dev.to/githubopensource/minecraft-in-rust-open-source-horizon-engine-4774"
         }
       },
       "card_style": "",
