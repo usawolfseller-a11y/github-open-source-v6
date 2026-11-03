@@ -60,7 +60,19 @@
     },
     "telegram_update_offset": 0
   },
-  "news_topics": [],
+  "news_topics": [
+    {
+      "Gemini_video_input": true,
+      "headline": "SpaceX ships Grok Bot for asynchronous multi-agent task execution",
+      "image_url": "https://i.ibb.co/1GDLQP2v/ai-brief-e0768535c036.png",
+      "official_url": "https://x.ai/news/introducing-grok-bot",
+      "published_at": "2026-11-03T09:52:17.634150Z",
+      "telegram_message_id": 39,
+      "topic_key": "grok-bot",
+      "video_id": "Nj7rnWJE92o",
+      "video_url": "https://www.youtube.com/watch?v=Nj7rnWJE92o"
+    }
+  ],
   "publish_failures": {},
   "published": {
     "aprilnea/openlogi": {
