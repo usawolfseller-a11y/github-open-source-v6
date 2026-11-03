@@ -121,6 +121,8 @@ def test_article_update_command_is_wired_end_to_end():
     # that is only in the case statement is rejected by the API with 422.
     choices = workflow.split("options:", 1)[1].split("slot:", 1)[0]
     assert "- article-update" in choices
+    whitelist = workflow.split('case "$COMMAND" in', 1)[1].split("*)", 1)[0]
+    assert "article-update" in whitelist
     assert hasattr(pipeline, "update_recent_article")
     assert hasattr(platforms.DevToClient, "update_article")
     cli_src = (REPO / "src" / "ghos_v6" / "cli.py").read_text(encoding="utf-8")
@@ -139,16 +141,40 @@ def test_article_update_uses_put_not_a_duplicate_post(monkeypatch):
         def json(self) -> dict:
             return {"url": "https://dev.to/example"}
 
-    def fake_put(url, **kwargs):
+    def fake_request(method, url, **kwargs):
         calls["url"] = url
-        calls["method"] = "put"
+        calls["method"] = method.lower()
         return _Resp()
 
-    monkeypatch.setattr(client.session, "put", fake_put)
+    monkeypatch.setattr(client.session, "request", fake_request)
     result = client.update_article(4968180, _record(), _generated())
     assert calls["method"] == "put"
     assert calls["url"] == "https://dev.to/api/articles/4968180"
     assert result["url"].startswith("https://dev.to/")
+
+
+def test_devto_throttling_is_retried_before_giving_up(monkeypatch):
+    from ghos_v6 import platforms as pl
+
+    client = pl.DevToClient("dummy-key")
+    seen: list[int] = []
+
+    class _Resp:
+        status_code = 429
+        headers: dict[str, str] = {}
+
+        def json(self) -> dict:
+            return {"error": "Retry later"}
+
+    def fake_request(method, url, **kwargs):
+        seen.append(1)
+        return _Resp()
+
+    monkeypatch.setattr(client.session, "request", fake_request)
+    monkeypatch.setattr(pl.time, "sleep", lambda _s: None)
+    response = client._request("GET", "https://dev.to/api/articles/me/all")
+    assert len(seen) == 4, "four bounded attempts"
+    assert response.status_code == 429
 
 
 def test_article_id_is_resolved_from_the_editable_article_list():

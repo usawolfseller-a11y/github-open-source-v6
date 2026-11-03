@@ -91,8 +91,10 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
      "Mastodon reintroduced into crossposts"),
     (".github/workflows/pipeline.yml", "article|article-update|news",
      "article|news", "article-update command removed from the workflow"),
-    ("src/ghos_v6/platforms.py", "        response = self.session.put(\n",
-     "        response = self.session.post(\n", "article update creates a duplicate post"),
+    ("src/ghos_v6/platforms.py",
+     '            "PUT", f"https://dev.to/api/articles/{article_id}",',
+     '            "POST", "https://dev.to/api/articles",',
+     "article update creates a duplicate post"),
 ]
 
 COPY_ITEMS = (

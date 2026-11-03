@@ -6,6 +6,7 @@ platform failure must never roll back the Telegram publication.
 from __future__ import annotations
 
 import re
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -45,6 +46,19 @@ class DevToClient:
     def configured(self) -> bool:
         return bool(self.api_key)
 
+    def _request(self, method: str, url: str, **kwargs: Any) -> requests.Response:
+        """Bounded retry for dev.to throttling (429) and transient 5xx."""
+        timeout = kwargs.pop("timeout", 60)
+        delays = (5, 15, 30)
+        for attempt in range(4):
+            response = self.session.request(method, url, timeout=timeout, **kwargs)
+            if response.status_code not in {429, 500, 502, 503, 504} or attempt == 3:
+                return response
+            raw = str(response.headers.get("Retry-After") or "")
+            delay = int(raw) if raw.isdigit() else delays[min(attempt, 2)]
+            time.sleep(min(max(delay, 1), 45))
+        return response
+
     def me(self) -> dict[str, Any]:
         response = self.session.get("https://dev.to/api/users/me", timeout=30)
         if response.status_code != 200:
@@ -73,10 +87,8 @@ class DevToClient:
         # as the public article surface.
         if str(record.get("image_url") or "").startswith("https://"):
             article["main_image"] = record["image_url"]
-        response = self.session.post(
-            "https://dev.to/api/articles",
-            json={"article": article},
-            timeout=60,
+        response = self._request(
+            "POST", "https://dev.to/api/articles", json={"article": article}
         )
         if response.status_code not in {200, 201}:
             raise _error("dev.to", response)
@@ -84,10 +96,9 @@ class DevToClient:
 
     def my_articles(self, per_page: int = 100) -> list[dict[str, Any]]:
         """Articles owned by this API key, including drafts."""
-        response = self.session.get(
-            "https://dev.to/api/articles/me/all",
-            params={"per_page": per_page},
-            timeout=30,
+        response = self._request(
+            "GET", "https://dev.to/api/articles/me/all",
+            params={"per_page": per_page}, timeout=30,
         )
         if response.status_code != 200:
             raise _error("dev.to article list", response)
@@ -120,10 +131,9 @@ class DevToClient:
             "published": True,
             "tags": self._tags(record, generated),
         }
-        response = self.session.put(
-            f"https://dev.to/api/articles/{article_id}",
+        response = self._request(
+            "PUT", f"https://dev.to/api/articles/{article_id}",
             json={"article": article},
-            timeout=60,
         )
         if response.status_code not in {200, 201}:
             raise _error("dev.to update", response)
