@@ -34,7 +34,6 @@ def _record(name, score, hours_ago):
         "published_at": (now - timedelta(hours=hours_ago)).isoformat(),
         "crossposts": {
             "bluesky": {"status": "pending", "attempts": 0, "due_at": (now - timedelta(minutes=5)).isoformat()},
-            "mastodon": {"status": "pending", "attempts": 0, "due_at": (now - timedelta(minutes=5)).isoformat()},
         },
     }
 
@@ -43,11 +42,8 @@ def _config():
     return Config(
         telegram_bot_token="x",
         feature_bluesky=True,
-        feature_mastodon=True,
         bluesky_handle="o",
         bluesky_app_password="p",
-        mastodon_instance_url="https://example.social",
-        mastodon_access_token="t",
     )
 
 
@@ -56,7 +52,6 @@ def test_only_the_best_post_of_the_day_is_crossposted(monkeypatch, tmp_path):
     the ones that still have a pending cross-post. Otherwise the first run
     crowns the first post, the next run crowns the second, and so on."""
     monkeypatch.setattr(pipeline, "BlueskyClient", _FakeSocial)
-    monkeypatch.setattr(pipeline, "MastodonClient", _FakeSocial)
     store = StateStore(tmp_path)
     store.data = {"published": {}}
     for name, score, hours in (("midday", 71, 2), ("morning", 88, 3), ("evening", 60, 4)):

@@ -70,7 +70,7 @@ PROJECT_SCHEMA: dict[str, Any] = {
 # ---------------------------------------------------------------------------
 # Per-surface copy: a second, cheap call that rewrites the same project for
 # each platform instead of slicing one text with scissors.  Measured need:
-# Bluesky and Mastodon used to receive the identical opening line (29 of 29
+# Bluesky and Facebook used to receive the identical opening line (29 of 29
 # words shared), and that line was the "hook" written for a reader who had
 # already scrolled into the Telegram post.
 # ---------------------------------------------------------------------------
@@ -83,8 +83,6 @@ SURFACES_SCHEMA: dict[str, Any] = {
             "properties": {
                 "bluesky_headline": {"type": "STRING"},
                 "bluesky_lead": {"type": "STRING"},
-                "mastodon_headline": {"type": "STRING"},
-                "mastodon_lead": {"type": "STRING"},
                 "Facebook_headline": {"type": "STRING"},
                 "Facebook_lead": {"type": "STRING"},
                 "Facebook_body": {"type": "STRING"},
@@ -97,8 +95,6 @@ SURFACES_SCHEMA: dict[str, Any] = {
             "required": [
                 "bluesky_headline",
                 "bluesky_lead",
-                "mastodon_headline",
-                "mastodon_lead",
                 "Facebook_headline",
                 "Facebook_lead",
                 "Facebook_body",
@@ -116,8 +112,6 @@ SURFACES_SCHEMA: dict[str, Any] = {
 SURFACE_KEYS = (
     "bluesky_headline",
     "bluesky_lead",
-    "mastodon_headline",
-    "mastodon_lead",
     "Facebook_headline",
     "Facebook_lead",
     # Bodies written for one surface instead of reassembling shared fields.
@@ -190,6 +184,19 @@ def _clean_text(text: str, limit: int) -> str:
     text = html.unescape(text)
     text = re.sub(r"\s+", " ", text).strip()
     return text[:limit]
+
+
+def _clean_markdown(text: str, limit: int) -> str:
+    """Like _clean_text, but keeps newlines so H2 sections and lists survive."""
+    value = re.sub(r"<!--.*?-->", " ", str(text or ""), flags=re.S)
+    value = re.sub(r"<[^>]+>", " ", value)
+    value = html.unescape(value).replace("\r\n", "\n")
+    value = re.sub(r"[ \t]+\n", "\n", value)
+    value = re.sub(r"\n{3,}", "\n\n", value)
+    return value.strip()[:limit]
+
+
+MARKDOWN_SURFACE_KEYS = frozenset({"devto_body", "Facebook_body"})
 
 
 def _readme_for_prompt(readme: str, limit: int = 10_000) -> str:
@@ -468,7 +475,7 @@ for the website version.
 The audience, in order of how far they are from the field:
 - Facebook: least technical. Readers scrolling a business/lifestyle feed.
   Explain the outcome in ordinary words. No tool names, no file formats.
-- Bluesky and Mastodon: curious people, many of them designers, founders
+- Bluesky and Facebook: curious people, many of them designers, founders
   and hobbyists. A term is fine only if the sentence still works without it.
 - The article (seo_*): someone typing a plain question into Google. It must
   match what they would search, and it must not promise more than the repo
@@ -491,10 +498,6 @@ Per field:
   The reader has never heard of this project. Lead with the outcome.
 - bluesky_lead: <=110 characters. One sentence that makes the headline
   concrete: who it is for or the detail that proves the claim.
-- mastodon_headline: <=70 characters. Warmer and slightly more technical
-  than Bluesky: the Mastodon crowd will tolerate a named technology.
-- mastodon_lead: <=180 characters. One sentence, can mention the language
-  or the approach.
 - Facebook_headline: <=60 characters. Plainest language of the three.
   A person who has never installed anything should understand it.
 - Facebook_lead: <=200 characters. Ordinary words, benefit first.
@@ -542,8 +545,6 @@ facts below do not state.
         limits = {
             "bluesky_headline": 90,
             "bluesky_lead": 200,
-            "mastodon_headline": 120,
-            "mastodon_lead": 260,
             "Facebook_headline": 120,
             "Facebook_lead": 260,
             "Facebook_body": 2_600,
@@ -555,7 +556,9 @@ facts below do not state.
         }
         cleaned: dict[str, str] = {}
         for key in SURFACE_KEYS:
-            value = _clean_text(str(surfaces.get(key) or ""), limits.get(key, 400))
+            raw = str(surfaces.get(key) or "")
+            cleaner = _clean_markdown if key in MARKDOWN_SURFACE_KEYS else _clean_text
+            value = cleaner(raw, limits.get(key, 400))
             if value:
                 cleaned[key] = value
         return cleaned
@@ -788,7 +791,7 @@ def generate_project_content(
     matter"; the second takes that answer and fits it to four different
     truncation rules. Folding the second into the first made the model do
     both jobs at once and it did the fitting badly (identical Bluesky and
-    Mastodon openers). The second call is bounded: a few hundred output
+    Facebook openers). The second call is bounded: a few hundred output
     tokens on top of ~4.8k for the first.
     """
     if client is not None and client.configured:
@@ -806,9 +809,8 @@ def generate_project_content(
             surfaces = {}
         if surfaces:
             # The two least technical headlines must survive a jargon audit.
-            # SEO and Mastodon deliberately keep their terms: a search query
-            # like "convert HTML to MP4" is the point, and the Mastodon crowd
-            # knows what HTML is.
+            # SEO deliberately keeps its terms: a search query like
+            # "convert HTML to MP4" is the point.
             offenders = jargon_hits(
                 " ".join(
                     [

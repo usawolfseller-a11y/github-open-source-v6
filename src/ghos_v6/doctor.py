@@ -10,7 +10,7 @@ from .config import Config
 from .Gemini import GeminiClient
 from .http import sanitize
 from .news import fetch_worldofai_entries
-from .platforms import BlueskyClient, DevToClient, MastodonClient
+from .platforms import BlueskyClient, DevToClient
 from .sources import GitHubApi
 from .telegram import TelegramClient
 from .telegraph import TelegraphClient
@@ -40,7 +40,6 @@ def run_doctor(
         "TELEGRAPH_ACCESS_TOKEN": bool(config.telegraph_access_token),
         "DEV_API_KEY": bool(config.dev_api_key),
         "BLUESKY_APP_PASSWORD": bool(config.bluesky_app_password),
-        "MASTODON_ACCESS_TOKEN": bool(config.mastodon_access_token),
     }
     checks["env_presence"] = presence
 
@@ -191,18 +190,6 @@ def run_doctor(
             checks["bluesky"] = {"ok": True, **result}
         except BaseException as exc:  # noqa: BLE001
             checks["bluesky"] = {"ok": False, "error": _safe_error(exc)}
-
-    if config.mastodon_access_token:
-        try:
-            me = MastodonClient(config.mastodon_instance_url, config.mastodon_access_token).verify()
-            checks["mastodon"] = {
-                "ok": True,
-                "acct": me.get("acct"),
-                "username": me.get("username"),
-                "id": me.get("id"),
-            }
-        except BaseException as exc:  # noqa: BLE001
-            checks["mastodon"] = {"ok": False, "error": _safe_error(exc)}
 
     # Facebook is published by make.com from a sheet row. v6 deliberately
     # holds no Page id/token, so there is no Graph API call to verify here.

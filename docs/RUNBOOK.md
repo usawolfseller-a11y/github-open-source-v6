@@ -83,7 +83,6 @@ daily 19:50 metrics, Thu 18:10 close + learn.
 | `TELEGRAPH_ACCESS_TOKEN` | Full-breakdown (Telegraph) pages |
 | `DEV_API_KEY` | Optional article-of-day |
 | `BLUESKY_APP_PASSWORD` | Optional Bluesky crossposts |
-| `MASTODON_ACCESS_TOKEN` | Optional Mastodon crossposts |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | Service account that appends Facebook rows to the make.com sheet |
 
 Facebook is published by make.com from a Google Sheet. v6 feeds that sheet
@@ -103,7 +102,7 @@ every GitHub link through a third-party domain. Links stay `github.com`.
    posts `setup` there; run **Doctor** to discover `TELEGRAM_TEST_CHANNEL_ID`.
 6. Run `ghos-v6 doctor` until 13/13 answer.
 7. Enable one surface at a time: `FEATURE_DEVTO` → `FEATURE_BLUESKY` →
-   `FEATURE_MASTODON` → `FEATURE_AI_BRIEF` → `FEATURE_SHEETS_HANDOFF`.
+   `FEATURE_AI_BRIEF` → `FEATURE_SHEETS_HANDOFF`.
    (The owner explicitly authorised enabling them together for the
    2026-11-03…2026-11-09 observation window.)
 8. Only after the acceptance checklist passes: `APP_ENV=production`,
@@ -132,8 +131,8 @@ attempt hit.
 `IMGBB_API_KEY` is optional at runtime: without it, cards fall back to
 the monthly GitHub release host, then to Telegraph upload, then to
 GitHub OpenGraph. Media hosting is only needed until each platform has
-copied the image: Telegram stores the photo on its own CDN, Bluesky and
-Mastodon upload blobs, and dev.to downloads the cover. Telegraph
+copied the image: Telegram stores the photo on its own CDN, Bluesky uploads
+blobs, and dev.to downloads the cover. Telegraph
 articles keep hot-linking the uploaded URL, so an expired or deleted
 ImgBB image would leave a broken image on the Telegraph page only.
 
@@ -151,7 +150,6 @@ mapped to `GH_API_TOKEN`.
 | `FEATURE_TELEGRAPH` | `true` |
 | `FEATURE_DEVTO` | `false` until article smoke test |
 | `FEATURE_BLUESKY` | `false` until social smoke test |
-| `FEATURE_MASTODON` | `false` until social smoke test |
 | `FEATURE_SHEETS_HANDOFF` | `false` until the Google service account exists |
 | `FEATURE_AI_BRIEF` | `false` until three sample briefs pass review |
 
@@ -234,7 +232,7 @@ preferred over publishing a candidate that does not pass the gate.
 - [ ] Every post has a large preview, GitHub button and Telegraph breakdown.
 - [ ] At least one Editorial card and one suitable CLI/Neon Terminal card inspected.
 - [ ] dev.to smoke article inspected before `FEATURE_DEVTO=true`.
-- [ ] One Bluesky and one Mastodon smoke crosspost inspected before enabling flags.
+- [ ] One Bluesky smoke crosspost inspected before enabling flags.
       **This is the only subsystem never exercised live — start here.**
 - [x] AI Brief proven able to publish (fixed 2026-11-02): built from the
       x.ai primary source, 1764 characters, `eligible: true`. Two more forced
@@ -253,7 +251,8 @@ path (`config.py`, `pipeline.py`, `doctor.yml`, `pipeline.yml`, `.env.example`),
 together with `FACEBOOK_PAGE_ID`, `FACEBOOK_PAGE_ACCESS_TOKEN`,
 `FEATURE_FACEBOOK` and its legacy mixed-case alias. v6 holds no Page token.
 
-To switch it on you need exactly three things: Secret
+To switch it on you need exactly three things (step-by-step in
+[`SECRETS_CHECKLIST.md`](SECRETS_CHECKLIST.md)): Secret
 `GOOGLE_SERVICE_ACCOUNT_JSON` (one-line service-account JSON), Variable
 `FACEBOOK_SHEETS_ID` (spreadsheet id), Variable `FACEBOOK_SHEETS_RANGE`
 (default `facebook!A1`), plus Editor access for the service-account e-mail
@@ -274,7 +273,6 @@ Hashnode changes the policy.
 - Gemini: create a replacement key in AI Studio, update the secret,
   run Doctor, then delete the old key.
 - Bluesky: create a new App Password, update the secret, revoke the old one.
-- Mastodon: delete/recreate the application token with the same minimal scopes.
 - dev.to: generate a new API key in Settings → Extensions.
 - Telegraph: create a new account only if necessary; old pages stay
   attached to the previous account token.
@@ -336,7 +334,7 @@ links and `telegram_cta_url()` falls back to the public channel; the contract
 is pinned in `tests/test_facebook_and_links.py` and in the mutation gate.
 
 For this window the following flags are on: `FEATURE_TELEGRAPH`,
-`FEATURE_BLUESKY`, `FEATURE_MASTODON`, `FEATURE_DEVTO`, `FEATURE_AI_BRIEF`.
+`FEATURE_BLUESKY`, `FEATURE_DEVTO`, `FEATURE_AI_BRIEF`.
 Schedules stay `active` for the whole window. `FEATURE_SHEETS_HANDOFF` stays
 off until the Google service account exists (see Facebook status above).
 
@@ -344,7 +342,7 @@ What to watch until Monday:
 
 - three autonomous Telegram posts a day, all with a large preview, GitHub
   button and Telegraph breakdown;
-- one best-of-day crosspost to Bluesky and Mastodon, with a CTA to
+- one best-of-day crosspost to Bluesky, with a CTA to
   `@GitHub_Open_Source` (never a `t.me/c/` link);
 - the daily dev.to article and the 19:15 AI Brief;
 - Sunday digest, poll, poll-close + `learn` (the `value_model` only appears

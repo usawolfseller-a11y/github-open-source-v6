@@ -16,7 +16,7 @@ and no new facts are invented.
 
 | Finding | Fix |
 |---|---|
-| Bluesky/Mastodon/Facebook copy sent readers to GitHub/Telegraph but did not reliably bring them back to Telegram. | Every external adapter now has a Telegram return CTA. A public post link is labelled **Discuss**; during private-channel testing it falls back to the public channel as **Daily picks**. Private `t.me/c/...` links are still filtered out. |
+| Bluesky/Facebook copy sent readers to GitHub/Telegraph but did not reliably bring them back to Telegram. | Every external adapter now has a Telegram return CTA. A public post link is labelled **Discuss**; during private-channel testing it falls back to the public channel as **Daily picks**. Private `t.me/c/...` links are still filtered out. |
 | The Telegram post asked readers to star somebody else's repository, exporting the value of our audience; even the GitHub button used a ⭐ icon. | Removed. The flagship rotates **React**, **Forward** and **Save + comment** asks on our own post, and the button is now a neutral 🔗 GitHub link. |
 | dev.to put Telegram last in the footer, after the reader had already left. | dev.to has a daily-picks line in the first-screen wrapper and puts the Telegram discussion/follow link first under **Discuss**. |
 | Telegraph ended in a generic “Links” list. | It now has a follow line near the top, a **Continue exploring** section, Telegram first, and a “Get the next pick” CTA at the end. |
@@ -27,7 +27,7 @@ and no new facts are invented.
 |---|---|
 | Name, hook, stats and links were compressed into dense single lines; the five-second *what/why/proof* test was weak. | Telegram v2 separates header, bold hook, divider, star/fork proof line, stack/activity line and contributors line. |
 | The `owner/repo` path was hidden behind links/buttons, so forwards lost the exact project identity. | The header shows `owner/repo` in code style beside the project name. |
-| One generic 💻 icon represented every stack. | A shared language/stack icon map is used by Telegram, Bluesky, Mastodon and Facebook; the written language name remains present for accessibility. |
+| One generic 💻 icon represented every stack. | A shared language/stack icon map is used by Telegram, Bluesky and Facebook; the written language name remains present for accessibility. |
 | Summary, hook and the first feature often repeated one another. | The Gemini prompt now forbids restating the hook in the summary and requires each feature to add a distinct capability or evidence point. |
 | A useful one-line quick start was hidden inside the expandable deep dive. | Short commands are visible before the deep dive; longer/multi-line commands stay expandable. |
 | Hashtags favoured niche repository topics and produced awkward tags such as `#SecurityAndAnalysis` and `#Typescript`. | Broad topics are prioritized; special casing and aliases produce `#TypeScript`, `#Security`, `#AI`, `#CLI`, and clean dev.to tags. The prompt also requires one short broad category. |
@@ -96,6 +96,6 @@ route back.
   ingest per-post views/reactions. CTA variants are deterministic so
   they can be compared once metrics collection is added.
 - **Public smoke order:** format v2 still publishes to the private
-  test channel first. dev.to, Bluesky and Mastodon are smoke-tested
+  test channel first. dev.to and Bluesky are smoke-tested
   one by one only after the owner accepts the new samples; Facebook
   remains blocked until a real Page token exists.

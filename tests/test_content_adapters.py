@@ -3,7 +3,6 @@ from ghos_v6.content_adapters import (
     build_devto_body,
     build_devto_title,
     build_Facebook_text,
-    build_mastodon_text,
     devto_tags,
     hashtags,
     image_alt_text,
@@ -61,16 +60,6 @@ def test_bluesky_text_fits_and_uses_repo_not_private_telegram_link():
     assert "Daily picks: https://t.me/GitHub_Open_Source" in text
     assert "t.me/c/" not in text
 
-
-def test_mastodon_text_fits_with_camelcase_tags_and_breakdown():
-    record, generated = _record_and_generated()
-    text = build_mastodon_text(record, generated)
-    assert len(text) <= 500
-    assert "Repo: https://github.com/example/tool" in text
-    assert "Breakdown: https://telegra.ph/example-tool" in text
-    assert "#OpenSource" in text
-    assert "Daily open-source picks on Telegram: https://t.me/GitHub_Open_Source" in text
-    assert "t.me/c/" not in text
 
 
 def test_facebook_text_has_context_question_and_budget():
@@ -138,6 +127,4 @@ def test_tag_cleanup_and_public_telegram_discussion_link():
     assert "Antidetect" not in tags
     assert devto_tags(record, generated) == ["opensource", "typescript", "security", "ai"]
 
-    mastodon = build_mastodon_text(record, generated)
-    assert "Discuss on Telegram: https://t.me/GitHub_Open_Source/123" in mastodon
     assert "Discuss this pick on Telegram" in build_devto_body(record, generated)

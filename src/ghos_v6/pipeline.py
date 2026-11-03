@@ -31,7 +31,7 @@ from .news import (
     prefilter_entry,
     synthesize_brief,
 )
-from .platforms import BlueskyClient, DevToClient, MastodonClient
+from .platforms import BlueskyClient, DevToClient
 from .rank import rank_candidates, select_candidate
 from .sources import GitHubApi, collect_candidates, enrich_candidate, enrich_candidates
 from .state import StateStore, iso_now
@@ -630,7 +630,6 @@ def publish_slot(config: Config, store: StateStore, slot: str = "manual") -> dic
                 "card_style": visual.card_style,
                 "crossposts": {
                     "bluesky": {"status": "pending" if config.feature_bluesky else "disabled", "due_at": due.isoformat(), "attempts": 0},
-                    "mastodon": {"status": "pending" if config.feature_mastodon else "disabled", "due_at": due.isoformat(), "attempts": 0},
                 },
                 "articles": {},
             }
@@ -692,20 +691,17 @@ def process_crossposts(config: Config, store: StateStore) -> dict[str, Any]:
         if platform not in clients:
             if platform == "bluesky":
                 clients[platform] = BlueskyClient(config.bluesky_handle, config.bluesky_app_password)
-            elif platform == "mastodon":
-                clients[platform] = MastodonClient(config.mastodon_instance_url, config.mastodon_access_token)
         return clients.get(platform)
 
     enabled = {
         "bluesky": config.feature_bluesky,
-        "mastodon": config.feature_mastodon,
     }
 
     def best_of_day() -> str:
         """The day's single winner, fixed as soon as one post has gone out.
 
         Owner decision: three project posts a day all going to Bluesky,
-        Mastodon and Facebook meant 63 cross-posts a week for 21 projects.
+        Bluesky and Facebook meant 63 cross-posts a week for 21 projects.
         That is blanket publishing, which the multi-platform agent warns
         against. Only one post per day leaves Telegram; the rest stay in the
         channel. dev.to already worked this way.
@@ -855,6 +851,33 @@ def article_of_day(config: Config, store: StateStore) -> dict[str, Any]:
         store.save()
         return {"ok": True, "published": True, "repo": key, "url": result.get("url") or ""}
     return {"ok": True, "published": False, "reason": "already_published"}
+
+
+def update_recent_article(config: Config, store: StateStore) -> dict[str, Any]:
+    """Re-render and PUT the most recent dev.to article in place.
+
+    Used when the article renderer changes: the owner sees the fix on the
+    already published URL instead of a second, duplicate article.
+    """
+    config.require("DEV_API_KEY")
+    candidates = [
+        record
+        for record in (store.data.get("published") or {}).values()
+        if (record.get("articles") or {}).get("devto", {}).get("id")
+    ]
+    if not candidates:
+        return {"ok": True, "updated": 0, "reason": "no_devto_articles"}
+    record = max(candidates, key=lambda item: str(item.get("published_at") or ""))
+    key = store.repo_key(record)
+    info = record["articles"]["devto"]
+    result = DevToClient(config.dev_api_key).update_article(
+        info["id"], record, record.get("generated") or {}
+    )
+    info["updated_at"] = iso_now()
+    info["url"] = str(result.get("url") or info.get("url") or "")
+    store.event("article_updated", repo=key, url=info["url"])
+    store.save()
+    return {"ok": True, "updated": 1, "repo": key, "url": info["url"]}
 
 
 def news_command(config: Config, store: StateStore, *, force: bool = False) -> dict[str, Any]:

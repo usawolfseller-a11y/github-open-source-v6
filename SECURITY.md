@@ -38,7 +38,7 @@ Out of scope:
 - the Telegram channel, its moderation, or accounts operated by third
   parties,
 - the content of third-party repositories that the bot reads,
-- social accounts (Bluesky, Mastodon, Facebook, dev.to) — report account
+- social accounts (Bluesky, Facebook, dev.to) — report account
   compromise to the respective platform.
 
 ## Security properties

@@ -44,7 +44,7 @@ PYTHONPATH=src python3 -m ghos_v6.cli doctor
 | `Gemini_models` / `Gemini_generate` | квота или ключ |
 | `GitHub_search` | токен GitHub |
 | `worldofai_rss` | канал сменил RSS |
-| `telegraph`, `devto`, `bluesky`, `mastodon`, `Facebook` | токены площадок |
+| `telegraph`, `devto`, `bluesky`, `Facebook` | токены площадок |
 | `card_render` | Pillow или шрифты |
 
 ### Частые поломки
@@ -69,7 +69,7 @@ PYTHONPATH=src python3 -m ghos_v6.cli news --force
 не изменился ли формат спонсорской строки у канала.
 
 **Кросс-посты не уходят.**
-Проверить `FEATURE_BLUESKY` / `FEATURE_MASTODON`. Для Facebook —
+Проверить `FEATURE_BLUESKY`. Для Facebook —
 `FEATURE_SHEETS_HANDOFF` и наличие `GOOGLE_SERVICE_ACCOUNT_JSON`; Page-токен
 не нужен и в v6 не читается.
 Потом `crossposts.*.status` в записи поста: `pending` → `sent` или
@@ -223,7 +223,7 @@ git checkout <commit> -- state/state.json
 | `state.json` > 10 МиБ | шаг «State size guard» в CI, `Lifecycle guard` | проверить компактирование, при необходимости архивировать полные записи |
 | Нет коммитов > 45 дней | `Lifecycle guard` | коммит/issue создаёт активность; иначе через 60 дней GitHub отключит все schedule |
 | `GEMINI_MODEL` исчез из API | `doctor` → `Gemini_models`, `Lifecycle guard` | сменить Variable на актуальную модель; проект fail-closed и молча перестанет публиковать |
-| Рост `Publish to Platforms` ошибок | Actions v5/v6 | разобрать до включения флагов Bluesky/Mastodon |
+| Рост `Publish to Platforms` ошибок | Actions v5/v6 | разобрать до включения флагов Bluesky |
 | Приближение к квоте артефактов | Billing → Usage, Budgets and alerts | 64 артефакта/день × размер state; триггер — размер, не число запусков |
 
 Полный разбор: [`RELIABILITY_2026-11-03.md`](RELIABILITY_2026-11-03.md).

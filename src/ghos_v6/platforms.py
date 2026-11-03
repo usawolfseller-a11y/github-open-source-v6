@@ -6,7 +6,6 @@ platform failure must never roll back the Telegram publication.
 from __future__ import annotations
 
 import re
-import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -81,6 +80,30 @@ class DevToClient:
         )
         if response.status_code not in {200, 201}:
             raise _error("dev.to", response)
+        return dict(response.json() or {})
+
+    def update_article(
+        self, article_id: int | str, record: dict[str, Any], generated: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Re-render an existing article after a formatting fix.
+
+        dev.to exposes PUT /api/articles/{id}; no duplicate post is created.
+        """
+        if not self.configured:
+            raise PlatformError("DEV_API_KEY is not set")
+        article: dict[str, Any] = {
+            "title": build_devto_title(record, generated),
+            "body_markdown": build_devto_body(record, generated).strip(),
+            "published": True,
+            "tags": self._tags(record, generated),
+        }
+        response = self.session.put(
+            f"https://dev.to/api/articles/{article_id}",
+            json={"article": article},
+            timeout=60,
+        )
+        if response.status_code not in {200, 201}:
+            raise _error("dev.to update", response)
         return dict(response.json() or {})
 
 
@@ -233,117 +256,6 @@ class BlueskyClient:
             result["url"] = f"https://bsky.app/profile/{session.get('handle')}/post/{rkey}"
         return result
 
-
-class MastodonClient:
-    def __init__(self, instance_url: str, access_token: str):
-        self.base = (instance_url or "https://mastodon.social").rstrip("/")
-        self.access_token = access_token.strip()
-        self.session = requests.Session()
-        self.session.headers.update(
-            {"Authorization": f"Bearer {self.access_token}", "User-Agent": USER_AGENT}
-        )
-
-    @property
-    def configured(self) -> bool:
-        return bool(self.access_token)
-
-    def verify(self) -> dict[str, Any]:
-        response = self.session.get(f"{self.base}/api/v1/accounts/verify_credentials", timeout=30)
-        if response.status_code != 200:
-            raise _error("Mastodon", response)
-        return dict(response.json() or {})
-
-    def _upload_media(self, data: bytes, content_type: str, alt_text: str) -> str:
-        if not data:
-            return ""
-        extension = {
-            "image/jpeg": "jpg",
-            "image/gif": "gif",
-            "image/webp": "webp",
-        }.get(content_type, "png")
-        response = self.session.post(
-            f"{self.base}/api/v2/media",
-            files={"file": (f"cover.{extension}", data, content_type or "image/png")},
-            data={"description": alt_text[:1500]},
-            timeout=90,
-        )
-        if response.status_code not in {200, 202}:
-            raise _error("Mastodon media", response)
-        media = dict(response.json() or {})
-        media_id = str(media.get("id") or "")
-        if not media_id:
-            return ""
-        for _ in range(12):
-            if media.get("url"):
-                return media_id
-            time.sleep(2)
-            check = self.session.get(f"{self.base}/api/v1/media/{media_id}", timeout=30)
-            if check.status_code == 200:
-                media = dict(check.json() or {})
-                if media.get("url"):
-                    return media_id
-        return media_id
-
-    def post(
-        self,
-        text: str,
-        *,
-        url: str = "",
-        image_data: bytes = b"",
-        content_type: str = "image/png",
-        image_alt: str = "",
-        idempotency_key: str = "",
-    ) -> dict[str, Any]:
-        if not self.configured:
-            raise PlatformError("Mastodon token is not set")
-        status_text = str(text or "").strip()
-        if url and url not in status_text:
-            suffix = f"\n\n{url}"
-            status_text = status_text[: max(0, 500 - len(suffix))].rstrip() + suffix
-        payload: dict[str, Any] = {
-            "status": status_text[:500],
-            "visibility": "public",
-            "language": "en",
-        }
-        if image_data:
-            media_id = self._upload_media(image_data, content_type, image_alt)
-            if media_id:
-                payload["media_ids"] = [media_id]
-        headers = {"Idempotency-Key": idempotency_key} if idempotency_key else None
-        response = self.session.post(
-            f"{self.base}/api/v1/statuses",
-            json=payload,
-            timeout=45,
-            headers=headers,
-        )
-        if response.status_code not in {200, 201}:
-            raise _error("Mastodon post", response)
-        status = dict(response.json() or {})
-        status_id = str(status.get("id") or "")
-        if status_id:
-            # A brand-new or moderated account can answer 201 with a status URL
-            # while the post is invisible to the public. Check the same
-            # unauthenticated view a subscriber has; federation can lag a
-            # couple of seconds, so try twice before calling it a failure.
-            for attempt in range(2):
-                try:
-                    public = requests.get(
-                        f"{self.base}/api/v1/statuses/{status_id}",
-                        headers={"User-Agent": USER_AGENT},
-                        timeout=30,
-                    )
-                except requests.RequestException as exc:
-                    raise PlatformError(f"Mastodon read-back failed: {exc}") from exc
-                if public.status_code == 200:
-                    break
-                if attempt == 0:
-                    time.sleep(2)
-            else:
-                raise PlatformError(
-                    f"Mastodon status {status_id} is not publicly visible "
-                    f"(HTTP {public.status_code}); check the account's moderation state"
-                )
-        return status
 
 
 class FacebookClient:

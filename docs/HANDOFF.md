@@ -12,7 +12,7 @@
 Автономная система, которая каждый день находит интересные open-source
 проекты на GitHub, пишет про них посты и публикует в Telegram-канал
 [@GitHub_Open_Source](https://t.me/GitHub_Open_Source). Плюс статьи на
-Telegraph и dev.to, кросс-посты в Bluesky / Mastodon / Facebook, ежедневный
+Telegraph и dev.to, кросс-посты в Bluesky / Facebook, ежедневный
 AI Brief по новостям и недельный дайджест с опросом. Ноль затрат на
 инфраструктуру: всё работает на GitHub Actions, генерация — на бесплатном
 тарифе Gemini.
@@ -56,7 +56,7 @@ AI Brief по новостям и недельный дайджест с опр�
 | **Карточки 1200×630** | горизонтальные, не квадрат |
 | **Заголовки не для разработчиков** | обычный человек должен захотеть открыть |
 | **SEO — английский, под Google** | dev.to и Telegraph, не русский |
-| **Кросс-пост только лучший пост суток** | Bluesky/Mastodon/Facebook, а Telegraph — на каждый пост |
+| **Кросс-пост только лучший пост суток** | Bluesky/Facebook, а Telegraph — на каждый пост |
 | **Facebook — через make.com из Google Sheet** | v6 не публикует в Page напрямую |
 | **Интересные проекты, а не библиотеки** | агентские скиллы и Claude Code — исключение |
 | **Технические названия моделей сохраняются** | вендор + точное имя + версия |
@@ -80,7 +80,7 @@ Telegram web ──┘    │              ↓                           │
                     │  пост + карточка + Telegraph             │
                     │              ↓                           │
                     │  process_crossposts (:05/:35)               │
-                    │  лучший пост суток → Bluesky/Mastodon/FB │
+                    │  лучший пост суток → Bluesky/FB │
                     └──────────────────────────────────────────┘
 ```
 
@@ -95,7 +95,7 @@ Telegram web ──┘    │              ↓                           │
 | `content_adapters.py` | 704 | Тексты под каждую площадку |
 | `formatter.py` | 559 | Длинный пост Telegram (HTML) |
 | `news.py` | 527 | AI Brief: RSS → префильтр → первоисточник → синтез |
-| `platforms.py` | 352 | Клиенты dev.to, Bluesky, Mastodon, Facebook |
+| `platforms.py` | 352 | Клиенты dev.to, Bluesky, Facebook |
 | `gate.py` | 275 | Автономный фильтр качества и безопасности |
 | `media_host.py` | 264 | ImgBB и Telegraph как хостинги картинок |
 | `telegraph.py` | 262 | Статьи Telegraph + Markdown→DOM |
@@ -122,7 +122,7 @@ Telegram web ──┘    │              ↓                           │
 
 1. **Основной вызов** — бриф: заголовок, факты, статья для Telegraph.
 2. **Вызов поверхностей** — 12 полей: отдельные заголовки и тела для
-   Bluesky, Mastodon, Facebook, dev.to, плюс `seo_query` и `telegraph_angle`.
+   Bluesky, Facebook, dev.to, плюс `seo_query` и `telegraph_angle`.
 
 Почему не отдельный вызов на каждую площадку: пять независимых писателей,
 читающих один README, расходятся в фактах. Проверено: два независимых
@@ -190,21 +190,27 @@ PYTHONPATH=src python3 -m ghos_v6.cli doctor
 
 **Секреты** (GitHub → Settings → Secrets): `TELEGRAM_BOT_TOKEN`,
 `GEMINI_API_KEY`, `IMGBB_API_KEY`, `TELEGRAPH_ACCESS_TOKEN`,
-`DEV_API_KEY`, `BLUESKY_APP_PASSWORD`, `MASTODON_ACCESS_TOKEN`,
+`DEV_API_KEY`, `BLUESKY_APP_PASSWORD`,
 `GOOGLE_SERVICE_ACCOUNT_JSON` (для make.com; пока не задан).
 
 **Переменные** (Settings → Variables): `APP_ENV`, `PUBLISH_TARGET`,
 `GITHUB_REPOSITORY`, `GEMINI_MODEL`, `TELEGRAM_MAIN_CHANNEL_ID`,
 `TELEGRAM_TEST_CHANNEL_ID`, `TELEGRAM_OWNER_CHAT_ID`,
-`TELEGRAM_SOURCE_CHANNELS`, `BLUESKY_HANDLE`, `MASTODON_INSTANCE_URL`,
+`TELEGRAM_SOURCE_CHANNELS`, `BLUESKY_HANDLE`,
 `FACEBOOK_SHEETS_ID`, `FACEBOOK_SHEETS_RANGE`,
-`FEATURE_TELEGRAPH`, `FEATURE_DEVTO`, `FEATURE_BLUESKY`, `FEATURE_MASTODON`,
+`FEATURE_TELEGRAPH`, `FEATURE_DEVTO`, `FEATURE_BLUESKY`,
 `FEATURE_AI_BRIEF`, `FEATURE_SHEETS_HANDOFF`.
 
 **Удалено 2026-11-03:** `FACEBOOK_PAGE_ID`, `FACEBOOK_PAGE_ACCESS_TOKEN`,
-`FEATURE_FACEBOOK` и легаси `FEATURE_Facebook`. Прямой Graph API выведен из
+`FEATURE_FACEBOOK`, легаси `FEATURE_Facebook`, а также весь контур Mastodon
+(`MASTODON_INSTANCE_URL`, `MASTODON_ACCESS_TOKEN`, `FEATURE_MASTODON`,
+`MastodonClient`, поля `mastodon_headline`/`mastodon_lead`) — аккаунт
+заблокирован за спам. Прямой Graph API выведен из
 рабочего контура: Facebook публикует make.com из строки Google-таблицы,
 поэтому Page-токен и id страницы v6 не нужны.
+
+Пошагово, где взять `GOOGLE_SERVICE_ACCOUNT_JSON`, `FACEBOOK_SHEETS_ID` и
+`FACEBOOK_SHEETS_RANGE` — в [`SECRETS_CHECKLIST.md`](SECRETS_CHECKLIST.md).
 
 **Никогда не печатайте значения секретов** ни в чат, ни в логи. Ошибки уже
 очищаются в `http.py::sanitize`.
@@ -236,7 +242,7 @@ PYTHONPATH=src python3 -m ghos_v6.cli doctor
 13 интеграций.
 
 **Не проверено боем:** кросс-посты. У всех трёх опубликованных постов
-`crossposts: disabled` — живьём в Bluesky, Mastodon и Facebook не ушло
+`crossposts: disabled` — живьём в Bluesky и Facebook не ушло
 **ни одного**. Это первое, что нужно проверить в новой сессии.
 
 **Не сделано:** Hashnode (отложен), Facebook напрямую (только через
@@ -249,7 +255,7 @@ make.com), продакшн-переключение.
 1. `ghos-v6 doctor` — убедиться, что 13/13 отвечают.
 2. Прочитать [`ROADMAP.md`](ROADMAP.md), фазы B–E.
 3. **Проверить один живой кросс-пост** — единственная непроверенная система.
-   Варианты: опубликовать в Bluesky/Mastodon аккаунты владельца, либо
+   Варианты: опубликовать в Bluesky-аккаунты владельца, либо
    написать тест на реальном API с удалением поста сразу после.
 4. Прогнать 5 дней в тестовом канале по 3 поста.
 5. Только потом `APP_ENV=production` + `PUBLISH_TARGET=main`.

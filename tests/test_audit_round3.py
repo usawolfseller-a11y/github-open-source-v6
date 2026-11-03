@@ -34,7 +34,6 @@ def _record(name, score, hours_ago):
         "published_at": (now - timedelta(hours=hours_ago)).isoformat(),
         "crossposts": {
             "bluesky": {"status": "pending", "attempts": 0, "due_at": (now - timedelta(minutes=5)).isoformat()},
-            "mastodon": {"status": "pending", "attempts": 0, "due_at": (now - timedelta(minutes=5)).isoformat()},
         },
     }
 
@@ -43,11 +42,8 @@ def _config():
     return Config(
         telegram_bot_token="x",
         feature_bluesky=True,
-        feature_mastodon=True,
         bluesky_handle="o",
         bluesky_app_password="p",
-        mastodon_instance_url="https://example.social",
-        mastodon_access_token="t",
     )
 
 
@@ -112,7 +108,6 @@ def test_later_higher_post_cannot_take_a_second_slot(monkeypatch, tmp_path):
     """Once a post has gone out today, the day's winner is fixed. A later,
     higher-scoring post must not take a second social slot."""
     monkeypatch.setattr(pipeline, "BlueskyClient", _FakeSocial)
-    monkeypatch.setattr(pipeline, "MastodonClient", _FakeSocial)
     store = StateStore(tmp_path)
     store.data = {"published": {}}
     store.data["published"]["owner/first"] = _record("first", 50, 5)

@@ -70,7 +70,7 @@
 ## 4. Что НЕ исправлено и требует владельца
 
 - ~~`pipeline.yml` и `doctor.yml` по-прежнему `disabled_manually`, включать нельзя без письменного решения.~~ **Снято владельцем 2026-11-03:** «публикацию разрешаю и все запреты снимаю». Workflow теперь разрешено включать; документация обновлена. Target lock и fail-closed при пустом тестовом ID сохраняются.
-- Не пройдены acceptance-пункты: 3–5 дней автономных тестовых постов, живой кросспост Bluesky и Mastodon, dev.to smoke article, еженедельный отчёт владельцу, остановка старого бота v5 в день переключения.
+- Не пройдены acceptance-пункты: 3–5 дней автономных тестовых постов, живой кросспост Bluesky, dev.to smoke article, еженедельный отчёт владельцу, остановка старого бота v5 в день переключения.
 - ~~Не заданы `FACEBOOK_PAGE_ACCESS_TOKEN` / `FACEBOOK_PAGE_ID`.~~ **Снято
   2026-11-03:** прямой Facebook Graph API удалён из рабочего контура, эти
   переменные и `FEATURE_FACEBOOK` больше не нужны и не читаются. Для Facebook
@@ -181,7 +181,7 @@ cancel-in-progress: false` в GitHub Actions допускает только о�
 **Что остаётся за владельцем (живая приёмка, а не автотесты):** визуальная
 проверка поста и карточки в тестовом канале, 3 дня автономных постов по 3
 в день, воскресный дайджест и опрос (`learn` уже прошёл, но `value_model`
-появится только после данных опроса), живой кросспост Bluesky/Mastodon,
+появится только после данных опроса), живой кросспост Bluesky,
 dev.to smoke article, Facebook-handoff после добавления Secrets/Variables,
 переключение трёх Variables на `production`/`main`, остановка v5 в день
 переключения и отзыв временного PAT.
@@ -244,14 +244,13 @@ workflow, `.env.example`); удалены также Variables `FACEBOOK_PAGE_ID
    в коде, если лист называется иначе — указать свой.
 4. Расшарить таблицу на **e-mail сервисного аккаунта** с ролью «Редактор» и
    включить сценарий **make.com**, который её читает.
-5. Проверить **Mastodon-аккаунт**: подтверждение e-mail, отсутствие
-   ограничений/модерации, видимость первого поста. Это не секрет и не код —
-   доступ владельца к аккаунту.
+5. ~~Проверить Mastodon-аккаунт~~ — **снято**: 2026-11-03 аккаунт
+   заблокирован за спам, площадка полностью удалена из проекта (§10).
 6. После окна наблюдения до **2026-11-09** — решение о переключении трёх
    Variables на `production`/`main`, остановка v5 в тот же день и отзыв PAT.
 
 Всё остальное уже есть: 7 Secrets (Telegram, Gemini, ImgBB, Telegraph,
-dev.to, Bluesky, Mastodon), `TELEGRAM_MAIN_CHANNEL_ID=@GitHub_Open_Source`,
+dev.to, Bluesky), `TELEGRAM_MAIN_CHANNEL_ID=@GitHub_Open_Source`,
 все флаги площадок включены, `Doctor`/`Publishing pipeline`/`CI`/`CodeQL`/
 `Lifecycle guard` — `active`. Расписания работают до понедельника.
 
@@ -261,3 +260,71 @@ dev.to, Bluesky, Mastodon), `TELEGRAM_MAIN_CHANNEL_ID=@GitHub_Open_Source`,
 `status: failed, attempts: 1, error: "Mastodon status … is not publicly
 visible (HTTP 404); check the account's moderation state"`. Ложного
 `published` больше нет; проблема аккаунта видна владельцу в логах и state.
+
+---
+
+## 10. Правки владельца 2026-11-03 (верстка, разделитель, удаление Mastodon)
+
+Владелец прислал скриншоты и три требования. Все три закрыты.
+
+### 10.1 dev.to: «одна сплошная портянка»
+
+**Причина.** `GeminiClient.generate_surfaces()` прогонял `devto_body` через
+`_clean_text()`, который делает `re.sub(r"\s+", " ", ...)`. Все переводы строк
+исчезали, и заголовки `## How it works` оказывались внутри абзаца — dev.to
+показывал их как обычный текст (на скриншоте «\\#\\# How it works By
+leveraging…»).
+
+**Исправление.**
+
+- `Gemini._clean_markdown()` сохраняет переводы строк для `devto_body` и
+  `Facebook_body` (`MARKDOWN_SURFACE_KEYS`); `surface_markdown()` читает тело
+  без схлопывания.
+- `normalize_article_markdown()` чинит уже сохранённые сплющенные черновики:
+  возвращает `##` в начало строки, отделяет название секции от первого
+  предложения, превращает ` - ` в Markdown-список, расставляет пустые строки.
+- После TL;DR-блока добавлена горизонтальная черта `---`, затем идут H2-секции
+  и блок `## Discuss`.
+- Новая команда `ghos-v6 article-update` (и `workflow_dispatch` с
+  `command=article-update`) делает `PUT /api/articles/{id}` — уже
+  опубликованная статья перерисовывается на месте, без дубликата.
+
+### 10.2 Разделитель между каналом и тегами
+
+`formatter.CHANNEL_TAG_DIVIDER = "========================================"`
+ставятся между подписью `📣 @GitHub_Open_Source — daily open-source picks` и
+хештегами — и в обычном project-посте, и в AI Brief (`#AINews #OpenSource`).
+Позиция зафиксирована тестами и мутацией.
+
+### 10.3 Mastodon удалён
+
+На скриншоте: **«Блокировка учётной записи (03 нояб. 2026), 13:00,
+причина: Спам», «Учётная запись заблокирована»**, апелляцию можно подать
+один раз. Владелец решил не восстанавливать площадку, а убрать её. Удалено:
+
+- `MastodonClient` и его read-back проверка (`platforms.py`), ветка в
+  `process_crossposts`, инициализация `crossposts.mastodon`, проверка в
+  `doctor.py`;
+- поля `Config` и `require()` (`MASTODON_INSTANCE_URL`,
+  `MASTODON_ACCESS_TOKEN`, `FEATURE_MASTODON`);
+- поля схемы Gemini `mastodon_headline`/`mastodon_lead`, лимиты, промпт,
+  `SURFACE_KEYS` и `build_mastodon_text`;
+- строки env в `pipeline.yml`/`doctor.yml`, `.env.example`,
+  `.env.keys.template`, упоминание в `http.py::_SENSITIVE_ENV`;
+- GitHub Secret `MASTODON_ACCESS_TOKEN` и Variables `MASTODON_INSTANCE_URL`,
+  `FEATURE_MASTODON`; исторические записи `crossposts.mastodon` и события в
+  `state.json`/`events.jsonl`;
+- тесты и документация (активная); в архивных отчётах осталась только
+  историческая хроника находки в §9.
+
+Флаг `FEATURE_BLUESKY` остался включённым; лучший пост суток теперь уходит
+только в Bluesky, а Facebook — через make.com. Секрет `BLUESKY_APP_PASSWORD`
+не пострадал.
+
+### 10.4 Состояние на момент правки
+
+301 тест, **65.84 %** branch-inclusive coverage, **30/30** мутаций убито,
+ruff/mypy/secret-scan чисты. Окно наблюдения до **2026-11-09** продолжается:
+`APP_ENV=test`, `PUBLISH_TARGET=test`, все исходящие CTA ведут на
+`@GitHub_Open_Source`. Что должен дать владелец для Facebook и как взять
+недостающие секреты — в [`SECRETS_CHECKLIST.md`](SECRETS_CHECKLIST.md).

@@ -16,7 +16,7 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 import requests
 from defusedxml import ElementTree as ET
 
-from .formatter import utf16_len, visible_text
+from .formatter import CHANNEL_TAG_DIVIDER, utf16_len, visible_text
 from .Gemini import GeminiClient
 from .http import USER_AGENT, UnsafeUrl, download_bytes, validate_public_url
 
@@ -565,6 +565,8 @@ def format_ai_brief(brief: dict[str, Any]) -> str:
             f"<i>{_esc(question)}</i>",
             "❤️ <b>React</b> if you want more verified AI briefs like this.",
             '📣 <a href="https://t.me/GitHub_Open_Source"><b>@GitHub_Open_Source</b></a> — daily open-source picks',
+            "",
+            CHANNEL_TAG_DIVIDER,
             "#AINews #OpenSource",
         ]
         return "\n".join(lines)

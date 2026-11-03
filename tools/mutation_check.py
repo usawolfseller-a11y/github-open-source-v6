@@ -72,14 +72,34 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
      'DEFAULT_RANGE = "Sheet1!A1"', "sheet range breaks the make.com layout"),
     (".env.example", "FEATURE_SHEETS_HANDOFF=false", "FEATURE_SHEETS_HANDOFF=true",
      "documented Sheets hand-off default flipped"),
-    ("src/ghos_v6/platforms.py", "        if status_id:\n", "        if False:\n",
-     "Mastodon public read-back disabled"),
+    ("src/ghos_v6/content_adapters.py",
+     '    raw = re.sub(r"\\s+#{2,3}\\s+", "\\n\\n## ", raw)',
+     "    raw = raw", "dev.to headings flattened back into a wall of text"),
+    ("src/ghos_v6/formatter.py",
+     'CHANNEL_TAG_DIVIDER = "========================================"',
+     'CHANNEL_TAG_DIVIDER = ""', "channel/tag separator removed"),
+    ("src/ghos_v6/Gemini.py",
+     'MARKDOWN_SURFACE_KEYS = frozenset({"devto_body", "Facebook_body"})',
+     "MARKDOWN_SURFACE_KEYS = frozenset()", "Markdown surfaces flattened again"),
+    ("src/ghos_v6/content_adapters.py",
+     'return (intro + "\\n\\n---\\n\\n" if intro else "") + markdown + footer',
+     'return (intro + "\\n\\n" if intro else "") + markdown + footer',
+     "TL;DR loses its visual rule"),
+    ("src/ghos_v6/pipeline.py",
+     '    enabled = {\n        "bluesky": config.feature_bluesky,\n',
+     '    enabled = {\n        "bluesky": config.feature_bluesky,\n        "mastodon": False,\n',
+     "Mastodon reintroduced into crossposts"),
+    (".github/workflows/pipeline.yml", "article|article-update|news",
+     "article|news", "article-update command removed from the workflow"),
+    ("src/ghos_v6/platforms.py", "        response = self.session.put(\n",
+     "        response = self.session.post(\n", "article update creates a duplicate post"),
 ]
 
 COPY_ITEMS = (
     "src", "tests", "docs", "state", "tools", ".github", "pyproject.toml",
     "requirements.in", "requirements.lock", "requirements-dev.in",
     "requirements-dev.lock", "README.md", "SECURITY.md", "LICENSE", ".env.example",
+    ".env.keys.template",
 )
 
 

@@ -81,12 +81,9 @@ jobs:
       DEV_API_KEY: ${{ secrets.DEV_API_KEY }}
       BLUESKY_HANDLE: ${{ vars.BLUESKY_HANDLE }}
       BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
-      MASTODON_INSTANCE_URL: ${{ vars.MASTODON_INSTANCE_URL }}
-      MASTODON_ACCESS_TOKEN: ${{ secrets.MASTODON_ACCESS_TOKEN }}
       FEATURE_TELEGRAPH: ${{ vars.FEATURE_TELEGRAPH }}
       FEATURE_DEVTO: ${{ vars.FEATURE_DEVTO }}
       FEATURE_BLUESKY: ${{ vars.FEATURE_BLUESKY }}
-      FEATURE_MASTODON: ${{ vars.FEATURE_MASTODON }}
       FEATURE_AI_BRIEF: ${{ vars.FEATURE_AI_BRIEF }}
       FEATURE_SHEETS_HANDOFF: ${{ vars.FEATURE_SHEETS_HANDOFF }}
       FACEBOOK_SHEETS_ID: ${{ vars.FACEBOOK_SHEETS_ID }}
@@ -127,7 +124,7 @@ jobs:
         run: |
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
             case "$COMMAND" in
-              collect|publish|crossposts|article|news|digest|report|moderation|facebook-handoff|metrics|learn|poll-close) ;;
+              collect|publish|crossposts|article|article-update|news|digest|report|moderation|facebook-handoff|metrics|learn|poll-close) ;;
               *) echo "::error::invalid command: $COMMAND"; exit 1 ;;
             esac
             if [[ "$COMMAND" == "publish" ]]; then

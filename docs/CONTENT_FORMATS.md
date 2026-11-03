@@ -93,18 +93,6 @@ Format-v2 principles from the design/growth audit:
 - **Accessibility:** clickable link and hashtag facets with UTF-8
   byte offsets; meaningful image alt text.
 
-## Mastodon — community note
-
-- **Budget:** 500 characters, built conservatively by raw length.
-- **Layout:** language icon + lead → two feature bullets → Repo,
-  Breakdown and Telegram links, each on its own line → at most three
-  hashtags. If space is tight, the long breakdown URL is dropped
-  before bullets or the Telegram return loop.
-- **Tags:** proper CamelCase for screen readers, with special cases
-  such as `#TypeScript`, `#JavaScript`, `#AI` and `#CLI`; awkward
-  generated phrases are normalized (for example `Security and
-  Analysis` → `#Security`).
-
 ## Facebook Page — structured plain text
 
 - **Budget:** editorial target up to about 1,800 characters; the API
@@ -191,8 +179,8 @@ external clients. If all hosts fail and OpenGraph is used, state
 records `visual_kind=opengraph` honestly and a `card_host_failed`
 event is written. The winning host is stored as `visual_host`.
 
-Hosting lifetime matters less than it looks: Telegram, Bluesky and
-Mastodon copy the image into their own storage at post time, and dev.to
+Hosting lifetime matters less than it looks: Telegram and Bluesky
+copy the image into their own storage at post time, and dev.to
 downloads the cover. Only the Telegraph article hot-links the URL, so a
 later ImgBB deletion/expiry would break the image in that article
 alone — never the Telegram or social posts.

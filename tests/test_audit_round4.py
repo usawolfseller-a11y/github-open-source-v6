@@ -1,12 +1,10 @@
 """Regression tests for the fourth audit (2026-11-02, round 4)."""
 from __future__ import annotations
 
-import requests
 
 from ghos_v6 import dedup, pipeline, polls
 from ghos_v6.config import Config
 from ghos_v6.formatter import format_project_caption
-from ghos_v6.platforms import MastodonClient
 from ghos_v6.state import StateStore
 from ghos_v6.telegram_payload import build_buttons, build_send_message_payload
 
@@ -98,31 +96,6 @@ def test_caption_escapes_hook():
     assert "<b>bold</b>" not in caption
     assert "&lt;b&gt;bold&lt;/b&gt;" in caption
 
-
-def test_mastodon_uses_idempotency_key(monkeypatch):
-    client = MastodonClient("https://example.social", "token")
-    captured = {}
-
-    def fake_post(url, **kwargs):
-        captured.update(kwargs)
-        response = requests.Response()
-        response.status_code = 200
-        response._content = b'{"id": 1}'
-        response._content_consumed = True
-        return response
-
-    def fake_get(url, **kwargs):
-        response = requests.Response()
-        response.status_code = 200
-        response._content = b'{"id": 1}'
-        response._content_consumed = True
-        return response
-
-    monkeypatch.setattr(client.session, "post", fake_post)
-    # The adapter now reads the new status back as an anonymous subscriber.
-    monkeypatch.setattr(requests, "get", fake_get)
-    client.post("hello", idempotency_key="owner/repo:mastodon")
-    assert captured["headers"]["Idempotency-Key"] == "owner/repo:mastodon"
 
 
 def test_close_poll_resolves_masked_chat_id(monkeypatch, tmp_path):

@@ -82,8 +82,6 @@ Telegram web ────┤  → merge_candidate() (дедуп по repo)  │
 |---|---|---|
 | `bluesky_headline` | заголовок Bluesky | 90 |
 | `bluesky_lead` | подводка | 160 |
-| `mastodon_headline` | заголовок Mastodon | 110 |
-| `mastodon_lead` | подводка | 220 |
 | `facebook_headline` | заголовок Facebook | 100 |
 | `facebook_lead` | подводка | 260 |
 | `Facebook_body` | **своё тело**, 120–200 слов | 2 600 |
@@ -110,7 +108,7 @@ Telegram web ────┤  → merge_candidate() (дедуп по repo)  │
 
 `deterministic_project_content()` строит пост из данных репозитория без ИИ.
 Пост выйдет беднее, но выйдет. Проверено: все четыре адаптера дают
-непустой текст (dev.to 2303, Facebook 1537, Bluesky 278, Mastodon 402).
+непустой текст (dev.to 2303, Facebook 1537, Bluesky 278).
 
 ---
 
@@ -142,13 +140,13 @@ GitHub release assets **исключены**: отдают `application/octet-st
 ```
 1. Найти посты, у которых crossposts.*.status == "pending" и due_at прошёл
 2. best_of_day(): выбрать ОДИН лучший пост за последние сутки по score
-3. Победитель → Bluesky / Mastodon (Facebook — отдельно, через make.com)
+3. Победитель → Bluesky (Facebook — отдельно, через make.com)
 4. Остальные → status "held", reason "not_best_of_day"
 5. Telegraph — отдельно, на каждый пост, не через эту очередь
 ```
 
 Ретраи и dead-letter на каждую площадку. Фича-флаги: `FEATURE_BLUESKY`,
-`FEATURE_MASTODON`, `FEATURE_DEVTO`. Facebook не в этой очереди:
+`FEATURE_DEVTO`. Facebook не в этой очереди:
 `FEATURE_SHEETS_HANDOFF` пишет строку в Google Sheet, откуда публикует
 make.com. Прямого Graph API в v6 нет.
 

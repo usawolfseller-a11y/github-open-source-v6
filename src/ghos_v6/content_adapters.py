@@ -5,7 +5,6 @@ module turns that object into native copy for each surface instead of
 copy/pasting the same paragraph everywhere:
 
 * Bluesky: one sharp idea + repo link, hard 300-character budget.
-* Mastodon: scannable 500-character community post with CamelCase tags.
 * Facebook: plain-language Page post with context and a question.
 * dev.to: searchable article wrapper with TL;DR and discussion CTA.
 
@@ -21,7 +20,6 @@ from typing import Any
 from .formatter import _language_icon as _shared_language_icon
 
 BLUESKY_LIMIT = 300
-MASTODON_LIMIT = 500
 FACEBOOK_TARGET = 1800
 
 _LANG_TAG = {
@@ -188,6 +186,19 @@ def surface_field(generated: dict[str, Any] | None, key: str) -> str:
     if not isinstance(surfaces, dict):
         return ""
     return clean_text(surfaces.get(key) or "")
+
+
+def surface_markdown(generated: dict[str, Any] | None, key: str) -> str:
+    """Read a Markdown body without flattening its paragraphs or headings.
+
+    ``surface_field`` deliberately collapses whitespace for one-line copy.
+    Applying it to an article turns every ``##`` heading into inline text,
+    which dev.to then renders as one unreadable wall of prose.
+    """
+    surfaces = (generated or {}).get("surfaces") or {}
+    if not isinstance(surfaces, dict):
+        return ""
+    return str(surfaces.get(key) or "").strip()
 
 
 def _surface_or(fallback: str, value: str, limit: int) -> str:
@@ -453,63 +464,6 @@ def build_bluesky_text(record: dict[str, Any], generated: dict[str, Any] | None 
         parts.append(suffix)
     return _fit_parts(parts, BLUESKY_LIMIT)
 
-def build_mastodon_text(record: dict[str, Any], generated: dict[str, Any] | None = None) -> str:
-    """Readable Mastodon post with repo, breakdown and Telegram loop.
-
-    Long breakdown URLs are dropped before either useful bullets or
-    the Telegram CTA; the channel loop is a growth requirement.
-    """
-    generated = _generated(record, generated)
-    masto_headline = surface_field(generated, "mastodon_headline")
-    lead = clip_text(masto_headline or _lead(record, generated), 190)
-    icon = language_icon(record)
-    if lead and icon and not masto_headline:
-        lead = f"{icon} {lead}"
-    masto_lead = surface_field(generated, "mastodon_lead")
-    features = _features(generated)
-    if masto_lead:
-        # The platform lead takes the first bullet slot instead of being
-        # stacked on top of the generic feature list. Otherwise the post
-        # opens with a sentence written for Mastodon and continues with a
-        # feature list that answers a question nobody asked.
-        bullets = [f"• {masto_lead}", *[f"• {feature}" for feature in features[:1]]]
-    else:
-        bullets = [f"• {feature}" for feature in features[:2]]
-    if not bullets:
-        detail = clip_text(_detail(record, generated), 180)
-        bullets = [detail] if detail else []
-    bullet_text = "\n".join(bullets)
-    url = repo_url(record)
-    breakdown = breakdown_url(record)
-    tags = hashtags(record, generated, limit=3, camel=True)
-    tg_line = telegram_cta_line(record)
-
-    def make_suffix(*, include_breakdown: bool) -> str:
-        link_lines: list[str] = []
-        if url:
-            link_lines.append(f"Repo: {url}")
-        if include_breakdown and breakdown and breakdown != url:
-            link_lines.append(f"Breakdown: {breakdown}")
-        link_lines.append(tg_line)
-        suffix = "\n".join(line for line in link_lines if line)
-        return (suffix + f"\n\n{tags}").strip() if tags else suffix
-
-    def join_parts(bullets_value: str, suffix: str) -> str:
-        return "\n\n".join(part for part in [lead, bullets_value, suffix] if part)
-
-    suffix = make_suffix(include_breakdown=True)
-    text = join_parts(bullet_text, suffix)
-    if len(text) <= MASTODON_LIMIT:
-        return text
-    suffix = make_suffix(include_breakdown=False)
-    text = join_parts(bullet_text, suffix)
-    if len(text) <= MASTODON_LIMIT:
-        return text
-    first_bullet = bullets[0] if bullets else ""
-    text = join_parts(first_bullet, suffix)
-    if len(text) <= MASTODON_LIMIT:
-        return text
-    return _fit_parts([lead, first_bullet, suffix], MASTODON_LIMIT)
 
 def build_Facebook_text(record: dict[str, Any], generated: dict[str, Any] | None = None) -> str:
     """Structured plain-text Facebook post with a Telegram return loop."""
@@ -597,8 +551,6 @@ def build_crosspost_text(
     key = clean_text(platform).lower()
     if key == "bluesky":
         return build_bluesky_text(record, generated)
-    if key == "mastodon":
-        return build_mastodon_text(record, generated)
     if key == "facebook":
         return build_Facebook_text(record, generated)
     # Any future platform still has to carry the return loop: a crosspost
@@ -648,6 +600,36 @@ def _strip_leading_h1(markdown: str) -> str:
     return "\n".join(lines).strip()
 
 
+ARTICLE_SECTIONS = (
+    "What it is", "Why it matters", "How it works", "Key features",
+    "Quick start", "Getting started", "When not to use it",
+    "Who should try it", "Verdict",
+)
+
+
+def normalize_article_markdown(text: Any) -> str:
+    """Turn an LLM article into readable Markdown, even if it was flattened.
+
+    Gemini sometimes returns one long line (``## What it is Horizon is ...``),
+    and older saved surfaces were flattened by a whitespace-collapsing
+    cleaner. Restore H2 headings, paragraph breaks and bullet lists so dev.to
+    renders sections instead of a single block of text.
+    """
+    raw = str(text or "").replace("\\#\\#", "##").replace("\\#", "#")
+    # A heading marker must start its own line, with air around it.
+    raw = re.sub(r"\s+#{2,3}\s+", "\n\n## ", raw)
+    raw = re.sub(
+        r"(?m)^(##\s*)(%s)\b[ \t]*" % "|".join(re.escape(x) for x in ARTICLE_SECTIONS),
+        lambda m: f"\n\n## {m.group(2)}\n\n",
+        raw,
+    )
+    # " - " separated feature lists become real Markdown bullets.
+    raw = re.sub(r"\s+-\s+", "\n- ", raw)
+    raw = re.sub(r"(?m)^(##[^\n]*)\n(?!\n)", r"\1\n\n", raw)
+    lines = [line.rstrip() for line in raw.splitlines()]
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
+
+
 def build_devto_body(record: dict[str, Any], generated: dict[str, Any] | None = None) -> str:
     generated = _generated(record, generated)
     # dev.to publishes its own technical article. Telegraph keeps the shared
@@ -655,9 +637,9 @@ def build_devto_body(record: dict[str, Any], generated: dict[str, Any] | None = 
     # query — the SEO agent's cannibalization rule. When the per-surface
     # call is unavailable we fall back to the shared article rather than
     # publishing nothing.
-    devto_body = surface_field(generated, "devto_body")
-    markdown = _strip_leading_h1(
-        str(devto_body or generated.get("article_markdown") or "")
+    devto_body = surface_markdown(generated, "devto_body")
+    markdown = normalize_article_markdown(
+        _strip_leading_h1(str(devto_body or generated.get("article_markdown") or ""))
     )
     summary = _sentences(_summary(record, generated), 330)
     who = clip_text(generated.get("who_for"), 220)
@@ -701,4 +683,6 @@ def build_devto_body(record: dict[str, Any], generated: dict[str, Any] | None = 
         "No hands-on test is claimed; evaluate it in a sandbox before production use.*\n"
     )
     intro = "\n".join(intro_lines).strip()
-    return (intro + "\n\n" if intro else "") + markdown + footer
+    # A rule after the TL;DR block and before the first H2 keeps the article
+    # scannable: summary, body with real sections, then the discussion block.
+    return (intro + "\n\n---\n\n" if intro else "") + markdown + footer

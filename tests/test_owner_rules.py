@@ -148,7 +148,7 @@ def test_compaction_constants_ttl_and_audit_event(tmp_path):
 def test_defaults_encode_owner_decisions(monkeypatch):
     for name in (
         "APP_ENV", "PUBLISH_TARGET", "GEMINI_MODEL", "FEATURE_TELEGRAPH",
-        "FEATURE_DEVTO", "FEATURE_BLUESKY", "FEATURE_MASTODON",
+        "FEATURE_DEVTO", "FEATURE_BLUESKY",
         "FEATURE_AI_BRIEF", "FEATURE_SHEETS_HANDOFF",
     ):
         monkeypatch.delenv(name, raising=False)
@@ -160,7 +160,7 @@ def test_defaults_encode_owner_decisions(monkeypatch):
     assert not any(
         getattr(cfg, flag)
         for flag in (
-            "feature_devto", "feature_bluesky", "feature_mastodon",
+            "feature_devto", "feature_bluesky",
             "feature_ai_brief", "feature_sheets_handoff",
         )
     ), "start with every optional flag off"

@@ -21,8 +21,8 @@ Autonomous, zero-cost discovery and publishing system for the
 > secrets validates and commits the state. See [`SECURITY.md`](SECURITY.md).
 >
 > **Reliability + intent tests (2026-11-03):** CI is green on Python 3.13 —
-> **300 tests**, **65.75 % branch-inclusive coverage** (69 % lines,
-> 55 % branches) and **24/24 intentional mutations killed** by
+> **301 tests**, **65.84 % branch-inclusive coverage** (69 % lines,
+> 55 % branches) and **30/30 intentional mutations killed** by
 > `tools/mutation_check.py`. The wheel ships all 142 card icons; state
 > compaction, a weekly lifecycle guard and executable owner-rule invariants
 > are in place. Every outbound CTA points at the real production channel;
@@ -42,10 +42,12 @@ Autonomous, zero-cost discovery and publishing system for the
 | 6 | [`docs/AUDIT_2026-11-02.md`](docs/AUDIT_2026-11-02.md) | What was verified by running it, and the four defects found |
 | 7 | [`SECURITY.md`](SECURITY.md) | How to report a vulnerability, security properties, known operational risks |
 | 8 | [`docs/RELIABILITY_2026-11-03.md`](docs/RELIABILITY_2026-11-03.md) | Production-readiness and 5-year reliability audit, and the fixes applied |
+| 9 | [`docs/SECRETS_CHECKLIST.md`](docs/SECRETS_CHECKLIST.md) | Exactly which secrets/variables are still missing and where to get them |
 
-The single most important open item: **cross-posting has never been sent
-live**. All three published posts carry `crossposts: disabled`. Prove one
-real Bluesky or Mastodon post before touching production.
+Live crossposts and dev.to articles are already proven (2026-11-03), with
+all outbound CTAs pointing at the real production channel. Mastodon was
+removed after the account was banned for spam. The remaining blocker is the
+make.com sheet hand-off: see `docs/SECRETS_CHECKLIST.md`.
 
 ## What it does
 
@@ -65,7 +67,7 @@ real Bluesky or Mastodon post before touching production.
 - Uses the adopted card system: Editorial Daily by default, Neon
   Terminal for CLI/TUI projects, Glass Aurora only for AI Brief assets,
   and Editorial Sunday Edition for the digest.
-- Queues Bluesky/Mastodon/Facebook crossposts behind feature flags with
+- Queues Bluesky/Facebook crossposts behind feature flags with
   retries and dead-letter records.
 - Can publish the best project of the day to dev.to.
 - Includes a verified WorldofAI AI Brief track: the YouTube channel is a
@@ -111,7 +113,7 @@ src/ghos_v6/
   media.py       README -> card -> OpenGraph visual cascade
   telegraph.py   Telegraph pages and image upload
   telegram.py    Bot API client and ID discovery
-  platforms.py   dev.to, Bluesky, Mastodon, Facebook adapters
+  platforms.py   dev.to, Bluesky, Facebook adapters
   content_adapters.py  platform-native copy, limits, tags and alt text
   news.py        WorldofAI RSS and verified AI Brief synthesis
   pipeline.py    collect/publish/crosspost/article/news/digest/report

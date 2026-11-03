@@ -81,6 +81,10 @@ _LANGUAGE_ICON = {
 }
 
 _DIVIDER = "──────────────"
+#: Visual break between the channel signature and the discovery hashtags.
+#: The owner asked for a clear separator so the tags do not read as part of
+#: the channel line when a post is forwarded or screenshotted.
+CHANNEL_TAG_DIVIDER = "========================================"
 _CHANNEL_SIGNATURE = (
     '📣 <a href="https://t.me/GitHub_Open_Source"><b>@GitHub_Open_Source</b></a> '
     "— daily open-source picks"
@@ -501,7 +505,7 @@ def format_project_post(
         lines += ["", _CHANNEL_SIGNATURE]
         ht = _hashtags(project)
         if ht:
-            lines += ["", ht]
+            lines += ["", CHANNEL_TAG_DIVIDER, ht]
         return "\n".join(lines)
 
     show_quick = quick_visible_default

@@ -238,7 +238,6 @@ def test_every_external_surface_carries_the_channel_loop():
         build_bluesky_text,
         build_crosspost_text,
         build_devto_body,
-        build_mastodon_text,
     )
 
     record = {
@@ -264,7 +263,6 @@ def test_every_external_surface_carries_the_channel_loop():
     }
     surfaces = {
         "bluesky": build_bluesky_text(record, generated),
-        "mastodon": build_mastodon_text(record, generated),
         "Facebook": build_Facebook_text(record, generated),
         "devto": build_devto_body(record, generated),
         "threads": build_crosspost_text("threads", record, generated),
@@ -385,14 +383,13 @@ def test_facebook_crosspost_never_falls_back_to_the_short_generic_text():
 
 def test_each_surface_gets_its_own_headline_not_the_shared_hook():
     """Owner's question: 'shouldn't headlines be for ordinary people, and
-    different on each platform?'  Measured before: Bluesky, Mastodon and
-    Facebook all opened with the same shared hook (29 of 29 words shared).
+    different on each platform?'  Measured before: Bluesky and Facebook
+    opened with the same shared hook (29 of 29 words shared).
     Now each adapter prefers its own field and falls back to the old
     behaviour when the second call is missing."""
     from ghos_v6.content_adapters import (
         build_bluesky_text,
         build_Facebook_text,
-        build_mastodon_text,
         surface_field,
     )
     from ghos_v6.Gemini import jargon_hits
@@ -406,23 +403,17 @@ def test_each_surface_gets_its_own_headline_not_the_shared_hook():
         "surfaces": {
             "bluesky_headline": "Turn web code into video files",
             "bluesky_lead": "A framework that converts HTML layouts into clean video files.",
-            "mastodon_headline": "Convert HTML and CSS into MP4 videos using TypeScript",
-            "mastodon_lead": "Renders frames locally instead of recording a browser.",
             "Facebook_headline": "Turn website designs into video files",
             "Facebook_lead": "Point it at a page layout and get a video that looks the same every time.",
         },
     }
     bs = build_bluesky_text(record, generated)
-    ms = build_mastodon_text(record, generated)
     fb = build_Facebook_text(record, generated)
     assert bs.startswith("Turn web code into video files")
-    assert "Convert HTML and CSS into MP4" in ms
     assert "Turn website designs into video files" in fb
     # the plainest surfaces carry no jargon
     assert jargon_hits(generated["surfaces"]["bluesky_headline"]) == []
     assert jargon_hits(generated["surfaces"]["Facebook_headline"]) == []
-    # Mastodon is allowed the technical term on purpose
-    assert jargon_hits(generated["surfaces"]["mastodon_headline"]) != []
     # and the old record without surfaces still renders
     legacy = {"hook": generated["hook"], "key_features": generated["key_features"]}
     assert build_bluesky_text(record, legacy)
@@ -682,7 +673,7 @@ def test_briefs_never_enter_the_ranking_or_poll_system():
 
 def test_only_the_best_post_of_the_day_is_crossposted():
     """Owner decision after the agents' warning about blanket publishing:
-    three posts a day must not all go to Bluesky, Mastodon and Facebook.
+    three posts a day must not all go to Bluesky and Facebook.
     Only the top-scored post of each day leaves Telegram; the rest are
     marked 'held' so state does not accumulate a backlog."""
     from datetime import datetime, timedelta, timezone
@@ -707,13 +698,11 @@ def test_only_the_best_post_of_the_day_is_crossposted():
             "published_at": (now - timedelta(hours=hours_ago)).isoformat(),
             "crossposts": {
                 "bluesky": {"status": "pending", "attempts": 0, "due_at": (now - timedelta(minutes=5)).isoformat()},
-                "mastodon": {"status": "pending", "attempts": 0, "due_at": (now - timedelta(minutes=5)).isoformat()},
             },
         }
 
-    config = Config(telegram_bot_token="x", feature_bluesky=True, feature_mastodon=True,
-                    bluesky_handle="o", bluesky_app_password="p",
-                    mastodon_instance_url="https://example.social", mastodon_access_token="t")
+    config = Config(telegram_bot_token="x", feature_bluesky=True,
+                    bluesky_handle="o", bluesky_app_password="p")
     process_crossposts(config, store)
 
     statuses = {key: rec["crossposts"]["bluesky"]["status"] for key, rec in store.data["published"].items()}
@@ -723,30 +712,6 @@ def test_only_the_best_post_of_the_day_is_crossposted():
     # and held posts do not pile up as pending work for tomorrow
     assert store.data["published"]["owner/midday"]["crossposts"]["bluesky"]["held_reason"] == "not_best_of_day"
 
-
-def test_surface_lead_replaces_the_first_bullet_instead_of_stacking():
-    """Found while auditing the bodies: Mastodon inserted its own lead as an
-    extra bullet and then kept the generic key_features, so the post opened
-    with a sentence written for this platform and continued with a feature
-    list that belonged to the project, not to the sentence. The lead must
-    take the first slot, not add to the list."""
-    from ghos_v6.content_adapters import build_mastodon_text
-
-    record = {"full_name": "AprilNEA/OpenLogi", "name": "OpenLogi", "url": "https://github.com/AprilNEA/OpenLogi",
-              "description": "Native Logitech config", "language": "Rust", "stars": 24808}
-    generated = {
-        "hook": "Remap your Logitech buttons.",
-        "key_features": ["Configure multi-step workflows", "Switch per-app profiles", "Control DPI presets"],
-        "surfaces": {"mastodon_headline": "Native Logitech settings",
-                     "mastodon_lead": "Runs locally with no account and no vendor app."},
-    }
-    text = build_mastodon_text(record, generated)
-    bullets = [line for line in text.splitlines() if line.startswith("•")]
-    assert bullets[0] == "• Runs locally with no account and no vendor app."
-    # the lead must not also appear as a separate bullet below the features
-    assert sum("Runs locally with no account" in b for b in bullets) == 1
-    # and the post still carries concrete features after the lead
-    assert any("multi-step" in b for b in bullets)
 
 
 def test_facebook_and_devto_get_their_own_bodies():

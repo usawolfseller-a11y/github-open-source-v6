@@ -54,7 +54,7 @@ def test_public_main_channel_link_is_kept_when_it_exists():
     assert ca.telegram_cta_url(record) == f"{REAL}/42"
 
 
-@pytest.mark.parametrize("platform", ["bluesky", "mastodon", "facebook"])
+@pytest.mark.parametrize("platform", ["bluesky", "facebook"])
 def test_every_crosspost_copy_points_back_to_the_real_channel(platform):
     text = ca.build_crosspost_text(platform, _record())
     assert REAL in text

@@ -81,8 +81,7 @@ Order is fixed by risk, not preference:
 
 1. **dev.to** — canonical link back to Telegraph, no rate-limit risk.
 2. **Bluesky** — 300-char budget; needs the card image as a blob upload.
-3. **Mastodon** — 500-char budget, instance-level rate limits.
-4. **Facebook** — *blocked*: needs a Page access token the owner does not have. Stays disabled until then; do not fake it with a user token.
+3. **Facebook** — published by make.com from a Google Sheet row (no Page token in v6).
 
 - [ ] Smoke each platform with one real post, flags flipped one at a time
 - [ ] Record failures as dead letters with the raw error
@@ -126,7 +125,7 @@ Ranked by expected value per hour of work:
 ## 3.5. Next session, in order
 
 1. **Prove one live crosspost.** This is the only subsystem never exercised
-   against a real API. Post one existing record to Bluesky and to Mastodon,
+   against a real API. Post one existing record to Bluesky,
    confirm the text and the image, then delete it if the account is public.
    Facebook cannot be proven this way: it goes through make.com.
 2. **Run `doctor`** and confirm 13/13.

@@ -25,6 +25,7 @@ from .pipeline import (
     process_crossposts,
     publish_slot,
     report_command,
+    update_recent_article,
 )
 from .state import StateStore
 
@@ -46,6 +47,7 @@ def _parser() -> argparse.ArgumentParser:
 
     sub.add_parser("crossposts", help="Process due social crossposts")
     sub.add_parser("article", help="Publish the best project of the day as an article")
+    sub.add_parser("article-update", help="Re-render the latest dev.to article in place")
 
     news = sub.add_parser("news", help="Publish one verified WorldofAI AI Brief")
     news.add_argument("--force", action="store_true", help="Run even if FEATURE_AI_BRIEF=false")
@@ -131,6 +133,8 @@ def main(argv: list[str] | None = None) -> int:
             result = process_crossposts(config, store)
         elif args.command == "article":
             result = article_of_day(config, store)
+        elif args.command == "article-update":
+            result = update_recent_article(config, store)
         elif args.command == "news":
             result = news_command(config, store, force=args.force)
         elif args.command == "digest":

@@ -56,8 +56,6 @@ class Config:
     dev_api_key: str = ""
     bluesky_handle: str = ""
     bluesky_app_password: str = ""
-    mastodon_instance_url: str = "https://mastodon.social"
-    mastodon_access_token: str = ""
     # Facebook is published by make.com from a sheet row: v6 never calls the
     # Graph API and therefore needs no Page id or Page token.
     sheets_spreadsheet_id: str = ""
@@ -67,7 +65,6 @@ class Config:
     feature_telegraph: bool = True
     feature_devto: bool = False
     feature_bluesky: bool = False
-    feature_mastodon: bool = False
     feature_ai_brief: bool = False
     feature_sheets_handoff: bool = False
 
@@ -97,17 +94,12 @@ class Config:
             dev_api_key=(os.getenv("DEV_API_KEY") or "").strip(),
             bluesky_handle=(os.getenv("BLUESKY_HANDLE") or "").strip().lstrip("@"),
             bluesky_app_password=(os.getenv("BLUESKY_APP_PASSWORD") or "").strip(),
-            mastodon_instance_url=(
-                os.getenv("MASTODON_INSTANCE_URL") or "https://mastodon.social"
-            ).strip().rstrip("/"),
-            mastodon_access_token=(os.getenv("MASTODON_ACCESS_TOKEN") or "").strip(),
             sheets_spreadsheet_id=(os.getenv("FACEBOOK_SHEETS_ID") or "").strip(),
             sheets_credentials_json=(os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON") or "").strip(),
             sheets_range=(os.getenv("FACEBOOK_SHEETS_RANGE") or "facebook!A1").strip(),
             feature_telegraph=_bool("FEATURE_TELEGRAPH", True),
             feature_devto=_bool("FEATURE_DEVTO", False),
             feature_bluesky=_bool("FEATURE_BLUESKY", False),
-            feature_mastodon=_bool("FEATURE_MASTODON", False),
             feature_ai_brief=_bool("FEATURE_AI_BRIEF", False),
             feature_sheets_handoff=_bool("FEATURE_SHEETS_HANDOFF", False),
         )
@@ -141,7 +133,6 @@ class Config:
             "TELEGRAPH_ACCESS_TOKEN": self.telegraph_access_token,
             "DEV_API_KEY": self.dev_api_key,
             "BLUESKY_APP_PASSWORD": self.bluesky_app_password,
-            "MASTODON_ACCESS_TOKEN": self.mastodon_access_token,
         }
         for name in names:
             if not values.get(name):
