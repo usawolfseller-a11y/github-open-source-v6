@@ -8,25 +8,25 @@ Autonomous, zero-cost discovery and publishing system for the
 > name and account handles belong to their owner; no GitHub brand rights
 > are claimed. Add the same disclaimer to every public account profile.
 
-> **Rollout state:** the code is production-shaped, but the repository is
-> configured for a private test channel (`APP_ENV=test`; `PUBLISH_TARGET`
-> defaults to `test` in `config.py`). `TELEGRAM_TEST_CHANNEL_ID` and
-> `TELEGRAM_OWNER_CHAT_ID` must be set in Variables before publishing; the
-> bot fails closed when they are missing. It must not be pointed at the main
-> channel until the test acceptance checklist in [`docs/RUNBOOK.md`](docs/RUNBOOK.md) passes.
->
-> **Publishing workflows in this repository are disabled on purpose.** This
-> GitHub account is a test account; the owner's instruction was to stop
-> publishing from it. Do not re-enable `pipeline.yml` or `doctor.yml`.
+> **Rollout state (2026-11-03):** the owner lifted the publishing bans and
+> authorised live runs — «публикацию разрешаю и все запреты снимаю».
+> `pipeline.yml` and `doctor.yml` may now be enabled. The target lock stays
+> in force: `main` requires `APP_ENV=production`, `PUBLISH_TARGET=main` and a
+> real `TELEGRAM_MAIN_CHANNEL_ID`; with test variables every post goes to the
+> private 1:1 test channel, and an empty test ID fails closed. Live
+> acceptance checklist: [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
 >
 > **Security posture:** project code runs in a read-only job with no
 > persisted checkout credentials; a separate job with no publishing
 > secrets validates and commits the state. See [`SECURITY.md`](SECURITY.md).
 >
-> **Reliability audit (2026-11-03):** CI is green on Python 3.13 (196 tests,
-> 66.83 % coverage), the wheel ships all 142 card icons, state compaction and
-> a weekly lifecycle guard were added. The publishing workflows remain
-> disabled. See [`docs/RELIABILITY_2026-11-03.md`](docs/RELIABILITY_2026-11-03.md).
+> **Reliability + intent tests (2026-11-03):** CI is green on Python 3.13 —
+> **284 tests**, **65.53 % branch-inclusive coverage** (69 % lines,
+> 55 % branches) and **18/18 intentional mutations killed** by
+> `tools/mutation_check.py`. The wheel ships all 142 card icons; state
+> compaction, a weekly lifecycle guard and executable owner-rule invariants
+> are in place. See
+> [`docs/RELIABILITY_2026-11-03.md`](docs/RELIABILITY_2026-11-03.md).
 
 ## New here? Read these in order
 

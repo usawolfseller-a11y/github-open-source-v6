@@ -1,10 +1,10 @@
 # Runbook — GitHub Open Source v6
 
-> **In the current repository the publishing workflows are off.**
-> `usawolfseller-a11y/github-open-source-v6` is a test account and the owner
-> instructed that nothing be published from it. `pipeline.yml` and
-> `doctor.yml` are `disabled_manually`. Use this runbook for a fresh account,
-> not to re-enable this one.
+> **2026-11-03:** the owner lifted all publishing bans («публикацию разрешаю
+> и все запреты снимаю»). `pipeline.yml` and `doctor.yml` may be enabled in
+> this repository. Start with `APP_ENV=test` / `PUBLISH_TARGET=test`, run
+> **Doctor**, then one manual test publish, and only after the acceptance
+> checklist below switch the three production variables together.
 
 ## Environments and target lock
 
@@ -214,6 +214,13 @@ preferred over publishing a candidate that does not pass the gate.
 
 ## Acceptance before main-channel switch
 
+> **Automated layer (2026-11-03):** 284 tests, 65.53 % branch-inclusive
+> coverage, 18/18 intentional mutations killed (`tools/mutation_check.py`),
+> owner decisions pinned in `tests/test_owner_rules.py`, artifact contracts in
+> `tests/test_contract_artifacts.py`. This proves the code and configuration
+> agree with each other — it does **not** replace live observation. Every item
+> below still needs a real run and the owner's eyes.
+
 - [ ] Doctor core checks pass, including Telegram, Gemini, GitHub and card render.
 - [ ] Doctor confirms the bot is admin of the test channel and sends hello.
 - [ ] At least 3 consecutive days of correct autonomous test posts.
@@ -289,14 +296,17 @@ python -m pip install --require-hashes -r requirements-dev.lock
 python -m pip install --no-deps -e .
 ruff check .
 mypy src
-pytest
+pytest                       # line + branch coverage floor 65 %
+python tools/mutation_check.py
 python tools/secret_scan.py
 ```
 
+`pytest` now measures branch-inclusive coverage, and `tools/mutation_check.py`
+re-runs the suite against 18 deliberate defects; any survivor fails the gate.
 `gitleaks` and CodeQL run in CI. Do not disable them. The publishing
 workflow is split into a read-only `run` job and a `commit-state` job; keep
 the split. `requirements.lock` is mandatory for reproducible installs.
 
-`TELEGRAM_MAIN_CHANNEL_ID` is intentionally unset in the test repository.
-Setting it is a production decision: the value must be the main channel
-(`@GitHub_Open_Source`), never the test channel id.
+`TELEGRAM_MAIN_CHANNEL_ID` exists in Actions Variables. Its value is a
+production decision: it must be the main channel (`@GitHub_Open_Source`),
+never the test channel id. Verify it before switching `PUBLISH_TARGET=main`.

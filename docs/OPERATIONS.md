@@ -113,7 +113,10 @@ p.write_text(json.dumps(d,ensure_ascii=False,indent=1))
 ```bash
 gh api repos/{owner}/{repo}/actions/workflows
 ```
-**На тестовом аккаунте они должны оставаться выключенными.**
+**С 2026-11-03 владелец разрешил включать `Doctor` и `Publishing pipeline`.**
+До переключения на `main` держим `APP_ENV=test` / `PUBLISH_TARGET=test`;
+если workflow снова окажутся выключены после 60 дней без коммитов — включить
+повторно (`Lifecycle guard` создаёт issue по этому поводу).
 
 ---
 

@@ -167,15 +167,23 @@ class StateStore:
         if isinstance(published, dict):
             cutoff = now - timedelta(days=self.PUBLISHED_FULL_RETENTION_DAYS)
             for key, record in published.items():
-                if not isinstance(record, dict) or record.get("_compact"):
+                if not isinstance(record, dict):
+                    continue
+                # History is bounded for every record, not only for old ones:
+                # a fresh project revisited several times would otherwise keep
+                # an unbounded list until it crosses the retention threshold.
+                history = list(record.get("history") or [])
+                if len(history) > self.HISTORY_MAX_ITEMS:
+                    record["history"] = history[-self.HISTORY_MAX_ITEMS:]
+                    changed += 1
+                if record.get("_compact"):
                     continue
                 stamp = _parse_ts(record.get("published_at"))
                 if stamp is None or stamp >= cutoff:
                     continue
                 compact = {f: record[f] for f in self._PUBLISHED_INDEX_FIELDS if f in record}
-                history = list(record.get("history") or [])
-                if history:
-                    compact["history"] = history[-self.HISTORY_MAX_ITEMS:]
+                if record.get("history"):
+                    compact["history"] = record["history"]
                 compact["_compact"] = True
                 published[key] = compact
                 changed += 1

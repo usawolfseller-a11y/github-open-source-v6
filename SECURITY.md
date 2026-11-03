@@ -117,6 +117,14 @@ Values are never stored in this repository.
   currently live in the test account's secrets.
 - Confirm the `Lifecycle guard` issues are reviewed; confirm `Budgets and
   alerts` is set on the billing account.
+- Revoke the temporary setup PAT used for the 2026-11-03 audit and push.
+
+**2026-11-03 decision:** the owner authorised publication and lifted the ban
+on enabling `pipeline.yml` / `doctor.yml`. `disabled_manually` is no longer a
+required state. The target lock remains a security control and must not be
+removed: with test variables all posts go to the private test channel, and
+`main` needs all three production variables at once. Any live run must start
+from the test target.
 
 `APP_ENV`, `PUBLISH_TARGET`, `TELEGRAM_TEST_CHANNEL_ID`,
 `TELEGRAM_OWNER_CHAT_ID` and `TELEGRAM_MAIN_CHANNEL_ID` are configured. The

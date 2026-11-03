@@ -41,7 +41,10 @@ ghos_v6 = ["assets/icons/*.png", "assets/icons/colour/*.png"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "-q --cov=src/ghos_v6 --cov-report=term-missing --cov-fail-under=65"
+# Branch-inclusive floor: lines alone hid 327 untested decisions. The gate is
+# intentionally honest (65 % combined), not a vanity 100 % statement figure.
+# tools/mutation_check.py complements it: 18/18 intentional defects are killed.
+addopts = "-q --cov=src/ghos_v6 --cov-branch --cov-report=term-missing --cov-fail-under=65"
 
 [tool.ruff]
 line-length = 100

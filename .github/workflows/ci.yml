@@ -31,8 +31,12 @@ jobs:
         run: ruff check .
       - name: Mypy
         run: mypy src
-      - name: Tests
+      - name: Tests (line + branch coverage)
         run: pytest
+      - name: Mutation gate
+        # A green suite must fail when an owner decision is broken. 18 fixed
+        # mutations are applied one at a time; any survivor fails the build.
+        run: python tools/mutation_check.py
       - name: Secret scan
         run: python tools/secret_scan.py
       - name: Wheel contains the icon assets
