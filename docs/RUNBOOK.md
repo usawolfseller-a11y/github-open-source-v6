@@ -218,7 +218,12 @@ preferred over publishing a candidate that does not pass the gate.
 > coverage, 18/18 intentional mutations killed (`tools/mutation_check.py`),
 > owner decisions pinned in `tests/test_owner_rules.py`, artifact contracts in
 > `tests/test_contract_artifacts.py`. This proves the code and configuration
-> agree with each other — it does **not** replace live observation. Every item
+> agree with each other — it does **not** replace live observation.
+>
+> **Live smoke done (2026-11-03):** Doctor green with a hello message, one real
+> test post (`smoke_e2e`) with a Telegraph page, and 10/10 further pipeline
+> commands green; both workflows are `active`. Details in
+> [`RELIABILITY_2026-11-03.md`](RELIABILITY_2026-11-03.md) §8. Every item
 > below still needs a real run and the owner's eyes.
 
 - [ ] Doctor core checks pass, including Telegram, Gemini, GitHub and card render.

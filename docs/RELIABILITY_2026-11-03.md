@@ -142,3 +142,40 @@ Property-тест обнаружил, что `StateStore._compact_state()` ог�
 автономных постов, визуальную приёмку карточек и кросс-постов, одобрение копи
 владельцем и мониторинг в проде. Чек-лист в `RUNBOOK.md` остаётся открытым.
 Список оставшихся решений владельца — в разделах 4–5 выше.
+
+---
+
+## 8. Живой прогон 2026-11-03 после снятия запретов
+
+Владелец разрешил публикацию и выбрал режим «тестовый канал → затем прод».
+На момент запуска: `APP_ENV=test`, `PUBLISH_TARGET=test`,
+`GEMINI_MODEL=gemini-3.5-flash-lite`, `FEATURE_TELEGRAPH=true`, остальные
+опциональные флаги выключены. Присутствуют 7 Secrets;
+`FACEBOOK_PAGE_ACCESS_TOKEN` и `GOOGLE_SERVICE_ACCOUNT_JSON` не заданы
+(эти подсистемы выключены). `TELEGRAM_MAIN_CHANNEL_ID` — публичный username и
+не совпадает с ID тестового канала.
+
+| Проверка | Результат |
+|---|---|
+| CI на `7e7f26e`: ruff, mypy, 284 теста, branch coverage, mutation gate, secret scan, wheel (142 PNG), state guard | **success** |
+| CodeQL, gitleaks | success |
+| `Doctor` с `--hello` | **success**: бот — админ тестового канала, приветствие отправлено, Gemini-модель доступна (46 моделей), GitHub search, карточка `neon_terminal`; единственный `ok:false` — ожидаемый пропуск Facebook без Page-токена |
+| `publish` (`slot=smoke_e2e`) | **success**: `"published": true`, Telegraph-страница создана, `published` 4 → 5, `commit-state` закоммитил state |
+| `collect`, `crossposts`, `article`, `news`, `metrics`, `learn`, `moderation`, `facebook-handoff`, `poll-close`, `report` | **10/10 success** |
+| Состояние workflow | `Doctor`, `Publishing pipeline`, `CI`, `CodeQL`, `Lifecycle guard`, `Cleanup test posts` — `active` |
+| `state.json` на `main` | `published=5`, `queue=28`, `seen_repos=209`, `dead_letters=0` |
+
+**Операционная находка.** `concurrency: group: state-writer,
+cancel-in-progress: false` в GitHub Actions допускает только один
+выполняющийся и один ожидающий запуск. Пакет из 10 одновременных
+`workflow_dispatch` дал 8 `cancelled` (не отказ кода); при последовательном
+повторе все команды завершились success. Правило: ручные dispatch отправлять
+по одному и дожидаться завершения.
+
+**Что остаётся за владельцем (живая приёмка, а не автотесты):** визуальная
+проверка поста и карточки в тестовом канале, 3 дня автономных постов по 3
+в день, воскресный дайджест и опрос (`learn` уже прошёл, но `value_model`
+появится только после данных опроса), живой кросспост Bluesky/Mastodon,
+dev.to smoke article, Facebook-handoff после добавления Secrets/Variables,
+переключение трёх Variables на `production`/`main`, остановка v5 в день
+переключения и отзыв временного PAT.
