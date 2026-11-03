@@ -4,8 +4,8 @@
 
 Коротко: для полного цикла не хватает **ровно одного секрета** и **двух
 переменных** — всё это относится к Facebook, который публикует make.com из
-Google-таблицы. Остальные 7 секретов уже настроены и работают (Telegram,
-Gemini, ImgBB, Telegraph, dev.to, Bluesky, GitHub token).
+Google-таблицы. Остальные 6 секретов уже настроены и работают (Telegram,
+Gemini, ImgBB, Telegraph, dev.to, Bluesky).
 
 > ⚠️ Не присылайте значения секретов в чат и не сохраняйте их в файлах
 > проекта. Добавляйте их прямо в GitHub → Settings → Secrets and variables →
@@ -140,7 +140,7 @@ no-op (`queued: 0`), ничего не ломает.
 | `FACEBOOK_PAGE_ACCESS_TOKEN`, `FACEBOOK_PAGE_ID`, `FEATURE_FACEBOOK` | удалены: Facebook публикует make.com |
 | `MASTODON_ACCESS_TOKEN`, `MASTODON_INSTANCE_URL`, `FEATURE_MASTODON` | удалены: аккаунт заблокирован за спам 2026-11-03 |
 | `TELEGRAM_MAIN_CHANNEL_ID` | уже `@GitHub_Open_Source` |
-| `BLUESKY_APP_PASSWORD`, `MASTODON`‑нет, `DEV_API_KEY`, `TELEGRAPH_ACCESS_TOKEN`, `IMGBB_API_KEY`, `GEMINI_API_KEY`, `TELEGRAM_BOT_TOKEN` | уже заданы, живые прогоны прошли |
+| `BLUESKY_APP_PASSWORD`, `DEV_API_KEY`, `TELEGRAPH_ACCESS_TOKEN`, `IMGBB_API_KEY`, `GEMINI_API_KEY`, `TELEGRAM_BOT_TOKEN` | уже заданы, живые прогоны прошли |
 | Любые значения Secrets в чат | добавляйте только через UI GitHub |
 
 ---
