@@ -425,12 +425,12 @@
       "crossposts": {
         "bluesky": {
           "attempts": 0,
-          "due_at": "2026-11-03T18:00:00+00:00",
+          "due_at": "2026-11-03T00:00:00+00:00",
           "status": "pending"
         },
         "mastodon": {
           "attempts": 0,
-          "due_at": "2026-11-03T18:00:00+00:00",
+          "due_at": "2026-11-03T00:00:00+00:00",
           "status": "pending"
         }
       },
