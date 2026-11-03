@@ -11,3 +11,4 @@
 {"projects_7d": 5, "sent": true, "ts": "2026-11-03T09:18:51.271390Z", "type": "weekly_report"}
 {"reason": "feature_devto_disabled", "repo": "unslothai/unsloth", "ts": "2026-11-03T09:20:34.539397Z", "type": "article_skipped"}
 {"reason": "channel_not_public", "ts": "2026-11-03T09:22:18.961823Z", "type": "metrics_skipped"}
+{"deleted": 0, "ts": "2026-11-03T09:23:40.002070Z", "type": "moderation_completed", "updates": 0}

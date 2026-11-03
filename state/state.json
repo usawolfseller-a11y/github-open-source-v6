@@ -52,7 +52,8 @@
       "finished_at": "2026-11-02T19:59:24.481942Z",
       "repo": "aprilnea/openlogi",
       "telegram_message_id": 35
-    }
+    },
+    "telegram_update_offset": 0
   },
   "news_topics": [],
   "publish_failures": {},
