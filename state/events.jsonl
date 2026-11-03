@@ -12,3 +12,5 @@
 {"reason": "feature_devto_disabled", "repo": "unslothai/unsloth", "ts": "2026-11-03T09:20:34.539397Z", "type": "article_skipped"}
 {"reason": "channel_not_public", "ts": "2026-11-03T09:22:18.961823Z", "type": "metrics_skipped"}
 {"deleted": 0, "ts": "2026-11-03T09:23:40.002070Z", "type": "moderation_completed", "updates": 0}
+{"preview_host": "imgbb", "repo": "horizon-rust/horizon", "ts": "2026-11-03T09:48:00.565669Z", "type": "published_as_text"}
+{"repo": "horizon-rust/horizon", "score": 91.132, "telegram_message_id": 38, "telegraph_url": "https://telegra.ph/Horizon-A-Minecraft-Java-Edition-Rewrite-in-Rust-11-03", "ts": "2026-11-03T09:48:00.566007Z", "type": "project_published"}
