@@ -452,10 +452,7 @@
         "mastodon": {
           "attempts": 0,
           "due_at": "2026-11-03T00:00:00+00:00",
-          "error": "",
-          "published_at": "2026-11-03T09:49:24.859330Z",
-          "status": "published",
-          "url": "https://mastodon.social/@GitHubOpenSource/117551881553566436"
+          "status": "pending"
         }
       },
       "description": "Minecraft: Java Edition 26.3 rewritten from scratch in Rust, checked against vanilla with 281 differential harnesses. Get it with the Horizon launcher.",
