@@ -450,9 +450,10 @@
           "url": "https://bsky.app/profile/githubopensource.bsky.social/post/3mzfkqoxkao25"
         },
         "mastodon": {
-          "attempts": 0,
-          "due_at": "2026-11-03T00:00:00+00:00",
-          "status": "pending"
+          "attempts": 1,
+          "due_at": "2026-11-03T10:28:29.680901+00:00",
+          "error": "Mastodon status 117551917478863729 is not publicly visible (HTTP 404); check the account's moderation state",
+          "status": "failed"
         }
       },
       "description": "Minecraft: Java Edition 26.3 rewritten from scratch in Rust, checked against vanilla with 281 differential harnesses. Get it with the Horizon launcher.",
