@@ -417,7 +417,13 @@
       "visual_kind": "card"
     },
     "horizon-rust/horizon": {
-      "articles": {},
+      "articles": {
+        "devto": {
+          "id": 4968180,
+          "published_at": "2026-11-03T09:51:09.465756Z",
+          "url": "https://dev.to/githubopensource/minecraft-in-rust-open-source-horizon-engine-3pc1"
+        }
+      },
       "card_style": "",
       "category": "DevTools",
       "contributors_count": 217,
