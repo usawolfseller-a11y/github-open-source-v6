@@ -12,6 +12,7 @@ on:
           - publish
           - crossposts
           - article
+          - article-update
           - news
           - digest
           - report

@@ -117,6 +117,10 @@ def test_mastodon_is_gone_from_the_project():
 def test_article_update_command_is_wired_end_to_end():
     workflow = (REPO / ".github" / "workflows" / "pipeline.yml").read_text(encoding="utf-8")
     assert "article-update" in workflow
+    # It must be in BOTH the input choice and the shell whitelist: a command
+    # that is only in the case statement is rejected by the API with 422.
+    choices = workflow.split("options:", 1)[1].split("slot:", 1)[0]
+    assert "- article-update" in choices
     assert hasattr(pipeline, "update_recent_article")
     assert hasattr(platforms.DevToClient, "update_article")
     cli_src = (REPO / "src" / "ghos_v6" / "cli.py").read_text(encoding="utf-8")
