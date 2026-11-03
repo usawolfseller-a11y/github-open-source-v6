@@ -82,6 +82,29 @@ class DevToClient:
             raise _error("dev.to", response)
         return dict(response.json() or {})
 
+    def my_articles(self, per_page: int = 100) -> list[dict[str, Any]]:
+        """Articles owned by this API key, including drafts."""
+        response = self.session.get(
+            "https://dev.to/api/articles/me/all",
+            params={"per_page": per_page},
+            timeout=30,
+        )
+        if response.status_code != 200:
+            raise _error("dev.to article list", response)
+        return list(response.json() or [])
+
+    @staticmethod
+    def resolve_article_id(
+        items: list[dict[str, Any]], url: str, fallback: int | str
+    ) -> tuple[Any, str]:
+        """Prefer an id the account can actually edit over a stale state id."""
+        for item in items:
+            item_url = str(item.get("url") or "")
+            path = str(item.get("path") or "")
+            if url and (item_url == url or (path and url.endswith(path))):
+                return item.get("id") or fallback, "url_match"
+        return fallback, "state_id"
+
     def update_article(
         self, article_id: int | str, record: dict[str, Any], generated: dict[str, Any]
     ) -> dict[str, Any]:

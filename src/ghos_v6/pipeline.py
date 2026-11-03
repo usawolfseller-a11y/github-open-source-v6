@@ -870,14 +870,27 @@ def update_recent_article(config: Config, store: StateStore) -> dict[str, Any]:
     record = max(candidates, key=lambda item: str(item.get("published_at") or ""))
     key = store.repo_key(record)
     info = record["articles"]["devto"]
-    result = DevToClient(config.dev_api_key).update_article(
-        info["id"], record, record.get("generated") or {}
+    client = DevToClient(config.dev_api_key)
+    try:
+        owned = client.my_articles()
+    except Exception as exc:  # noqa: BLE001 - diagnostics must not kill the update
+        logger.warning("dev.to article list unavailable: %s", sanitize(str(exc))[:200])
+        owned = []
+    article_id, id_source = client.resolve_article_id(
+        str(info.get("url") or ""), info.get("id") or 0
+    )
+    result = client.update_article(
+        article_id, record, record.get("generated") or {}
     )
     info["updated_at"] = iso_now()
     info["url"] = str(result.get("url") or info.get("url") or "")
     store.event("article_updated", repo=key, url=info["url"])
     store.save()
-    return {"ok": True, "updated": 1, "repo": key, "url": info["url"]}
+    return {
+        "ok": True, "updated": 1, "repo": key, "url": info["url"],
+        "owned_articles": len(owned), "id_source": id_source,
+        "article_id": article_id,
+    }
 
 
 def news_command(config: Config, store: StateStore, *, force: bool = False) -> dict[str, Any]:

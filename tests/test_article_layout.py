@@ -149,3 +149,15 @@ def test_article_update_uses_put_not_a_duplicate_post(monkeypatch):
     assert calls["method"] == "put"
     assert calls["url"] == "https://dev.to/api/articles/4968180"
     assert result["url"].startswith("https://dev.to/")
+
+
+def test_article_id_is_resolved_from_the_editable_article_list():
+    from ghos_v6.platforms import DevToClient
+
+    url = "https://dev.to/githubopensource/horizon-3pc1"
+    items = [
+        {"id": 111, "url": "https://dev.to/githubopensource/other-1"},
+        {"id": 222, "url": url, "path": "/githubopensource/horizon-3pc1"},
+    ]
+    assert DevToClient.resolve_article_id(items, url, 999) == (222, "url_match")
+    assert DevToClient.resolve_article_id([], url, 999) == (999, "state_id")
