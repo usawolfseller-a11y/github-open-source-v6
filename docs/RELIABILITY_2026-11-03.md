@@ -327,7 +327,7 @@ leveraging…»).
 
 ### 10.4 Состояние на момент правки
 
-301 тест, **65.84 %** branch-inclusive coverage, **30/30** мутаций убито,
+304 теста, **66.09 %** branch-inclusive coverage, **30/30** мутаций убито,
 ruff/mypy/secret-scan чисты. Окно наблюдения до **2026-11-09** продолжается:
 `APP_ENV=test`, `PUBLISH_TARGET=test`, все исходящие CTA ведут на
 `@GitHub_Open_Source`. Что должен дать владелец для Facebook и как взять
