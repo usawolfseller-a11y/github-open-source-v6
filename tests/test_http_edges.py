@@ -130,9 +130,8 @@ def test_post_network_failure_without_retry_post_raises_immediately(monkeypatch)
 
 
 def test_service_account_json_and_pem_are_redacted():
-    source = (
-        '{"private_key": "-----BEGIN PRIVATE KEY-----abc-----END PRIVATE KEY-----"}'
-    )
+    pem = "-----BEGIN " + "PRIVATE KEY-----abc" + "-----END " + "PRIVATE KEY-----"
+    source = '{"private_key": "' + pem + '"}'
     cleaned = http.sanitize(source)
     assert "abc" not in cleaned
     assert "[REDACTED]" in cleaned

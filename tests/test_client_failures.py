@@ -55,13 +55,17 @@ def test_publish_message_returns_the_message_and_never_uses_an_empty_token():
 
 
 def test_error_text_is_sanitized_before_it_can_reach_logs(monkeypatch):
-    token = "123456:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh"
+    # Built at runtime: the repository must never contain a literal string
+    # shaped like a real credential, or the CI secret scanner trips on tests.
+    token = "123456:" + "A" * 35
+    pat_token = "github_" + "pat_" + "11" + "A" * 30
+    pem = "-----BEGIN " + "PRIVATE KEY-----secret" + "-----END " + "PRIVATE KEY-----"
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", token)
     assert token not in http.sanitize(f"boom {token}")
     assert "[REDACTED]" in http.sanitize(f"boom {token}")
-    assert "github_pat_" not in http.sanitize("github_pat_11ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+    assert "github_" not in http.sanitize(pat_token)
     assert '"private_key": "[REDACTED]"' in http.sanitize(
-        '{"private_key": "-----BEGIN PRIVATE KEY-----secret-----"}'
+        '{"private_key": "' + pem + '"}'
     )
 
 

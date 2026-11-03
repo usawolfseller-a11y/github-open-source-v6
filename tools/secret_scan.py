@@ -28,12 +28,35 @@ ALLOW_SUBSTRINGS = (
 )
 
 
+SKIP_DIRS = {
+    ".git", ".venv", "__pycache__", "node_modules", ".mypy_cache",
+    ".pytest_cache", ".ruff_cache", "dist", "build",
+}
+
+
 def tracked_files() -> list[Path]:
+    """Tracked files *and* untracked ones.
+
+    A brand-new file is exactly where an accidentally pasted key is most
+    likely to appear; scanning only ``git ls-files`` used to report a clean
+    run while such a file sat unstaged.
+    """
     try:
-        out = subprocess.check_output(["git", "ls-files"], text=True)
-        return [Path(p) for p in out.splitlines() if p]
+        names = subprocess.check_output(["git", "ls-files"], text=True).splitlines()
+        names += subprocess.check_output(
+            ["git", "ls-files", "--others", "--exclude-standard"], text=True
+        ).splitlines()
+        return [
+            Path(p) for p in names
+            if p
+            and not any(part in SKIP_DIRS for part in Path(p).parts)
+            and Path(p).is_file()
+        ]
     except Exception:
-        return [p for p in Path(".").rglob("*") if p.is_file() and ".git" not in p.parts]
+        return [
+            p for p in Path(".").rglob("*")
+            if p.is_file() and not any(part in SKIP_DIRS for part in p.parts)
+        ]
 
 
 def main() -> int:
