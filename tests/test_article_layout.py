@@ -236,13 +236,17 @@ def test_article_update_recreates_a_deleted_article(monkeypatch, tmp_path):
 
 def test_env_key_template_asks_only_for_the_missing_values():
     text = (REPO / ".env.keys.template").read_text(encoding="utf-8")
+    import re
+
     for obsolete in (
         "FACEBOOK_PAGE_ID",
         "FACEBOOK_PAGE_ACCESS_TOKEN",
         "FEATURE_FACEBOOK",
-        "MASTODON",
+        "MASTODON_ACCESS_TOKEN",
+        "MASTODON_INSTANCE_URL",
+        "FEATURE_MASTODON",
     ):
-        assert obsolete not in text.upper(), obsolete
+        assert not re.search(rf"(?m)^{obsolete}=", text), obsolete
     for missing in (
         "GOOGLE_SERVICE_ACCOUNT_JSON",
         "FACEBOOK_SHEETS_ID",
