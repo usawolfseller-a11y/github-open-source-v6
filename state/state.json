@@ -91,11 +91,6 @@
           "attempts": 0,
           "due_at": "2026-11-02T20:29:24.481609+00:00",
           "status": "disabled"
-        },
-        "mastodon": {
-          "attempts": 0,
-          "due_at": "2026-11-02T20:29:24.481609+00:00",
-          "status": "disabled"
         }
       },
       "description": "⚡️A native, local-first alternative to Logitech Options+, written in Rust 🦀 — remap buttons, DPI, and SmartShift over HID++. No account, no telemetry.",
@@ -131,8 +126,6 @@
           "bluesky_headline": "Remap your mouse without bloated software",
           "bluesky_lead": "Control your mouse buttons, DPI, and lighting locally on any major operating system without an account.",
           "devto_body": "## What it is OpenLogi is an open-source, local-first configuration utility written in Rust that allows users to manage Logitech mice, keyboards, and lighting accessories on Linux, macOS, and Windows. It serves as an alternative to proprietary suites like Logitech Options+, communicating directly with hardware over HID++ and UVC protocols without requiring telemetry or an internet connection. ## How it works The project leverages a native Rust stack built with GPUI to provide a low-overhead graphical user interface as well as a command-line automation interface. Instead of storing configurations in opaque registry keys or cloud databases, it writes all settings to a plain-text TOML file, making it easy to version-control or sync across machines. ## Key features - Configure DPI presets, report rates, and SmartShift wheel behavior offline - Define per-application profiles that switch based on the focused app - Assign custom actions, tap-and-hold bindings, and multi-step macros - Control Litra lighting power, brightness, and color temperature - Manage UVC webcam settings with automatic stream release ## Getting started To run the project from source, ensure you have the Rust toolchain installed. Clone the repository and build the application using Cargo: ```bash git clone https://github.com/AprilNEA/OpenLogi.git cd OpenLogi cargo build --release ``` ## When not to use it While functional, the software is still under active development. If you rely on rock-solid stability for mission-critical enterprise setups or prefer official vendor support, you may want to wait for more mature releases.",
-          "mastodon_headline": "An open-source Rust utility for Logitech hardware",
-          "mastodon_lead": "Bypass proprietary companion suites with a native app that talks directly to your hardware via HID and stores settings in plain text.",
           "seo_description": "Remap Logitech mice and keyboards on Linux, macOS, and Windows with an open-source Rust utility. No accounts, no telemetry, and fully local configs.",
           "seo_query": "open-source alternative to logitech options",
           "seo_title": "Open-source alternative to Logitech Options - OpenLogi",
@@ -221,11 +214,6 @@
           "attempts": 0,
           "due_at": "2026-11-02T11:10:15.571614+00:00",
           "status": "disabled"
-        },
-        "mastodon": {
-          "attempts": 0,
-          "due_at": "2026-11-02T11:10:15.571614+00:00",
-          "status": "disabled"
         }
       },
       "description": "Turn any codebase, with its docs, SQL schemas, configs, and PDFs, into a queryable knowledge graph. A /graphify skill for Claude Code, Cursor, Codex, and Gemini CLI: local deterministic AST parsing, every edge explained, no vector store.",
@@ -259,8 +247,6 @@
           "Facebook_lead": "Stop digging through thousands of project files. This local tool turns your entire folder structure into an interactive visual map so you can find how everything connects instantly.",
           "bluesky_headline": "Turn messy code into a searchable map",
           "bluesky_lead": "An open source tool that helps developers query large codebases locally without raw file dumps.",
-          "mastodon_headline": "Turn any codebase into a queryable knowledge graph",
-          "mastodon_lead": "Graphify parses source code locally across 40 languages into a structured graph, replacing traditional file searches with path tracing and natural language queries.",
           "seo_description": "Convert your entire codebase and documentation into a searchable knowledge graph locally. Built for developers managing large projects with AI tools.",
           "seo_title": "Turn Codebase Into Knowledge Graph - Graphify"
         },
@@ -346,11 +332,6 @@
           "status": "disabled"
         },
         "bluesky": {
-          "attempts": 0,
-          "due_at": "2026-11-01T12:13:27.733575+00:00",
-          "status": "disabled"
-        },
-        "mastodon": {
           "attempts": 0,
           "due_at": "2026-11-01T12:13:27.733575+00:00",
           "status": "disabled"
@@ -448,12 +429,6 @@
           "published_at": "2026-11-03T09:49:22.633303Z",
           "status": "published",
           "url": "https://bsky.app/profile/githubopensource.bsky.social/post/3mzfkqoxkao25"
-        },
-        "mastodon": {
-          "attempts": 1,
-          "due_at": "2026-11-03T10:28:29.680901+00:00",
-          "error": "Mastodon status 117551917478863729 is not publicly visible (HTTP 404); check the account's moderation state",
-          "status": "failed"
         }
       },
       "description": "Minecraft: Java Edition 26.3 rewritten from scratch in Rust, checked against vanilla with 281 differential harnesses. Get it with the Horizon launcher.",
@@ -489,8 +464,6 @@
           "bluesky_headline": "Run Minecraft natively in Rust without Java overhead",
           "bluesky_lead": "A clean-room game engine rewrite delivering high performance and programmatic control.",
           "devto_body": "## What it is Horizon is a clean-room reimplementation of Minecraft Java Edition written entirely in Rust. It replaces the traditional Java runtime environment with a high-performance native binary designed to interface directly with existing vanilla assets, saves, and resource packs. ## How it works By leveraging low-level graphics APIs and rigorous differential testing against vanilla mechanics across 281 harnesses, Horizon achieves full game loop compatibility while bypassing JVM overhead entirely. It reads existing save files and assets natively without requiring translation layers. ## Key features - Run vanilla worlds, mobs, redstone, and commands natively through a high-performance Rust binary - Automate gameplay or integrate automation via horizon-ctl and Model Context Protocol endpoints - Render distant terrain up to 1024 chunks with custom graphics presets and controller support - Host dedicated servers easily without requiring a Java runtime environment - Import compatible CurseForge and Modrinth modpacks built around data and asset overrides ## Getting started Clone the repository from GitHub and ensure you have a modern Rust toolchain installed. Build the project using Cargo to launch the binary or configure your server instances. ## When not to use it While an engineering masterpiece for systems programmers and bot builders, casual players will still encounter missing feature gaps compared to the official client.",
-          "mastodon_headline": "Horizon: Minecraft Java rewritten in Rust with MCP support",
-          "mastodon_lead": "Experience native game loop compatibility, vanilla save support, and 281 differential harnesses in a single high-performance Rust binary.",
           "seo_description": "Play Minecraft Java Edition rewritten completely in Rust without Java. Designed for systems developers and enthusiasts seeking native performance.",
           "seo_query": "minecraft rewritten in rust",
           "seo_title": "Minecraft in Rust - Open Source Horizon Engine",
@@ -574,11 +547,6 @@
           "status": "disabled"
         },
         "bluesky": {
-          "attempts": 0,
-          "due_at": "2026-11-01T11:29:57.998794+00:00",
-          "status": "disabled"
-        },
-        "mastodon": {
           "attempts": 0,
           "due_at": "2026-11-01T11:29:57.998794+00:00",
           "status": "disabled"
@@ -685,11 +653,6 @@
           "attempts": 0,
           "due_at": "2026-11-03T18:00:00+00:00",
           "status": "disabled"
-        },
-        "mastodon": {
-          "attempts": 0,
-          "due_at": "2026-11-03T18:00:00+00:00",
-          "status": "disabled"
         }
       },
       "description": "Local UI to run and train LLMs and diffusion models. Supports GGUF, MLX, Qwen3.8, DeepSeek-V4.1, MiniMax-H3, Gemma 4, FLUX and more.",
@@ -725,8 +688,6 @@
           "bluesky_headline": "Train and run local AI models on your own desktop",
           "bluesky_lead": "Fine-tune models like Qwen and DeepSeek locally without heavy cloud setups or complex Python scripts.",
           "devto_body": "## What it is Unsloth is a native desktop application and local web interface designed to manage, serve, and fine-tune large language and diffusion models directly on consumer and workstation hardware. Written in Python, it bridges the gap between raw local runtimes and user-friendly desktop management, targeting developers who want to bypass heavy cloud setups. ## How it works The application sits on top of standard containerized and local runtimes to expose an OpenAI-compatible API endpoint. It interfaces directly with local compute hardware, letting you deploy weights, build custom data recipes, and run inference locally without external dependencies. ## Key features - Direct integration with coding assistants via single-command tools - Support for multi-GPU setups, NVIDIA, AMD, Intel hardware, CPUs, and Vulkan backends - Native dataset generation from local PDF, CSV, and DOCX files - Secure remote access and LAN sharing via Cloudflare HTTPS integration - OpenAI-compatible local API endpoint for all hosted models ## Getting started Clone the repository from GitHub, ensure you have Python installed along with your required hardware drivers, and launch the desktop interface to begin managing your local models. ## When not to use it Skip this tool if you lack the local hardware resources required to run or fine-tune large models, or if your workflow strictly mandates managed cloud infrastructure and enterprise hosting support.",
-          "mastodon_headline": "Local desktop GUI and runner for training language and diffusion models",
-          "mastodon_lead": "Manage, serve, and fine-tune models directly on your hardware with multi-GPU support and a local OpenAI-compatible API.",
           "seo_description": "Run, serve, and fine-tune large language and diffusion models locally on your desktop hardware without relying on external cloud providers.",
           "seo_query": "run and fine tune local AI models desktop app",
           "seo_title": "Run and fine-tune local AI models - Open source desktop app",
